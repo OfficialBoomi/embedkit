@@ -1,0 +1,3359 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Root */
+  .boomi-plugin-root {
+    position: relative;
+    --boomi-root-bg-color: var(--boomi-page-bg-color, #f9fafb);
+    background-color: var(--boomi-root-bg-color);
+    color: var(--boomi-root-fg-color, #111827);
+    background-image: var(--boomi-root-bg-image, none);
+    background-repeat: no-repeat, repeat, repeat;
+  }
+
+  /* Global cursor: pointer for interactive elements */
+  .boomi-plugin-root a,
+  .boomi-plugin-root button,
+  .boomi-plugin-root [role="button"] {
+    cursor: pointer;
+  }
+
+  /* Page Body */
+  .boomi-plugin-body {
+    position: relative;
+    padding: 2rem;
+  }
+
+  /* Primary Button */
+  .boomi-btn-primary {
+    background-color: var(--boomi-btn-primary-bg);
+    color: var(--boomi-btn-primary-fg);
+    border-color: var(--boomi-btn-primary-border);
+    box-shadow: var(--boomi-btn-primary-shadow);
+  }
+  .boomi-btn-primary:hover {
+    background-color: var(--boomi-btn-primary-bg-hover, var(--boomi-btn-primary-bg));
+    color: var(--boomi-btn-primary-fg-hover, var(--boomi-btn-primary-fg));
+    border-color: var(--boomi-btn-primary-border-hover, var(--boomi-btn-primary-border));
+    box-shadow: var(--boomi-btn-primary-shadow-hover, var(--boomi-btn-primary-shadow));
+  }
+  .boomi-btn-primary:active {
+    background-color: var(--boomi-btn-primary-bg-active, var(--boomi-btn-primary-bg));
+    color: var(--boomi-btn-primary-fg-active, var(--boomi-btn-primary-fg));
+    border-color: var(--boomi-btn-primary-border-active, var(--boomi-btn-primary-border));
+    box-shadow: var(--boomi-btn-primary-shadow-active, var(--boomi-btn-primary-shadow));
+  }
+  .boomi-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    filter: saturate(0.9);
+  }
+
+  /* Secondary Button */
+  .boomi-btn-secondary {
+    background-color: var(--boomi-btn-secondary-bg);
+    color: var(--boomi-btn-secondary-fg);
+    border-color: var(--boomi-btn-secondary-border);
+    box-shadow: var(--boomi-btn-secondary-shadow);
+  }
+  .boomi-btn-secondary:hover {
+    background-color: var(--boomi-btn-secondary-bg-hover, var(--boomi-btn-secondary-bg));
+    color: var(--boomi-btn-secondary-fg-hover, var(--boomi-btn-secondary-fg));
+    border-color: var(--boomi-btn-secondary-border-hover, var(--boomi-btn-secondary-border));
+    box-shadow: var(--boomi-btn-secondary-shadow-hover, var(--boomi-btn-secondary-shadow));
+  }
+  .boomi-btn-secondary:active {
+    background-color: var(--boomi-btn-secondary-bg-active, var(--boomi-btn-secondary-bg));
+    color: var(--boomi-btn-secondary-fg-active, var(--boomi-btn-secondary-fg));
+    border-color: var(--boomi-btn-secondary-border-active, var(--boomi-btn-secondary-border));
+    box-shadow: var(--boomi-btn-secondary-shadow-active, var(--boomi-btn-secondary-shadow));
+  }
+  .boomi-btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    filter: saturate(0.9);
+  }
+
+  /* Success tone for Button (green) */
+  .boomi-btn-success {
+    --_bg: var(--boomi-success-bg, #16a34a);     
+    --_bg-hover: var(--boomi-success-bg-hover, #15803d);
+    --_border: var(--boomi-success-border, #15803d);
+    --_text: var(--boomi-success-text, #ffffff);
+
+    background: var(--_bg);
+    color: var(--_text);
+    border-color: var(--_border);
+  }
+  .boomi-btn-success:hover {
+    background: var(--_bg-hover);
+  }
+  .boomi-btn-success:focus-visible {
+    outline: 2px solid var(--_border);
+    outline-offset: 2px;
+  }
+
+  /* Breadcrumb link style */
+  .boomi-breadcrumb-link {
+    color: var(--boomi-header-fg);
+    text-decoration: none;
+    transition: color 0.15s ease-in-out;
+  }
+  .boomi-breadcrumb-link:hover {
+    color: var(--boomi-header-fg-hover, var(--boomi-header-fg));
+    text-decoration: none;
+  }
+  .boomi-breadcrumb-link:active {
+    color: var(--boomi-header-fg-active, var(--boomi-header-fg-hover, var(--boomi-header-fg)));
+  }
+
+  /* Input Style */
+  .boomi-input {
+    background-color: var(--boomi-input-bg);
+    color: var(--boomi-input-fg);
+    border: 1px solid var(--boomi-input-border);
+    box-shadow: var(--boomi-input-shadow);
+    transition: border-color .15s ease, box-shadow .15s ease, outline-color .15s ease;
+  }
+  .boomi-input::placeholder {
+    color: var(--boomi-input-placeholder);
+  }
+  .boomi-input:focus {
+    outline: none;
+  }
+  .boomi-input:focus-visible {
+    border-color: var(--boomi-input-border-focus, var(--boomi-input-border));
+    box-shadow: var(--boomi-input-shadow-focus, var(--boomi-input-shadow));
+    outline: 1px solid var(--boomi-input-outline-focus, var(--boomi-input-border-focus, currentColor));
+  }
+  .boomi-input:disabled {
+    background-color: var(--boomi-input-bg-disabled, var(--boomi-input-bg));
+    color: var(--boomi-input-fg-disabled, var(--boomi-input-fg));
+    border-color: var(--boomi-input-border-disabled, var(--boomi-input-border));
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+  .boomi-input:invalid {
+    border-color: var(--boomi-input-border-invalid, var(--boomi-input-border));
+  }
+  .boomi-input:focus-visible:invalid {
+    outline-color: var(--boomi-input-outline-invalid, var(--boomi-input-border-invalid, currentColor));
+  }
+
+  /* Table Row Styles */
+  .boomi-table-row {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+  .boomi-table-row:nth-child(odd) {
+    background-color: var(--boomi-table-row-odd-bg);
+  }
+  .boomi-table-row:nth-child(even) {
+    background-color: var(--boomi-table-row-even-bg);
+  }
+  .boomi-table-row-scale:hover {
+    transform: scale(1.01);
+  }
+  .boomi-table-row:hover {
+    box-shadow: var(--boomi-table-row-hover-shadow);
+  }
+  .boomi-table-header {
+    background-color: var(--boomi-table-header-bg);
+    color: var(--boomi-table-header-fg);
+    border-bottom: 1px solid var(--boomi-table-header-border, currentColor);
+  }
+
+  /* Admin layout */
+  .boomi-admin-shell {
+    --_shell-bg: var(--boomi-admin-shell-bg, var(--boomi-root-bg-color));
+    --_shell-fg: var(--boomi-admin-shell-fg, var(--boomi-root-fg-color));
+    --_shell-radius: var(--boomi-admin-shell-radius, 0rem);
+    --_shell-shadow: var(--boomi-admin-shell-shadow, var(--boomi-card-shadow, none));
+    display: flex;
+    min-height: 540px;
+    height: 100%;
+    width: 100%;
+    background-color: var(--_shell-bg);
+    color: var(--_shell-fg);
+    border-radius: var(--_shell-radius);
+    box-shadow: var(--_shell-shadow);
+    overflow: hidden;
+  }
+
+  .boomi-admin-sidebar {
+    --_sidebar-bg: var(
+      --boomi-admin-sidebar-bg,
+      var(--boomi-header-bg, var(--boomi-card-bg, var(--boomi-root-bg-color)))
+    );
+    --_sidebar-fg: var(--boomi-admin-sidebar-fg, var(--boomi-header-fg, var(--boomi-root-fg-color)));
+    --_sidebar-border: var(--boomi-admin-sidebar-border, var(--boomi-card-border, transparent));
+    width: var(--boomi-admin-sidebar-width, 16rem);
+    background-color: var(--_sidebar-bg);
+    color: var(--_sidebar-fg);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--_sidebar-border);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .boomi-admin-logo {
+    height: 4rem;
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--boomi-admin-sidebar-border, var(--boomi-card-border, transparent));
+  }
+  .boomi-admin-logo-text {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .boomi-admin-nav {
+    flex: 1;
+    padding: 1rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    overflow-y: auto;
+  }
+  .boomi-admin-nav-button {
+    --_nav-bg: var(--boomi-admin-nav-bg, transparent);
+    --_nav-fg: var(--boomi-admin-nav-fg, var(--boomi-admin-sidebar-fg, currentColor));
+    --_nav-bg-hover: var(
+      --boomi-admin-nav-bg-hover,
+      color-mix(in srgb, var(--_nav-bg) 75%, transparent)
+    );
+    --_nav-fg-hover: var(--boomi-admin-nav-fg-hover, var(--_nav-fg));
+    --_nav-bg-active: var(
+      --boomi-admin-nav-bg-active,
+      color-mix(in srgb, var(--_nav-bg) 85%, transparent)
+    );
+    --_nav-fg-active: var(--boomi-admin-nav-fg-active, var(--_nav-fg));
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.9rem;
+    border-radius: var(--boomi-admin-nav-radius, 0.625rem);
+    background-color: var(--_nav-bg);
+    color: var(--_nav-fg);
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-align: left;
+    border: 1px solid transparent;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .boomi-admin-nav-button:hover {
+    background-color: var(--_nav-bg-hover);
+    color: var(--_nav-fg-hover);
+    border-color: var(--boomi-admin-nav-border-hover, transparent);
+  }
+  .boomi-admin-nav-button.is-active {
+    background-color: var(--_nav-bg-active);
+    color: var(--_nav-fg-active);
+    border-color: var(--boomi-admin-nav-border-active, var(--boomi-admin-nav-border-hover, transparent));
+    box-shadow: var(--boomi-admin-nav-shadow-active, inset 0 0 0 1px currentColor);
+  }
+  .boomi-admin-nav-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+  }
+  .boomi-admin-nav-label {
+    flex: 1;
+  }
+
+  .boomi-admin-logout {
+    padding: 1rem;
+    border-top: 1px solid var(--boomi-admin-sidebar-border, var(--boomi-card-border, transparent));
+  }
+  .boomi-admin-logout-button {
+    --_logout-bg: var(--boomi-admin-logout-bg, var(--boomi-admin-nav-bg, transparent));
+    --_logout-fg: var(--boomi-admin-logout-fg, var(--boomi-admin-sidebar-fg, currentColor));
+    --_logout-bg-hover: var(
+      --boomi-admin-logout-bg-hover,
+      color-mix(in srgb, var(--_logout-bg) 82%, transparent)
+    );
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: var(--boomi-admin-nav-radius, 0.625rem);
+    background-color: var(--_logout-bg);
+    color: var(--_logout-fg);
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .boomi-admin-logout-button:hover {
+    background-color: var(--_logout-bg-hover);
+    border-color: var(--boomi-admin-nav-border-hover, transparent);
+  }
+
+  .boomi-admin-main {
+    flex: 1;
+    overflow: auto;
+    background-color: var(
+      --boomi-admin-main-bg,
+      var(--boomi-page-bg-color, var(--boomi-root-bg-color))
+    );
+    color: var(--boomi-admin-main-fg, var(--boomi-root-fg-color));
+    padding: var(--boomi-admin-main-padding, 0);
+  }
+  .boomi-admin-main-inner {
+    max-width: var(--boomi-admin-main-max-width, 100%);
+    width: 100%;
+    margin: 0;
+    height: 100%;
+  }
+
+  /* Admin CORS cards: slightly larger footprint */
+  .boomi-cors-card {
+    min-height: 150px;
+    padding: 0.5rem;
+  }
+
+  /* Card Styles */
+  .boomi-card {
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--boomi-card-border);
+    background-color: var(--boomi-card-bg);
+    box-shadow: var(--boomi-card-shadow);
+    border-radius: var(--boomi-card-radius, 0.75rem); 
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: visible;
+    z-index: 1;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+  .boomi-card:hover {
+    transform: var(--boomi-card-hover-scale, scale(1.01));
+    box-shadow: var(--boomi-card-hover-shadow, var(--boomi-card-shadow));
+    z-index: 5; /* allow dropdowns to float above neighboring buttons/cards */
+  }
+
+  /* Menu container (panel) */
+  .boomi-menu {
+    background-color: var(--boomi-menu-bg);
+    color: var(--boomi-menu-fg);
+    border: 1px solid var(--boomi-menu-border);
+    box-shadow: var(--boomi-menu-shadow);
+    border-radius: var(--boomi-menu-radius, 0.5rem);
+    font-size: var(--boomi-menu-font-size, 0.875rem);
+    padding: 0.25rem;
+    min-width: 12rem;
+    z-index: 50;
+  }
+
+  /* Menu items */
+  .boomi-menu-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem; 
+    min-height: 2.75rem;
+    line-height: 1.35rem;
+    border-radius: var(--boomi-menu-item-radius, 0.375rem); 
+    color: var(--boomi-menu-item-fg, var(--boomi-menu-fg));
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .boomi-menu-item:hover,
+  .boomi-menu-item[data-headlessui-state~="active"] {
+    background-color: var(--boomi-menu-item-bg-hover, var(--boomi-menu-item-bg));
+    color: var(--boomi-menu-item-fg-hover, var(--boomi-menu-item-fg, var(--boomi-menu-fg)));
+  }
+  .boomi-menu-item:focus-visible {
+    outline: 2px solid var(--boomi-menu-item-outline, var(--boomi-menu-border));
+    outline-offset: 2px;
+  }
+  .boomi-menu-icon {
+    width: 1.25rem; 
+    height: 1.25rem; 
+    opacity: var(--boomi-menu-icon-opacity, 0.95);
+  }
+  .boomi-menu-item--danger {
+    color: var(--boomi-menu-danger-fg);
+  }
+  .boomi-menu-item--danger:hover,
+  .boomi-menu-item--danger[data-headlessui-state~="active"] {
+    background-color: var(--boomi-menu-danger-bg-hover, var(--boomi-menu-item-bg-hover));
+    color: var(--boomi-menu-danger-fg-hover, var(--boomi-menu-danger-fg));
+  }
+  .boomi-menu-divider {
+    height: 1px;
+    background-color: var(--boomi-menu-divider);
+    margin: 0.25rem 0;
+  }
+
+  /* Modal Overlay */
+  .boomi-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483500;
+    display: flex;
+    padding-top: 6rem;
+    align-items: flex-start;     
+    justify-content: center;  
+    background-color: var(--boomi-modal-overlay-bg, rgba(0,0,0,.5));
+    backdrop-filter: blur(4px);
+    overflow: auto;
+  }
+
+  /* Modal itself */
+  .boomi-modal-container {
+    position: relative;
+    width: 65%;
+    transform: translate(
+      var(--boomi-modal-offset-x, 0px),
+      var(--boomi-modal-offset-y, 0px)
+    );
+    background-color: var(--boomi-modal-bg, #fff);
+    color: var(--boomi-modal-fg, #111);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: var(--boomi-modal-shadow, 0 4px 20px rgba(0,0,0,.2));
+    border: var(--boomi-modal-border, 1px solid transparent);
+    overflow: auto;
+  }
+
+  /* Close Button */
+  .boomi-modal-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: transparent;
+    border: none;
+    color: var(--boomi-modal-close-fg, #6b7280);
+    cursor: pointer;
+    transition: color 0.15s ease-in-out;
+  }
+  .boomi-modal-close:hover {
+    color: var(--boomi-modal-close-hover-fg, #111);
+  }
+
+  /* Form label / helper / error */
+  .boomi-form-label {
+    display: block;
+    font-size: 0.875rem; 
+    font-weight: 600;   
+    color: var(--boomi-form-label-fg, var(--boomi-header-fg-color, #374151));
+    margin-bottom: 0.25rem;
+  }
+  .boomi-form-required {
+    color: var(--boomi-form-required-fg, #f87171); 
+    margin-left: 0.125rem;
+  }
+  .boomi-form-helper {
+    font-size: 0.75rem;  
+    color: var(--boomi-form-helper-fg, #6b7280); 
+    margin-top: 0.25rem;
+  }
+  .boomi-form-error {
+    font-size: 0.875rem;
+    color: var(--boomi-danger-fg);
+    margin-top: 0.15rem;
+  }
+
+  /* Input variants (you already have .boomi-input) */
+  .boomi-input--readonly {
+    background-color: var(--boomi-input-bg-disabled, var(--boomi-input-bg));
+    color: var(--boomi-input-fg-disabled, var(--boomi-input-fg));
+    border-color: var(--boomi-input-border-disabled, var(--boomi-input-border));
+    cursor: not-allowed;
+  }
+  .boomi-input--error {
+    border-color: var(--boomi-input-border-invalid, var(--boomi-input-border));
+    outline-color: var(--boomi-input-outline-invalid, var(--boomi-input-border-invalid));
+  }
+
+  /* Select button (ListboxButton) */
+  .boomi-select {
+    position: relative;
+    background-color: var(--boomi-select-bg, var(--boomi-input-bg, #fff));
+    color: var(--boomi-select-fg, var(--boomi-input-fg, #111));
+    border: 1px solid var(--boomi-select-border, var(--boomi-input-border, #d1d5db));
+    box-shadow: var(--boomi-select-shadow, var(--boomi-input-shadow, 0 0 0 0 rgba(0,0,0,0)));
+    border-radius: 0.375rem; 
+    padding: 0.5rem 2.5rem 0.5rem 0.75rem; 
+    text-align: left;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .boomi-select:focus-visible {
+    outline: none;
+    border-color: var(--boomi-select-border-focus, var(--boomi-input-border-focus, #6366f1));
+    box-shadow: var(--boomi-select-shadow-focus, var(--boomi-input-shadow-focus, 0 0 0 2px rgba(99,102,241,.35)));
+  }
+  .boomi-select--disabled {
+    background-color: var(--boomi-select-bg-disabled, var(--boomi-input-bg-disabled, #f9fafb));
+    color: var(--boomi-select-fg-disabled, var(--boomi-input-fg-disabled, #6b7280));
+    border-color: var(--boomi-select-border-disabled, var(--boomi-input-border-disabled, #e5e7eb));
+    cursor: not-allowed;
+  }
+  .boomi-select--error {
+    border-color: var(--boomi-select-border-invalid, var(--boomi-input-border-invalid, #f87171));
+    box-shadow: none;
+  }
+  .boomi-select-icon {
+    width: 1rem; /* h-4 */
+    height: 1rem; /* w-4 */
+    color: var(--boomi-select-icon, #9ca3af);
+  }
+
+  /* Options panel (ListboxOptions) */
+  .boomi-options {
+    margin-top: 0.25rem; 
+    max-height: 9rem;  
+    overflow: auto;
+    background-color: var(--boomi-options-bg, #fff);
+    color: var(--boomi-options-fg, #111);
+    border: 1px solid var(--boomi-options-border, #e5e7eb);
+    border-radius: 0.375rem;
+    box-shadow: var(--boomi-options-shadow,
+      0 10px 15px -3px rgba(0,0,0,0.1),
+      0 4px 6px -4px rgba(0,0,0,0.1)
+    );
+    z-index: 9999;
+  }
+
+  /* Search bar inside options */
+  .boomi-options-search {
+    background-color: var(--boomi-options-search-bg, var(--boomi-options-bg, #fff));
+    border-bottom: 1px solid var(--boomi-options-border, #e5e7eb);
+    padding: 0.25rem; /* p-1 */
+  }
+
+  /* Option rows */
+  .boomi-option {
+    position: relative;
+    cursor: default;
+    user-select: none;
+    padding: 0.5rem 2.25rem 0.5rem 0.75rem; 
+    border-radius: 0.375rem;
+    color: var(--boomi-option-fg, var(--boomi-options-fg, #111));
+    background: var(--boomi-option-bg, transparent);
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .boomi-option--active {
+    background-color: var(--boomi-option-bg-active, var(--boomi-menu-item-bg-hover, #f3f4f6));
+    color: var(--boomi-option-fg-active, var(--boomi-option-fg, #111));
+  }
+  .boomi-option--selected {
+    background-color: var(--boomi-option-bg-selected, var(--boomi-option-bg-active));
+    color: var(--boomi-option-fg-selected, #fff);
+  }
+  .boomi-option--placeholder {
+    color: var(--boomi-option-fg-placeholder, #9ca3af);
+    font-style: italic;
+  }
+
+  /* Loader */
+  .boomi-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    row-gap: 0.5rem; 
+  }
+  .boomi-loader-dots {
+    display: flex;
+    column-gap: 0.25rem;
+  }
+  .boomi-loader-dot {
+    width: var(--boomi-loader-dot-size, 0.75rem);  
+    height: var(--boomi-loader-dot-size, 0.75rem); 
+    border-radius: 9999px;
+    background-color: var(--boomi-loader-dot-bg, #111827);
+    opacity: var(--boomi-loader-dot-opacity, 1);
+    animation: boomi-bounce 0.9s infinite ease-in-out;
+  }
+  .boomi-loader-dot--1 {
+    animation-delay: 0s;
+    opacity: var(--boomi-loader-dot1-opacity, 0.25);
+  }
+  .boomi-loader-dot--2 {
+    animation-delay: 0.12s;
+    opacity: var(--boomi-loader-dot2-opacity, 0.6);
+  }
+  .boomi-loader-dot--3 {
+    animation-delay: 0.24s;
+    opacity: var(--boomi-loader-dot3-opacity, 1);
+  }
+  .boomi-loader-message {
+    font-size: 0.875rem; 
+    color: var(--boomi-loader-msg-fg, #4b5563); 
+    padding-top: 0.5rem; 
+    text-align: center;
+  }
+  @keyframes boomi-bounce {
+    0%, 80%, 100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-35%);
+    }
+  }
+
+  /* Overlay background */
+  .boomi-spinner-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    padding-top: 8rem;
+    align-items: flex-start;
+    justify-content: center;
+    background-color: var(--boomi-spinner-overlay-bg, rgba(0,0,0,0.5));
+    backdrop-filter: blur(var(--boomi-spinner-overlay-blur, 4px));
+  }
+  .boomi-spinner-overlay--contained {
+    position: absolute;
+    padding-top: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: inherit;
+    background-color: var(--boomi-spinner-overlay-contained-bg,
+      color-mix(in srgb, var(--boomi-agent-update-bg, var(--boomi-page-bg-color)) 80%, transparent));
+    backdrop-filter: blur(var(--boomi-spinner-overlay-contained-blur, 2px));
+    z-index: 20;
+  }
+
+  /* Center container */
+  .boomi-spinner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    row-gap: 1rem;
+  }
+
+  /* Ring wrapper (so ping + spin stack) */
+  .boomi-spinner-ring-wrap {
+    position: relative;
+    width: var(--boomi-spinner-size, 4rem);  
+    height: var(--boomi-spinner-size, 4rem); 
+  }
+
+  /* Main spinning ring */
+  .boomi-spinner-ring {
+    width: 100%;
+    height: 100%;
+    border-width: var(--boomi-spinner-border-width, 4px);
+    border-style: solid;
+    border-color: transparent;
+    border-top-color: var(--boomi-spinner-ring-color, white);
+    border-radius: 9999px;
+    animation: boomi-spin 1s linear infinite;
+  }
+
+  /* Pulsing background ring */
+  .boomi-spinner-ring-ping {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background-color: var(--boomi-spinner-ping-color, white);
+    opacity: var(--boomi-spinner-ping-opacity, 0.1);
+    animation: boomi-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  /* Message text */
+  .boomi-spinner-message {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--boomi-spinner-message-fg, white);
+    animation: boomi-pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Animations */
+  @keyframes boomi-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes boomi-ping {
+    0% {
+      transform: scale(1);
+      opacity: var(--boomi-spinner-ping-opacity, 0.1);
+    }
+    75%, 100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+
+  @keyframes boomi-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  /* Root wrapper */
+  .boomi-wizard {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* Steps row */
+  .boomi-steps {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;         
+    padding: 1rem;       
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .boomi-step {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 2rem; 
+    flex: 0 0 auto;
+  }
+
+  .boomi-step--with-connector {
+    flex: 1 1 0; 
+  }
+
+  .boomi-step-row {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem; 
+  }
+
+  .boomi-step-dot {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 1.75rem;     
+    height: 1.75rem;  
+    flex-shrink: 0;
+    font-weight: 600;
+    border-radius: 9999px;
+    background-color: var(--boomi-wizard-step-dot-bg);
+    color: var(--boomi-wizard-step-dot-fg);
+    box-shadow: var(--boomi-wizard-step-dot-shadow, 0 0 0 0 rgba(0,0,0,0));
+    border: 1px solid var(--boomi-wizard-step-dot-border, transparent);
+    transition: background-color .15s ease, color .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+
+  .boomi-step-connector {
+    margin-inline-start: 0.5rem;
+    height: 1px;
+    flex: 1 1 auto;
+    background: var(--boomi-wizard-connector-bg);
+    box-shadow: var(--boomi-wizard-connector-shadow, none);
+  }
+
+  .boomi-step:last-child .boomi-step-connector {
+    display: none !important;
+  }
+
+  .boomi-step-label {
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;  
+    color: var(--boomi-wizard-label-fg);
+  }
+
+  /* States */
+  .boomi-step--active .boomi-step-dot {
+    background-color: var(--boomi-wizard-step-dot-bg-active);
+    color: var(--boomi-wizard-step-dot-fg-active);
+    border-color: var(--boomi-wizard-step-dot-border-active, var(--boomi-wizard-step-dot-bg-active));
+    box-shadow: var(--boomi-wizard-step-dot-shadow-active, var(--boomi-wizard-step-dot-shadow));
+  }
+  .boomi-step--completed .boomi-step-dot {
+    background-color: var(--boomi-wizard-step-dot-bg-completed);
+    color: var(--boomi-wizard-step-dot-fg-completed);
+    border-color: var(--boomi-wizard-step-dot-border-completed, var(--boomi-wizard-step-dot-bg-completed));
+    box-shadow: var(--boomi-wizard-step-dot-shadow-completed, var(--boomi-wizard-step-dot-shadow));
+  }
+
+  /* Card container for pages */
+  .boomi-wizard-card {
+    margin-top: 1rem;    
+    background-color: var(--boomi-wizard-card-bg);
+    color: var(--boomi-wizard-card-fg);
+    border: 1px solid var(--boomi-wizard-card-border);
+    border-radius: 0.75rem; 
+    box-shadow: var(--boomi-wizard-card-shadow);
+    padding: 1rem;       
+  }
+
+  /* Link row (top of page) */
+  .boomi-wizard-links {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    padding: 0.5rem;      
+    margin-top: 0.5rem;   
+  }
+  .boomi-wizard-link-left { flex: 1 1 auto; }
+  .boomi-wizard-link-right { display: flex; justify-content: flex-end; padding-right: 0.5rem; }
+
+  .boomi-wizard-link {
+    font-size: 0.875rem;    
+    font-weight: 600;         
+    color: var(--boomi-wizard-link-fg);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color .15s ease;
+  }
+  .boomi-wizard-link:hover {
+    color: var(--boomi-wizard-link-fg-hover, var(--boomi-wizard-link-fg));
+  }
+  .boomi-wizard-link-strong {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--boomi-wizard-link-strong-fg, var(--boomi-wizard-link-fg));
+    cursor: pointer;
+  }
+
+  /* Bottom action row */
+  .boomi-wizard-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    padding: 0.5rem;   
+    margin-top: 0.5rem; 
+  }
+
+  /* Notifications */
+  .boomi-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: .5rem;
+    padding: 1rem;           
+    border: 1px solid var(--boomi-notice-border);
+    border-radius: var(--boomi-notice-radius, .5rem);
+    background: var(--boomi-notice-bg);
+    color: var(--boomi-notice-fg);
+    box-shadow: var(--boomi-notice-shadow, none);
+  }
+  .boomi-notice__icon {
+    width: 1.25rem; 
+    height: 1.25rem;
+    opacity: var(--boomi-notice-icon-opacity, .95);
+  }
+  .boomi-notice__text {
+    font-size: .875rem;  
+    font-weight: 500;
+    line-height: 1.25rem;
+  }
+  .boomi-notice__label {
+    font-weight: 700;
+    margin-right: .25rem;
+  }
+
+  /* Generic "Update" panel */
+  .boomi-update {
+    background-color: var(--boomi-update-bg);
+    color: var(--boomi-update-fg);
+    border: 1px solid var(--boomi-update-border);
+    border-radius: var(--boomi-update-radius, .75rem);
+    box-shadow: var(--boomi-update-shadow);
+    padding: var(--boomi-update-padding, 1rem);
+  }
+
+  /* Optional header block inside an update panel */
+  .boomi-update-header {
+    margin-bottom: .5rem;
+    padding-inline: var(--boomi-update-header-px, .5rem);
+  }
+  .boomi-update-title {
+    font-size: 1.125rem;   
+    font-weight: 700;      
+    color: var(--boomi-update-title-fg, currentColor);
+    margin-bottom: .25rem; 
+  }
+  .boomi-update-desc {
+    font-size: .875rem;   
+    color: var(--boomi-update-desc-fg, var(--boomi-page-fg-color));
+    margin-bottom: 1rem;   
+  }
+
+  /* Content section inside panel */
+  .boomi-update-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--boomi-update-body-gap, 1rem);
+  }
+
+  /* Actions row (bottom of panel) */
+  .boomi-update-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: .5rem;           
+    margin-top: 1.5rem;  
+  }
+
+  /* Loading / empty states alignment helper */
+  .boomi-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Tabs wrapper (optional border) */
+  .boomi-tabs {
+    border-bottom: 1px solid var(--boomi-tablist-border, var(--boomi-update-border));
+    padding-top: 1rem;  
+    padding-bottom: 0;  
+  }
+
+  /* Tablist row */
+  .boomi-tablist {
+    display: flex;
+    gap: .5rem;           
+    padding-left: 1rem;   
+    padding-right: 1rem;
+  }
+
+  /* Individual tab */
+  .boomi-tab {
+    background-color: var(--boomi-tab-bg, var(--boomi-btn-secondary-bg));
+    color: var(--boomi-tab-fg, var(--boomi-btn-secondary-fg));
+    border: 1px solid var(--boomi-tab-border, var(--boomi-btn-secondary-border));
+    border-bottom: none; 
+    border-top-left-radius: .5rem;
+    border-top-right-radius: .5rem;
+    padding: .5rem 1rem; 
+    font-size: .875rem;  
+    font-weight: 600;   
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+  }
+
+  .boomi-tab:hover {
+    background-color: var(--boomi-tab-bg-hover, var(--boomi-btn-secondary-bg-hover, var(--boomi-tab-bg)));
+    color: var(--boomi-tab-fg-hover, var(--boomi-btn-secondary-fg));
+  }
+
+  .boomi-tab--active {
+    background-color: var(--boomi-tab-bg-active, var(--boomi-btn-primary-bg));
+    color: var(--boomi-tab-fg-active, var(--boomi-btn-primary-fg));
+    border-color: var(--boomi-tab-border-active, var(--boomi-btn-primary-border));
+  }
+
+  /* Inner content area under tabs */
+  .boomi-update-content {
+    padding: 1rem; 
+    background-color: var(--boomi-update-content-bg);
+    color: var(--boomi-update-content-fg);
+    border: 1px solid var(--boomi-update-border);
+    border-top: none; 
+    border-bottom-left-radius: var(--boomi-update-radius, .2rem);
+    border-bottom-right-radius: var(--boomi-update-radius, .2rem);
+  }
+
+  /* Canvas wrapper */
+  .boomi-map-canvas {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--boomi-map-bg, transparent);
+    color: var(--boomi-map-fg, inherit);
+  }
+
+  /* The connection layer */
+  .boomi-map-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Default path stroke (JS can override per-selection if needed) */
+  .boomi-map-svg path {
+    stroke: var(--boomi-map-line, currentColor);
+    stroke-width: var(--boomi-map-line-width, 1.4px);
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    filter: var(--boomi-map-line-filter, none); 
+  }
+
+  /* Default path highlighted stroke (JS can override per-selection if needed) */
+  .boomi-map-svg path.is-highlighted {
+    stroke: var(--boomi-map-line-highlight);
+    stroke-width: var(--boomi-map-line-width, 2.5px);
+  }
+
+  /* when anything is selected, dim non-highlighted paths */
+  .boomi-map-svg.has-selection path:not(.is-highlighted) {
+    opacity: var(--boomi-map-line-dim);
+  }
+
+  /* Columns */
+  .boomi-map-col { display: flex; flex-direction: column; gap: .5rem; z-index: 10; }
+  .boomi-map-col--sources { width: 25%; padding-right: .5rem; }
+  .boomi-map-col--functions { width: 40%; align-items: center; padding-inline: .5rem; }
+  .boomi-map-col--targets { width: 25%; padding-left: .5rem; }
+
+  .boomi-map-heading {
+    font-weight: 600;
+    color: var(--boomi-map-heading-fg, inherit);
+    margin-bottom: .5rem;
+  }
+
+  /* Cards (source / target / function) */
+  .boomi-map-card {
+    position: relative;
+    padding: .5rem;
+    border: 1px solid var(--boomi-map-card-border);
+    border-radius: .5rem;
+    background: var(--boomi-map-card-bg);
+    box-shadow: var(--boomi-map-card-shadow);
+    transition: box-shadow .15s ease, transform .15s ease, background-color .15s ease;
+  }
+  .boomi-map-card:hover {
+    box-shadow: var(--boomi-map-card-shadow-hover, var(--boomi-map-card-shadow));
+    transform: var(--boomi-map-card-transform-hover, none);
+    transform: none;
+  }
+
+  /* Source card states */
+  .boomi-map-card--source { background: var(--boomi-map-source-bg, var(--boomi-map-card-bg)); }
+  .boomi-map-card--source.is-selected { outline: 3px solid var(--boomi-map-source-outline, var(--boomi-accent)); }
+  .boomi-map-card--source.is-mapped { background: var(--boomi-map-source-bg-mapped, var(--boomi-map-source-bg)); border-color: var(--boomi-map-source-border-mapped, var(--boomi-map-card-border)); }
+
+  /* Target card states */
+  .boomi-map-card--target { background: var(--boomi-map-target-bg, var(--boomi-map-card-bg)); }
+  .boomi-map-card--target.is-selected { outline: 3px solid var(--boomi-map-target-outline, var(--boomi-accent)); }
+  .boomi-map-card--target.is-mapped { background: var(--boomi-map-target-bg-mapped, var(--boomi-map-target-bg)); border-color: var(--boomi-map-target-border-mapped, var(--boomi-map-card-border)); }
+
+  /* Function card */
+  .boomi-map-card--function {
+    background: var(--boomi-map-func-bg, var(--boomi-map-card-bg));
+    color: var(--boomi-map-func-fg, inherit);
+  }
+  .boomi-map-card--function:hover {
+    --boomi-map-card-transform-hover: none;
+  }
+  .boomi-map-svg { z-index: 5; }   
+  .boomi-map-col { z-index: 10; }     
+  .boomi-map-card--function .boomi-map-card-title {
+    color: var(--boomi-map-func-title-fg, var(--boomi-accent));
+    font-weight: 600;
+  }
+  .boomi-map-card--function .boomi-map-card-subtitle {
+    color: var(--boomi-map-func-subtle-fg, var(--boomi-muted));
+    font-size: .75rem;
+  }
+
+  /* Pins / endpoints */
+  .boomi-map-pin {
+    position: absolute;
+    width: .75rem; 
+    height: .75rem;
+    border-radius: 9999px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .boomi-map-pin.--source {
+    right: -10px; top: 50%; transform: translateY(-50%);
+    background: var(--boomi-map-pin-source-bg);
+    border: 2px solid var(--boomi-map-pin-source-border, transparent);
+  }
+  .boomi-map-pin.--target {
+    left: -10px; top: 50%; transform: translateY(-50%);
+    background: var(--boomi-map-pin-target-bg);
+    border: 2px solid var(--boomi-map-pin-target-border, transparent);
+  }
+  .boomi-map-pin.--input {
+    left: -14px; top: 50%; transform: translateY(-50%);
+    background: var(--boomi-map-pin-input-bg);
+    border: 2px solid var(--boomi-map-pin-input-border, transparent);
+  }
+  .boomi-map-pin.--output {
+    right: -16px; top: 50%; transform: translateY(-50%);
+    background: var(--boomi-map-pin-output-bg);
+    border: 2px solid var(--boomi-map-pin-output-border, transparent);
+  }
+  /* Selectable pins read the animation from a variable */
+  .boomi-map-pin.is-selectable {
+    cursor: pointer;
+  }
+  .boomi-map-pin.is-mappable {
+    animation: boomi-map-pulse 1.2s ease-in-out infinite;
+    border-color: var(--boomi-map-pulse-border);
+    opacity: var(--boomi-map-pin-mappable-opacity, 0.9);
+    filter: saturate(0.95) brightness(1.1);
+  }
+  .boomi-map-pin.--source.is-mappable { 
+    animation: none !important; 
+    opacity: 1 !important; 
+    filter: none !important; 
+  }
+  .boomi-map-pin.is-mappable::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 9999px;
+    border: 2px solid var(--boomi-map-pulse-border, currentColor);
+    animation: boomi-map-pulse 1.2s ease-out infinite;
+    pointer-events: none;
+    opacity: .75;
+  }
+  .boomi-map-pin.is-danger    { background: var(--boomi-map-pin-danger-bg); }
+  .boomi-map-pin:hover        { transform: translateY(-50%) scale(1.06); }
+
+  /* Active/selected function OUTPUT pin */
+  .boomi-map-pin.--output.is-active-output {
+    /* animate like a “picked up” pin */
+    --boomi-map-pin-anim: boomi-map-pulse 1.15s ease-in-out infinite;
+    animation: var(--boomi-map-pin-anim);
+
+    /* distinct color when active */
+    background: var(--boomi-map-pin-output-bg-active, var(--boomi-map-pin-output-bg));
+    border-color: var(--boomi-map-pin-output-border-active, currentColor);
+
+    /* subtle halo + slight emphasis */
+    box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 18%, transparent);
+    opacity: var(--boomi-map-pin-active-opacity, 0.96);
+    filter: saturate(1.05) brightness(1.05);
+  }
+
+  /* Little “x” badge on mapped endpoints */
+  .boomi-map-pin-badge {
+    position: absolute; top: -4px; right: -6px;
+    width: 1rem; height: 1rem;
+    border-radius: 9999px;
+    background: var(--boomi-map-pin-badge-bg);
+    color: var(--boomi-map-pin-badge-fg);
+    font-size: .75rem; line-height: 1rem; text-align: center;
+    cursor: pointer;
+  }
+
+  /* Add button (optional if not using your Button component) */
+  .boomi-map-add-btn {
+    display: inline-flex; align-items: center; gap: .25rem;
+    border: 1px solid var(--boomi-map-add-border, var(--boomi-btn-secondary-border));
+    background: var(--boomi-map-add-bg, var(--boomi-btn-secondary-bg));
+    color: var(--boomi-map-add-fg, var(--boomi-btn-secondary-fg));
+    padding: .375rem .75rem; border-radius: .375rem; font-size: .75rem; font-weight: 600;
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
+    box-shadow: var(--boomi-map-add-shadow, none);
+  }
+  .boomi-map-add-btn:hover {
+    background: var(--boomi-map-add-bg-hover, var(--boomi-btn-secondary-bg-hover, var(--boomi-map-add-bg)));
+    color: var(--boomi-map-add-fg-hover, var(--boomi-map-add-fg));
+    border-color: var(--boomi-map-add-border-hover, var(--boomi-map-add-border));
+    box-shadow: var(--boomi-map-add-shadow-hover, var(--boomi-map-add-shadow));
+  }
+  /* 1) Functions must be absolutely positioned (no layout reflow) */
+  .boomi-map-col--functions { position: relative; } 
+  .boomi-map-card.boomi-map-card--function {
+    position: absolute !important;          
+    transition: box-shadow .15s ease, background-color .15s ease !important;
+  }
+
+  /* 3) Don’t nudge function cards on hover (keeps geometry stable) */
+  .boomi-map-card--function:hover {
+    --boomi-map-card-transform-hover: none;
+  }
+
+  /* Function card selected state */
+  .boomi-map-card--function.is-selected {
+    outline: 3px solid var(--boomi-map-func-outline, var(--boomi-accent));
+    outline-offset: 0; 
+  }
+
+  /* 4) Make stacking predictable: columns above SVG for clicks, but SVG underlay for lines */
+  .boomi-map-svg { z-index: 1 !important; }
+  .boomi-map-col { position: relative; z-index: 2 !important; }
+
+  /* Cute pulse for selectable pins (opt-in by themes) */
+  @keyframes boomi-map-pulse {
+    0%,100% { box-shadow: 0 0 0 0 var(--boomi-map-pulse-color); }
+    50%     { box-shadow: 0 0 0 8px var(--boomi-map-pulse-color); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .boomi-map-pin.is-selectable { animation: none; }
+  }
+
+  /* hit highlighting */
+  .boomi-map-card.is-search-hit {
+    outline: 2px solid var(--hit-outline, #ff9800);
+    outline-offset: 2px;
+  }
+  .boomi-map-card.is-current-hit {
+    box-shadow: 0 0 0 3px var(--hit-current, #ffb74d);
+  }
+
+  /* dark-mode overrides (adjust to your theme) */
+  .dark .boomi-map-card.is-search-hit {
+    outline-color: #ffd400; /* bright yellow */
+  }
+  .dark .boomi-map-card.is-current-hit {
+    box-shadow: 0 0 0 3px #ffe266;
+  }
+
+  /* tiny nav buttons */
+  .boomi-btn-xs {
+    font-size: 11px;
+    line-height: 1;
+    padding: 2px 6px;
+  }
+
+  /* ===== Schedule (Process Schedules) ===== */
+  .boomi-sched {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;              
+    padding: 1rem;       
+    background: var(--boomi-update-bg, transparent);
+    color: var(--boomi-update-fg, inherit);
+  }
+
+  /* Card */
+  .boomi-sched-card {
+    border: 1px solid var(--boomi-wizard-card-border, var(--boomi-update-border, currentColor));
+    background: var(--boomi-wizard-card-bg, var(--boomi-card-bg, #fff));
+    color: var(--boomi-wizard-card-fg, var(--boomi-card-fg, #111));
+    border-radius: 0.75rem;  
+    box-shadow: var(--boomi-wizard-card-shadow, var(--boomi-card-shadow, 0 2px 0 #000));
+    overflow: hidden;
+  }
+
+  /* Card header (accordion trigger) */
+  .boomi-sched-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .5rem 1rem;       
+    cursor: pointer;
+    background: var(--boomi-sched-header-bg, transparent);
+    color: var(--boomi-sched-header-fg, inherit);
+    border-bottom: 1px solid var(--boomi-sched-header-border, var(--boomi-update-border, transparent));
+  }
+  .boomi-sched-card__title {
+    font-weight: 700;
+    font-size: .95rem;
+  }
+  .boomi-sched-card__controls {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+  .boomi-sched-card__delete {
+    color: var(--boomi-danger-fg, #ef4444);
+    transition: color .15s ease;
+  }
+  .boomi-sched-card__delete:hover {
+    color: var(--boomi-danger-fg-hover, #b91c1c);
+  }
+
+  /* Card body */
+  .boomi-sched-card__body {
+    padding: 1rem;         
+    display: grid;
+    gap: 1rem;
+  }
+
+  /* Field rows */
+  .boomi-sched-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+  }
+  .boomi-sched-label {
+    font-weight: 600;
+    min-width: 6.5rem;
+  }
+
+  /* Days section */
+  .boomi-sched-days__label {
+    font-weight: 600;
+  }
+  .boomi-sched-days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;             
+    margin-top: .5rem;      
+  }
+  .boomi-sched-day {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    font-size: .9rem;
+  }
+  .boomi-sched-day input[type="checkbox"] {
+    accent-color: var(--boomi-accent, #FF5CA2);
+  }
+
+  /* Top-right add button row */
+  .boomi-sched-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* Wrapper for the whole ConnectorForm */
+  .boomi-connector {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Logical grouping per EnvironmentExtensions */
+  .boomi-connector-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Each connection/process-properties card */
+  .boomi-connector-section {
+    background-color: var(--boomi-connector-bg);
+    color: var(--boomi-connector-fg);
+    border: 1px solid var(--boomi-conn-border);
+    border-radius: var(--boomi-connector-radius, 0.75rem);
+    box-shadow: var(--boomi-connector-shadow, 0 0 0 0 transparent);
+    padding: 0.75rem;
+  }
+
+  /* Error — override variables only */
+  .boomi-connector-section--error {
+     --boomi-conn-border: var(--boomi-danger, #dc2626);
+    --boomi-connector-shadow: 0 0 0 2px var(--boomi-danger, #dc2626);
+  }
+
+  .boomi-connector-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--boomi-connector-title-fg, currentColor);
+    margin-bottom: 0.5rem;
+  }
+  .boomi-connector-heading--error {
+    color: var(--boomi-danger, #dc2626);
+  }
+  .boomi-connector-error-banner {
+    margin: 0.5rem 0 1rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  /* Field wrapper (gives spacing between <Input/> rows) */
+  .boomi-connector-field {
+    margin-bottom: 0.5rem;  
+  }
+
+  /* Action row under a section */
+  .boomi-connector-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding-inline: 1rem;  
+    margin-top: 0.25rem;
+  }
+
+  /* Optional “muted” subtext color inside sections */
+  .boomi-connector-subtle {
+    color: var(--boomi-connector-subtle-fg, inherit);
+  }
+
+  /* If you want a soft inner panel look */
+  .boomi-connector-inner {
+    background-color: var(--boomi-connector-inner-bg, transparent);
+    border: 1px solid var(--boomi-connector-inner-border, transparent);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  /* ===== SweetAlert2 (SwalNotification) ===== */
+  .swal2-container.boomi-swal{
+    --boomi-swal-bg: rgba(0, 0, 0, 0.9);
+  }
+  .swal2-container {
+    z-index: 2147483600 !important;
+  }
+  #boomi-page-root.swal2-container {
+    position: absolute !important;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2147483600 !important; /* above agent modal overlay */
+  }
+
+ .boomi-swal {
+    background-color: var(--boomi-spinner-overlay-bg, rgba(0,0,0,0.5)) !important;
+    backdrop-filter: blur(var(--boomi-spinner-overlay-blur, 4px)) !important;
+  } 
+
+  .swal2-container .boomi-swal-popup {
+    background-color: var(--boomi-swal-bg) !important;
+    opacity: 1 !important;
+    color: var(--boomi-swal-fg) !important;
+    border: var(--boomi-swal-border) !important;
+    box-shadow: var(--boomi-swal-shadow) !important;
+    border-radius: 1rem !important;
+    padding: 1.25rem !important;
+  }
+
+
+  .boomi-swal .swal2-title {
+    color: var(--boomi-update-title-fg, var(--boomi-modal-fg));
+    font-weight: 700;
+    font-size: 1.125rem; 
+    margin-bottom: .25rem;
+  }
+
+  .boomi-swal .swal2-html-container {
+    color: var(--boomi-update-desc-fg, inherit);
+    font-size: 0.95rem;
+  }
+
+  .boomi-swal .swal2-actions {
+    display: flex;
+    gap: .5rem; 
+    margin-top: 1rem;
+  }
+
+  .boomi-swal .swal2-styled:focus {
+    outline: none;
+    box-shadow: var(--boomi-input-shadow-focus, 0 0 0 2px rgba(99,102,241,.35));
+  }
+
+  /* Buttons inherit your design tokens */
+  .boomi-swal .swal2-confirm {
+    background-color: var(--boomi-btn-primary-bg);
+    color: var(--boomi-btn-primary-fg);
+    border: 1px solid var(--boomi-btn-primary-border);
+    box-shadow: var(--boomi-btn-primary-shadow);
+  }
+  .boomi-swal .swal2-confirm:hover {
+    background-color: var(--boomi-btn-primary-bg-hover, var(--boomi-btn-primary-bg));
+  }
+  .boomi-swal .swal2-confirm:active {
+    background-color: var(--boomi-btn-primary-bg-active, var(--boomi-btn-primary-bg));
+  }
+
+  .boomi-swal .swal2-cancel {
+    background-color: var(--boomi-btn-secondary-bg);
+    color: var(--boomi-btn-secondary-fg);
+    border: 1px solid var(--boomi-btn-secondary-border);
+    box-shadow: var(--boomi-btn-secondary-shadow);
+  }
+  .boomi-swal .swal2-cancel:hover {
+    background-color: var(--boomi-btn-secondary-bg-hover, var(--boomi-btn-secondary-bg));
+  }
+  .boomi-swal .swal2-cancel:active {
+    background-color: var(--boomi-btn-secondary-bg-active, var(--boomi-btn-secondary-bg));
+  }
+
+  /* Icon colors align to your notice palette, with sensible fallbacks */
+  .boomi-swal .swal2-icon { border-color: currentColor; }
+  .boomi-swal .swal2-icon.swal2-success {
+    color: var(--boomi-notice-success-fg, #16a34a);
+    border-color: currentColor;
+  }
+  .boomi-swal .swal2-icon.swal2-warning {
+    color: var(--boomi-notice-warning-fg, #f59e0b);
+    border-color: currentColor;
+  }
+  .boomi-swal .swal2-icon.swal2-error {
+    color: var(--boomi-notice-error-fg, #ef4444);
+    border-color: currentColor;
+  }
+
+  /* Progress bar (if you enable timer) */
+  .boomi-swal .swal2-timer-progress-bar {
+    background: var(--boomi-accent, currentColor);
+  }
+
+  /* Optional enter/exit micro-animations (use SweetAlert2 showClass/hideClass) */
+  .boomi-swal-in   { animation: boomi-swal-in 160ms ease-out both; }
+  .boomi-swal-out  { animation: boomi-swal-out 120ms ease-in  both; }
+
+  @keyframes boomi-swal-in {
+    from { transform: translateY(4px) scale(.98); opacity: 0; }
+    to   { transform: translateY(0)   scale(1);    opacity: 1; }
+  }
+  @keyframes boomi-swal-out {
+    from { transform: translateY(0)   scale(1);    opacity: 1; }
+    to   { transform: translateY(4px) scale(.98);  opacity: 0; }
+  }
+
+  /* ===== Agent Panel ===== */
+  .boomi-agent-panel {
+    /* container */
+    background: var(--boomi-agent-bg, var(--boomi-card-bg));
+    color: var(--boomi-agent-fg, var(--boomi-page-fg-color));
+    border: 1px solid var(--boomi-agent-border, var(--boomi-card-border));
+    box-shadow: var(--boomi-agent-shadow,
+      0 12px 24px -8px rgba(0,0,0,.25),
+      0 8px 16px -8px rgba(0,0,0,.12));
+    border-radius: var(--boomi-agent-radius, 1rem);
+    overflow: hidden;
+    backdrop-filter: var(--boomi-agent-blur, none);
+  }
+
+  /* Gradient micro-chrome header with tabs */
+  .boomi-agent-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .5rem .5rem .5rem .375rem;
+    border-bottom: 1px solid var(--boomi-agent-header-border, var(--boomi-card-border));
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--boomi-agent-header-bg, var(--boomi-modal-bg)) 100%, transparent) 0%,
+        color-mix(in srgb, var(--boomi-agent-header-bg, var(--boomi-modal-bg)) 88%, transparent) 100%
+      );
+  }
+
+  .boomi-agent-pane {
+    background-color: var(--boomi-agent-pane-bg, var(--boomi-page-bg-color));
+    color: var(--boomi-agent-pane-fg, var(--boomi-page-fg-color));
+    font-size: .96rem;
+  }
+  .boomi-agent-workspace {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+  .boomi-agent-configure-panel {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+    border-radius: 0;
+    position: relative;
+  }
+
+  .boomi-agent-update {
+    background: var(--boomi-agent-update-bg, var(--boomi-card-bg));
+    border: 1px solid var(--boomi-agent-update-border, var(--boomi-card-border));
+    border-radius: var(--boomi-agent-update-radius, 0);
+    box-shadow: var(--boomi-agent-update-shadow, var(--boomi-card-shadow));
+    color: var(--boomi-agent-update-fg, var(--boomi-card-fg, var(--boomi-page-fg-color)));
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+    position: relative;
+  }
+  .boomi-agent-update__body {
+    padding: 1rem 1.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+    overflow: auto;
+  }
+  .boomi-agent-update__header {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+  }
+  .boomi-agent-update__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: inherit;
+  }
+  .boomi-agent-update__desc {
+    font-size: .95rem;
+    opacity: .8;
+  }
+  .boomi-agent-update__actions {
+    margin-top: auto;
+    display: flex;
+    gap: .75rem;
+    justify-content: flex-end;
+    padding-top: 1rem;
+  }
+
+  .boomi-agent-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999998;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+    color: var(--boomi-page-fg-color, #f8fafc);
+  }
+  .boomi-agent-overlay--full {
+    background: transparent;
+    backdrop-filter: blur(4px);
+  }
+  .boomi-agent-overlay__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .75rem 1rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--boomi-page-fg-color,#f8fafc) 12%, transparent);
+    background: color-mix(in srgb, var(--boomi-page-bg-color,#0b1220) 80%, transparent);
+  }
+  .boomi-agent-overlay__header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .boomi-agent-overlay__title {
+    font-size: .95rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+  }
+  .boomi-agent-overlay__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    background: transparent;
+    overflow: auto;
+  }
+  .boomi-agent-overlay__inner {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background: color-mix(in srgb, var(--boomi-card-bg,#0f172a) 92%, transparent);
+    backdrop-filter: blur(6px);
+  }
+  .boomi-agent-overlay--modal {
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+  }
+  .boomi-agent-overlay__scrim {
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    pointer-events: none;
+  }
+  .boomi-agent-overlay__modal {
+    position: relative;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--boomi-card-border,#334155) 70%, transparent);
+    background: color-mix(in srgb, var(--boomi-card-bg,#0f172a) 70%, transparent);
+    box-shadow: 0 25px 70px rgba(0,0,0,0.45);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .boomi-agent-overlay__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    width: 36px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--boomi-page-fg-color,#fff) 12%, transparent);
+    color: var(--boomi-page-fg-color,#fff);
+    transition: background-color .15s ease, transform .12s ease;
+  }
+  .boomi-agent-overlay__close:hover {
+    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--boomi-page-fg-color,#fff) 22%, transparent);
+  }
+
+  .boomi-agent-tabs { display: flex; gap: .375rem; }
+  .boomi-agent-tab {
+    background: var(--boomi-agent-tab-bg, var(--boomi-tab-bg));
+    color: var(--boomi-agent-tab-fg, var(--boomi-tab-fg));
+    border: 1px solid var(--boomi-agent-tab-border, var(--boomi-tab-border));
+    border-radius: .5rem;
+    padding: .375rem .75rem;
+    transition: transform .12s ease, background-color .15s ease, color .15s ease, box-shadow .15s ease;
+  }
+  .boomi-agent-tab:hover { transform: translateY(-1px); }
+  .boomi-agent-tab.is-active {
+    background: var(--boomi-agent-tab-bg-active, var(--boomi-tab-bg-active));
+    color: var(--boomi-agent-tab-fg-active, var(--boomi-tab-fg-active));
+    border-color: var(--boomi-agent-tab-border-active, var(--boomi-tab-border-active));
+    box-shadow: var(--boomi-agent-tab-shadow-active,
+      0 6px 14px -6px color-mix(in srgb, var(--boomi-accent) 35%, transparent));
+  }
+
+  .boomi-agent-close {
+    padding: .25rem .5rem;
+    border-radius: .5rem;
+    color: var(--boomi-agent-close-fg, var(--boomi-modal-close-fg));
+    transition: background-color .15s ease, color .15s ease, transform .12s ease;
+  }
+  .boomi-agent-close:hover {
+    color: var(--boomi-agent-close-hover-fg, var(--boomi-modal-close-hover-fg));
+    background: var(--boomi-agent-close-bg-hover, color-mix(in srgb, currentColor 8%, transparent));
+    transform: rotate(0deg) scale(1.03);
+  }
+
+  .boomi-agent-body {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+    height: calc(100% - 50px);
+    padding: .75rem;
+  }
+
+  /* Info section */
+  .boomi-agent-section {
+    background: var(--boomi-agent-section-bg, var(--boomi-update-content-bg));
+    color: var(--boomi-agent-section-fg, var(--boomi-update-content-fg));
+    border: 1px solid var(--boomi-agent-section-border, var(--boomi-update-border));
+    border-radius: .75rem;
+    padding: .75rem;
+    box-shadow: var(--boomi-agent-section-shadow, 0 1px 2px rgba(0,0,0,0.06));
+  }
+  .boomi-agent-title { font-weight: 700; font-size: 1rem; margin-bottom: .25rem; }
+  .boomi-agent-kv { display: grid; gap: .25rem; font-size: .9rem; }
+  .boomi-agent-kv > div { display: grid; grid-template-columns: 5rem 1fr; gap: .5rem; }
+
+  /* Chat */
+  .boomi-agent-chat {
+    display: flex; flex-direction: column;
+    background: var(--boomi-agent-chat-bg, var(--boomi-card-bg));
+    color: var(--boomi-agent-chat-fg, inherit);
+    border: 1px solid var(--boomi-agent-chat-border, var(--boomi-card-border));
+    border-radius: .75rem;
+    min-height: 0; /* flex fix for overflowing children */
+    flex: 1 1 auto;
+  }
+
+  .boomi-agent-messages {
+    flex: 1 1 auto;
+    padding: .75rem;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+  }
+
+  /* Message bubbles */
+  .boomi-agent-bubble {
+    max-width: min(820px, 98%);
+    padding: .7rem 1rem;
+    border-radius: 1.25rem;
+    font-size: .95rem;
+    line-height: 1.45rem;
+    border: 1px solid var(--boomi-agent-bubble-border, transparent);
+    box-shadow: var(--boomi-agent-bubble-shadow, 0 1px 2px rgba(0,0,0,.06));
+    backdrop-filter: blur(10px);
+    transition: transform .15s ease, box-shadow .2s ease;
+  }
+  .boomi-agent-bubble.from-user {
+    margin-left: auto;
+    margin-right: 0;
+    background: var(--boomi-agent-bubble-user-bg, color-mix(in srgb, var(--boomi-accent) 12%, transparent));
+    color: var(--boomi-agent-bubble-user-fg, currentColor);
+    border-color: var(--boomi-agent-bubble-user-border, color-mix(in srgb, var(--boomi-accent) 30%, transparent));
+    width: min(75%, 1024px);
+    max-width: min(75%, 1024px);
+  }
+  .boomi-agent-bubble.from-agent {
+    background: var(--boomi-agent-bubble-agent-bg, var(--boomi-update-content-bg));
+    color: var(--boomi-agent-bubble-agent-fg, var(--boomi-update-content-fg));
+    border-color: var(--boomi-agent-bubble-agent-border, var(--boomi-update-border));
+  }
+
+  .boomi-agent-bubble-text { white-space: pre-wrap; }
+  .boomi-agent-bubble:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(15,23,42,0.08);
+  }
+  .boomi-agent-bubble-meta { font-size: .7rem; opacity: .6; margin-top: .25rem; }
+
+  .boomi-agent-text-block {
+    position: relative;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1.25rem;
+    border: 1px solid var(--boomi-agent-text-border, color-mix(in srgb, var(--boomi-agent-pane-fg, #0f172a) 10%, transparent));
+    background: var(--boomi-agent-text-bg, color-mix(in srgb, var(--boomi-agent-pane-bg, #f8fafc) 94%, transparent));
+    color: var(--boomi-agent-text-fg, var(--boomi-agent-pane-fg, #0f172a));
+    box-shadow: 0 16px 32px color-mix(in srgb, #000 12%, transparent);
+  }
+  .boomi-agent-text-block__content {
+    font-size: .75rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .boomi-agent-text-block__content.is-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  }
+  .boomi-agent-text-block__content.is-scrollable {
+    overflow: auto;
+  }
+  .boomi-agent-text-block__copy {
+    position: absolute;
+    top: .55rem;
+    right: .55rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--boomi-agent-text-copy-bg, color-mix(in srgb, var(--boomi-agent-text-fg, #0f172a) 12%, transparent));
+    color: var(--boomi-agent-text-copy-fg, var(--boomi-agent-text-fg, #0f172a));
+    border: none;
+    cursor: pointer;
+    transition: background-color .15s ease, transform .12s ease;
+  }
+  .boomi-agent-text-block__copy:hover {
+    background: var(--boomi-agent-text-copy-bg-hover, color-mix(in srgb, var(--boomi-agent-text-fg, #0f172a) 22%, transparent));
+    transform: translateY(-1px);
+  }
+  .boomi-agent-text-block__copy.is-copied {
+    background: color-mix(in srgb, var(--boomi-agent-text-copy-bg-hover, #000) 90%, transparent);
+    color: var(--boomi-agent-text-copy-fg, currentColor);
+  }
+  .boomi-agent-text-block__copy-toast {
+    position: absolute;
+    top: .7rem;
+    right: 3.3rem;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--boomi-agent-text-copy-fg, var(--boomi-agent-text-fg, #0f172a));
+    opacity: .9;
+  }
+
+  .boomi-agent-inputrow {
+    display: flex;
+    gap: .5rem;
+    padding: .75rem;
+    border-top: 1px solid var(--boomi-agent-chat-border, var(--boomi-card-border));
+    background: var(--boomi-agent-compose-bg, var(--boomi-card-bg));
+    border-radius: 1rem;
+    box-shadow: var(--boomi-agent-compose-shadow, 0 8px 24px rgba(0,0,0,0.08));
+  }
+
+  .boomi-agent-composer {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    padding: clamp(.75rem, 2vw, 1.25rem);
+    background: transparent;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Soft accent bar under the header; theme-aware via tokens */
+  .boomi-hero-bar {
+    height: 6px;
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--boomi-accent) 85%, transparent) 0%,
+        color-mix(in srgb, var(--boomi-accent) 55%, transparent) 40%,
+        color-mix(in srgb, var(--boomi-accent) 25%, transparent) 100%
+      );
+    border-bottom: 1px solid color-mix(in srgb, var(--boomi-accent) 35%, transparent);
+  }
+
+  /* Soft divider that adapts to theme */
+  .boomi-divider-soft {
+    height: 1px;
+    background:
+      color-mix(
+        in srgb,
+        var(--boomi-update-border, currentColor) 55%,
+        transparent
+      );
+    opacity: .6;
+  }
+
+  /* Key/Value layout */
+  .boomi-kv { margin: .25rem 0; }
+  .boomi-kv-row {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, 7.5rem) 1fr;
+    gap: .75rem;
+    align-items: start;
+  }
+  .boomi-kv-key {
+    font-weight: 700;
+    color: var(--boomi-form-label-fg, currentColor);
+    opacity: .9;
+  }
+  .boomi-kv-val {
+    color: var(--boomi-update-content-fg, inherit);
+    word-break: break-word;
+  }
+
+  /* Base chip */
+  .boomi-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .25rem .55rem;
+    font-size: .75rem;
+    font-weight: 700;
+    border-width: 1px;                 /* split, not shorthand */
+    border-style: solid;
+    border-color: var(--boomi-chip-border);
+    background: var(--boomi-chip-bg);
+    color: var(--boomi-chip-fg);
+    border-radius: 9999px;
+    box-shadow:
+      0 1px 2px color-mix(in srgb, var(--boomi-accent) 12%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, white 8%, transparent);
+  }
+
+  /* Variants just retarget the tokens */
+  .boomi-chip--success {
+    --boomi-chip-bg: var(--boomi-chip-success-bg);
+    --boomi-chip-fg: var(--boomi-chip-success-fg);
+    --boomi-chip-border: var(--boomi-chip-success-border);
+  }
+  .boomi-chip--warning {
+    --boomi-chip-bg: var(--boomi-chip-warning-bg);
+    --boomi-chip-fg: var(--boomi-chip-warning-fg);
+    --boomi-chip-border: var(--boomi-chip-warning-border);
+  }
+  .boomi-chip--error {
+    --boomi-chip-bg: var(--boomi-chip-error-bg);
+    --boomi-chip-fg: var(--boomi-chip-error-fg);
+    --boomi-chip-border: var(--boomi-chip-error-border);
+  }
+
+  /* Enter animation */
+  @keyframes boomi-agent-in {
+    from { transform: translateY(10px) scale(.98); opacity: 0; }
+    to   { transform: translateY(0)     scale(1);    opacity: 1; }
+  }
+
+  /* ===== Agent “shimmer” border + soft tint ===== */
+
+  /* Keyframes for the subtle chasing light */
+  @keyframes boomi-border-shimmer-rotate {
+    to { transform: rotate(360deg); }
+  }
+  @property --boomi-angle {
+    syntax: '<angle>';
+    inherits: true;        
+    initial-value: 0deg;
+  }
+  /* --- Card with animated border tracer (pure CSS) --- */
+  .boomi-card--agent {
+    position: relative;
+    isolation: isolate; 
+    background:
+      linear-gradient(var(--boomi-agent-card-tint, color-mix(in srgb, var(--boomi-accent) 6%, transparent)),
+                      var(--boomi-agent-card-tint, transparent)) padding-box,
+      var(--boomi-card-bg);
+    border-color: color-mix(in srgb, var(--boomi-card-border) 65%, var(--boomi-agent-shimmer-1));
+  }
+
+  .boomi-card--agent::before {
+    content: "";
+    position: absolute;
+    inset: 0;                        
+    border-radius: inherit;
+    padding: var(--boomi-agent-ring, 2px);  
+    background:
+      conic-gradient(
+        from var(--boomi-angle, 0deg),
+        transparent 0deg 338deg,       /* narrow lit arc */
+        currentColor 338deg 360deg     /* the “light” */
+      );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    z-index: 0; 
+    filter:
+      drop-shadow(0 0 4px  color-mix(in srgb, currentColor 55%, transparent))
+      drop-shadow(0 0 10px color-mix(in srgb, currentColor 38%, transparent))
+      drop-shadow(0 0 18px color-mix(in srgb, currentColor 22%, transparent));
+    opacity: min(var(--boomi-agent-shimmer-opacity, .35), .6);
+  }
+
+  /* Animate only the angle custom property */
+  @keyframes boomi-angle-sweep {
+    from { --boomi-angle: 0turn; }
+    to   { --boomi-angle: 0.999turn; }
+  }
+
+  /* Drive the animation from the element (propagates to ::before) */
+  .boomi-card--agent {
+    --boomi-angle: 0deg;
+    --boomi-agent-shimmer-speed: 2.8s;
+    --boomi-agent-shimmer-direction: normal;
+
+    animation-name: boomi-angle-sweep;
+    animation-duration: var(--boomi-agent-shimmer-speed);
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-direction: var(--boomi-agent-shimmer-direction);
+  }
+
+  /* Smoother GPU rendering, avoids shimmer aliasing on some GPUs */
+  .boomi-card--agent::before { will-change: background; }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .boomi-card--agent { animation: none !important; }
+  }
+
+  /* Table row variant (keeps it ultra subtle) */
+  .boomi-table-row--agent {
+    --_tint: var(--boomi-agent-row-tint, color-mix(in srgb, var(--boomi-accent) 5%, transparent));
+    background:
+      linear-gradient(var(--_tint), var(--_tint)) padding-box,
+      transparent;
+    border-top: 1px solid color-mix(in srgb, var(--boomi-table-header-border) 60%, var(--boomi-agent-shimmer-2));
+    border-bottom: 1px solid color-mix(in srgb, var(--boomi-table-header-border) 60%, var(--boomi-agent-shimmer-1));
+  }
+  .boomi-table-row--agent { position: relative; }
+  .boomi-table-row--agent::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 0; /* table rows are square; change if you round them */
+    padding: 1px;
+    background:
+      conic-gradient(
+        from var(--boomi-agent-shimmer-angle, 0deg),
+        transparent 0 10%,
+        color-mix(in srgb, var(--boomi-agent-shimmer-1) 60%, transparent) 30%,
+        transparent 60%,
+        color-mix(in srgb, var(--boomi-agent-shimmer-2) 60%, transparent) 80%,
+        transparent
+      );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    opacity: var(--boomi-agent-row-shimmer-opacity, .22);
+    animation: boomi-border-shimmer-rotate var(--boomi-agent-shimmer-speed, 10s) linear infinite;
+    pointer-events: none;
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .boomi--agent-shimmer::before,
+    .boomi-table-row--agent::before {
+      animation: none !important;
+      opacity: 0 !important;
+    }
+  }
+
+
+  /* ---------- Firefox ---------- */
+  .boomi-scroll {
+    /* thumb color | track color */
+    scrollbar-color: var(--boomi-scrollbar-thumb) var(--boomi-scrollbar-bg);
+    scrollbar-width: thin; /* Firefox only: auto | thin | none */
+  }
+
+  /* ---------- WebKit/Blink (Chrome, Edge, Safari) ---------- */
+  .boomi-scroll::-webkit-scrollbar {
+    width: var(--boomi-scrollbar-width);
+    height: var(--boomi-scrollbar-width);
+    background: transparent; /* track paint happens in track piece */
+  }
+  .boomi-scroll::-webkit-scrollbar-track {
+    background: var(--boomi-scrollbar-bg);
+    border-radius: var(--boomi-scrollbar-radius);
+  }
+  .boomi-scroll::-webkit-scrollbar-thumb {
+    background-color: var(--boomi-scrollbar-thumb);
+    border-radius: var(--boomi-scrollbar-radius);
+    border: 3px solid transparent; /* creates “pill” with padding */
+    background-clip: content-box;
+  }
+  .boomi-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: var(--boomi-scrollbar-thumb-hover);
+  }
+  .boomi-scroll::-webkit-scrollbar-thumb:active {
+    background-color: var(--boomi-scrollbar-thumb-active);
+  }
+  .boomi-scroll::-webkit-scrollbar-corner {
+    background: var(--boomi-scrollbar-corner);
+  }
+
+  /* Optional: slightly slimmer on very small containers */
+  .boomi-scroll.is-slim::-webkit-scrollbar { width: 8px; height: 8px; }
+  .boomi-scroll.is-ultraslim::-webkit-scrollbar { width: 6px; height: 6px; }
+
+  /* Optional: show wider thumb on hover (nice for desktop) */
+  .boomi-scroll:hover::-webkit-scrollbar-thumb {
+    border-width: 2px;
+  }
+
+  /* ---------- Themed chip pulse ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    :host([data-animations="on"]) .boomi-chip--pulse::after {
+      animation: boomi-chip-halo 1.8s ease-out infinite !important;
+    }
+    :host([data-animations="on"]) .boomi-chip-dot {
+      animation: boomi-chip-dot-pulse 1.4s ease-in-out infinite !important;
+    }
+  }
+
+  /* Base chip already exists as .boomi-chip in your CSS; we augment it here */
+  .boomi-chip {
+    position: relative;
+    isolation: isolate;
+    /* ensure text is a tad stronger by default */
+    font-weight: 700;
+    z-index: 1; 
+  }
+
+  /* Leading dot picks up the chip color automatically */
+  .boomi-chip-dot {
+    width: .375rem;     /* ~6px */
+    height: .375rem;
+    border-radius: 9999px;
+    background: currentColor;
+    opacity: .85;
+    /* gentle breathing */
+    animation: boomi-chip-dot-pulse 1.4s ease-in-out infinite;
+  }
+
+  /* Soft halo pulse around the chip */
+  .boomi-chip--pulse::after {
+    content: "";
+    position: absolute;
+    inset: -4px;            
+    border-radius: 9999px;
+    pointer-events: none;
+    z-index: 2; 
+    --_halo: var(--boomi-chip-pulse-color, color-mix(in srgb, var(--boomi-accent) 40%, transparent));
+    background: radial-gradient(closest-side, var(--_halo), transparent 70%);
+    opacity: .18;
+    transform: scale(.96);
+    animation: boomi-chip-halo 1.8s ease-out infinite;
+  }
+
+  .boomi-chip--success { --boomi-chip-pulse-color: color-mix(in srgb, var(--boomi-chip-success-fg) 45%, transparent); }
+  .boomi-chip--warning { --boomi-chip-pulse-color: color-mix(in srgb, var(--boomi-chip-warning-fg) 45%, transparent); }
+  .boomi-chip--error   { --boomi-chip-pulse-color: color-mix(in srgb, var(--boomi-chip-error-fg)   45%, transparent); }
+
+  @keyframes boomi-chip-halo {
+    0%   { opacity: .10; transform: scale(.96); }
+    35%  { opacity: .30; transform: scale(1.06); }
+    70%  { opacity: .16; transform: scale(1.10); }
+    100% { opacity: .10; transform: scale(1.12); }
+  }
+
+  @keyframes boomi-chip-dot-pulse {
+    0%, 100% { transform: scale(1);   opacity: .9; }
+    50%      { transform: scale(1.28); opacity: .55; }
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .boomi-chip--pulse::after,
+    .boomi-chip-dot {
+      animation: none !important;
+    }
+  }
+}
+
+@layer base {
+  /* Defaults (light) */
+  :host {
+    /* Full size */
+    display: block;
+    height: 100%;
+
+    /* Font */
+    --boomi-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+                  "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji",
+                  "Segoe UI Symbol", "Noto Color Emoji";
+    --default-font-family: var(--boomi-font);
+
+    /* Core danger tokens */
+    --boomi-danger: theme('colors.rose.600');
+    --boomi-danger-contrast: theme('colors.white');
+    --boomi-danger-fg: var(--boomi-danger);
+    --boomi-danger-border: var(--boomi-danger);
+    --boomi-danger-bg: color-mix(in srgb, var(--boomi-danger) 10%, transparent);
+    --boomi-danger-ring: 0 0 0 2px color-mix(in srgb, var(--boomi-danger) 35%, transparent);  
+    --boomi-error-soft: color-mix(in srgb, var(--boomi-danger) 70%, theme('colors.white'));
+
+    /* Primary Button */
+    --boomi-btn-primary-bg: theme('colors.indigo.600');
+    --boomi-btn-primary-fg: theme('colors.white');
+    --boomi-btn-primary-border: theme('colors.indigo.700');
+    --boomi-btn-primary-shadow:
+      0 4px 6px -1px color-mix(in srgb, theme('colors.indigo.700') 10%, transparent),
+      0 2px 4px -2px color-mix(in srgb, theme('colors.indigo.700') 10%, transparent);
+    --boomi-btn-primary-bg-hover: theme('colors.indigo.700');
+    --boomi-btn-primary-bg-active: theme('colors.indigo.800');
+
+    /* Secondary Button */
+    --boomi-btn-secondary-bg: theme('colors.gray.200');
+    --boomi-btn-secondary-fg: theme('colors.gray.700');
+    --boomi-btn-secondary-border: theme('colors.gray.300');
+    --boomi-btn-secondary-shadow:
+      0 4px 6px -1px color-mix(in srgb, theme('colors.gray.300') 10%, transparent),
+      0 2px 4px -2px color-mix(in srgb, theme('colors.gray.300') 10%, transparent);
+    --boomi-btn-secondary-bg-hover: theme('colors.gray.300');
+    --boomi-btn-secondary-bg-active: theme('colors.gray.400');
+
+    /* Input (light defaults) */
+    --boomi-input-bg: theme('colors.white');
+    --boomi-input-fg: theme('colors.gray.800');
+    --boomi-input-placeholder: theme('colors.gray.400');
+    --boomi-input-border: theme('colors.gray.300');
+    --boomi-input-shadow: 0 0 0 0 rgba(0,0,0,0);
+    --boomi-input-border-focus: theme('colors.indigo.500');
+    --boomi-input-shadow-focus:
+      0 0 0 2px color-mix(in srgb, theme('colors.indigo.500') 35%, transparent);
+    --boomi-input-outline-focus: var(--boomi-input-border-focus);
+    --boomi-input-border-invalid: var(--boomi-danger);
+    --boomi-input-outline-invalid: var(--boomi-danger);
+    --boomi-input-bg-disabled: theme('colors.gray.50');
+    --boomi-input-fg-disabled: theme('colors.gray.500');
+    --boomi-input-border-disabled: theme('colors.gray.200');
+
+    /* Root */
+    --boomi-root-bg-color: theme('colors.white');
+    --boomi-root-fg-color: theme('colors.gray.700');
+
+    /* Page */
+    --boomi-page-bg-color: theme('colors.white');
+    --boomi-page-fg-color: theme('colors.gray.700');
+
+    /* Header */
+    --boomi-show-header: 1;
+    --boomi-header-bg-color: theme('colors.white');
+    --boomi-header-fg-color: theme('colors.gray.700');
+    --boomi-header-fg-hover: theme('colors.gray.600'); 
+    --boomi-header-border-color: theme('colors.gray.200');
+    --boomi-header-shadow:
+      0 4px 6px -1px color-mix(in srgb, theme('colors.gray.200') 10%, transparent),
+      0 2px 4px -2px color-mix(in srgb, theme('colors.gray.200') 10%, transparent);
+
+    /* Table Row */
+    --boomi-table-header-bg: theme('colors.gray.100');
+    --boomi-table-header-fg: theme('colors.gray.700');
+    --boomi-table-header-border: theme('colors.gray.300');
+    --boomi-table-row-odd-bg: theme('colors.white');
+    --boomi-table-row-even-bg: theme('colors.gray.50');
+    --boomi-table-row-hover-shadow:
+      0 4px 6px -1px rgba(0,0,0,0.1),
+      0 2px 4px -2px rgba(0,0,0,0.1);
+
+    /* Cards */
+    --boomi-card-border: theme('colors.indigo.300');
+    --boomi-card-bg: theme('colors.gray.50');
+    --boomi-card-shadow:
+      0 4px 6px -1px rgba(0,0,0,0.1),
+      0 2px 4px -2px rgba(0,0,0,0.1);
+    --boomi-card-hover-shadow:
+      0 8px 10px -1px rgba(99,102,241,0.2),
+      0 4px 6px -2px rgba(99,102,241,0.1);
+    --boomi-card-hover-scale: scale(1.01);
+
+    /* Agent text responses */
+    --boomi-agent-text-bg: color-mix(in srgb, var(--boomi-agent-pane-bg, var(--boomi-page-bg-color)) 94%, transparent);
+    --boomi-agent-text-border: color-mix(in srgb, var(--boomi-agent-pane-fg, var(--boomi-page-fg-color)) 14%, transparent);
+    --boomi-agent-text-fg: var(--boomi-agent-pane-fg, var(--boomi-page-fg-color));
+    --boomi-agent-text-copy-bg: color-mix(in srgb, var(--boomi-agent-text-border) 45%, transparent);
+    --boomi-agent-text-copy-bg-hover: color-mix(in srgb, var(--boomi-agent-text-border) 65%, transparent);
+    --boomi-agent-text-copy-fg: var(--boomi-agent-text-fg);
+
+    /* Sidebar */
+    --boomi-sidebar-bg: color-mix(in srgb, var(--boomi-card-bg) 92%, transparent);
+    --boomi-sidebar-fg: var(--boomi-page-fg-color);
+    --boomi-sidebar-header-bg: color-mix(in srgb, var(--boomi-card-bg) 80%, transparent);
+    --boomi-sidebar-border: var(--boomi-card-border);
+    --boomi-sidebar-header-shadow: 0 1px 2px color-mix(in srgb, var(--boomi-card-border) 35%, transparent);
+    --boomi-sidebar-btn-bg: var(--boomi-btn-primary-bg);
+    --boomi-sidebar-btn-bg-hover: var(--boomi-btn-primary-bg-hover);
+    --boomi-sidebar-btn-fg: var(--boomi-btn-primary-fg);
+    --boomi-sidebar-btn-border: var(--boomi-btn-primary-border);
+    --boomi-sidebar-secondary-btn-bg: var(--boomi-btn-secondary-bg);
+    --boomi-sidebar-secondary-btn-bg-hover: var(--boomi-btn-secondary-bg-hover);
+    --boomi-sidebar-secondary-btn-fg: var(--boomi-btn-secondary-fg);
+    --boomi-sidebar-secondary-btn-border: var(--boomi-btn-secondary-border);
+
+    /* Menus */    
+    --boomi-menu-bg: theme('colors.white');
+    --boomi-menu-fg: theme('colors.gray.700');
+    --boomi-menu-border: theme('colors.gray.200');
+    --boomi-menu-shadow:
+      0 4px 6px -1px rgba(0,0,0,0.08),
+      0 2px 4px -2px rgba(0,0,0,0.06);
+    --boomi-menu-item-bg: transparent;
+    --boomi-menu-item-bg-hover: theme('colors.gray.100');
+    --boomi-menu-item-fg: theme('colors.gray.700');
+    --boomi-menu-item-fg-hover: theme('colors.gray.800');
+    --boomi-menu-divider: theme('colors.gray.200');
+    --boomi-menu-danger-fg: var(--boomi-danger-fg);
+    --boomi-menu-danger-fg-hover: var(--boomi-danger-fg);
+    --boomi-menu-danger-bg-hover: color-mix(in srgb, var(--boomi-danger) 10%, transparent);
+
+    /* Modals */    
+     --boomi-modal-top-offset: 1rem;
+    --boomi-modal-overlay-bg: rgba(0, 0, 0, 0.50);
+    --boomi-modal-bg: theme('colors.white');
+    --boomi-modal-fg: theme('colors.gray.800');
+    --boomi-modal-border: 1px solid theme('colors.gray.200');
+    --boomi-modal-shadow:
+      0 20px 25px -5px rgba(0,0,0,0.10),
+      0 8px 10px -6px rgba(0,0,0,0.10);
+    --boomi-modal-close-fg: theme('colors.gray.400');
+    --boomi-modal-close-hover-fg: theme('colors.gray.700');
+
+     /* Inputs */    
+    --boomi-form-label-fg: theme('colors.gray.700');
+    --boomi-form-helper-fg: theme('colors.gray.500');
+    --boomi-form-error-fg: var(--boomi-danger-fg);
+    --boomi-form-required-fg: theme('colors.rose.400');
+
+      /* Select */
+    --boomi-select-bg: theme('colors.white');
+    --boomi-select-fg: theme('colors.gray.800');
+    --boomi-select-border: theme('colors.gray.300');
+    --boomi-select-shadow: 0 0 0 0 rgba(0,0,0,0);
+    --boomi-select-border-focus: theme('colors.indigo.500');
+    --boomi-select-shadow-focus: 0 0 0 2px color-mix(in srgb, theme('colors.indigo.500') 35%, transparent);
+    --boomi-select-icon: theme('colors.gray.400');
+    --boomi-select-bg-disabled: theme('colors.gray.50');
+    --boomi-select-fg-disabled: theme('colors.gray.500');
+    --boomi-select-border-disabled: theme('colors.gray.200');
+    --boomi-select-border-invalid: var(--boomi-danger);
+    --boomi-options-bg: theme('colors.white');
+    --boomi-options-fg: theme('colors.gray.800');
+    --boomi-options-border: theme('colors.gray.200');
+    --boomi-options-shadow:
+      0 10px 15px -3px rgba(0,0,0,0.10),
+      0 4px 6px -4px rgba(0,0,0,0.10);
+    --boomi-options-search-bg: theme('colors.white');
+    --boomi-option-bg-active: theme('colors.gray.100');
+    --boomi-option-fg-selected: theme('colors.gray.900');
+
+    /* Ajax Loader */
+    --boomi-loader-dot-bg: theme('colors.gray.900');
+    --boomi-loader-dot-size: 0.75rem;
+    --boomi-loader-dot1-opacity: 0.25;
+    --boomi-loader-dot2-opacity: 0.6;
+    --boomi-loader-dot3-opacity: 1;
+    --boomi-loader-msg-fg: theme('colors.gray.600');
+
+    /* Spinner */
+    --boomi-spinner-overlay-bg: rgba(255, 255, 255, 0.6);
+    --boomi-spinner-overlay-blur: 4px;
+    --boomi-spinner-overlay-contained-bg: color-mix(in srgb, theme('colors.gray.200') 45%, transparent);
+    --boomi-spinner-overlay-contained-blur: 2px;
+    --boomi-spinner-ring-color: theme('colors.indigo.500');
+    --boomi-spinner-ping-color: theme('colors.indigo.400');
+    --boomi-spinner-message-fg: theme('colors.gray.700');
+
+    /* Wizard */
+    --boomi-wizard-step-dot-bg: theme('colors.indigo.100');
+    --boomi-wizard-step-dot-fg: theme('colors.gray.800');
+    --boomi-wizard-step-dot-border: theme('colors.indigo.200');
+    --boomi-wizard-step-dot-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    --boomi-wizard-step-dot-bg-active: theme('colors.indigo.400');
+    --boomi-wizard-step-dot-fg-active: theme('colors.white');
+    --boomi-wizard-step-dot-border-active: theme('colors.indigo.500');
+    --boomi-wizard-step-dot-bg-completed: theme('colors.indigo.300');
+    --boomi-wizard-step-dot-fg-completed: theme('colors.white');
+    --boomi-wizard-step-dot-border-completed: theme('colors.indigo.400');
+    --boomi-wizard-connector-bg: theme('colors.gray.300');
+    --boomi-wizard-connector-shadow: none;
+    --boomi-wizard-label-fg: theme('colors.gray.700');
+    --boomi-wizard-card-bg: theme('colors.white');
+    --boomi-wizard-card-fg: theme('colors.gray.800');
+    --boomi-wizard-card-border: theme('colors.gray.200');
+    --boomi-wizard-card-shadow:
+      0 4px 6px -1px rgba(0,0,0,0.08),
+      0 2px 4px -2px rgba(0,0,0,0.06);
+    --boomi-wizard-link-fg: theme('colors.indigo.600');
+    --boomi-wizard-link-fg-hover: theme('colors.indigo.700');
+    --boomi-wizard-link-strong-fg: theme('colors.indigo.700');
+
+    /* Notificatoins */
+    --boomi-notice-bg: var(--boomi-notice-error-bg);
+    --boomi-notice-fg: var(--boomi-notice-error-fg);
+    --boomi-notice-border: var(--boomi-notice-error-border);
+    --boomi-notice-shadow: var(--boomi-notice-error-shadow, 0 0 0 0 transparent);
+
+    /* Update Panels */
+    --boomi-update-bg: var(--boomi-card-bg, theme('colors.white'));
+    --boomi-update-fg: var(--boomi-page-fg-color, theme('colors.gray.700'));
+    --boomi-update-border: var(--boomi-card-border, theme('colors.gray.200'));
+    --boomi-update-shadow: var(--boomi-card-shadow,
+      0 4px 6px -1px rgba(0,0,0,0.08),
+      0 2px 4px -2px rgba(0,0,0,0.06)
+    );
+    --boomi-update-title-fg: theme('colors.gray.800');
+    --boomi-update-desc-fg: theme('colors.gray.600');
+    --boomi-update-content-bg: theme('colors.white');
+    --boomi-update-content-fg: theme('colors.gray.800');
+    --boomi-thread-separator: color-mix(in srgb, var(--boomi-card-border) 70%, transparent);
+
+    /* Tabs */
+    --boomi-tablist-border: theme('colors.gray.200');
+    --boomi-tab-bg: theme('colors.gray.100');
+    --boomi-tab-fg: theme('colors.gray.700');
+    --boomi-tab-border: theme('colors.gray.300');
+    --boomi-tab-bg-hover: theme('colors.gray.200');
+    --boomi-tab-fg-hover: theme('colors.gray.800');
+    --boomi-tab-border-hover: theme('colors.gray.300');
+    --boomi-tab-bg-active: theme('colors.indigo.600');
+    --boomi-tab-fg-active: theme('colors.white');
+    --boomi-tab-border-active: theme('colors.indigo.700');
+
+    /* Mapping Canvas */
+    --boomi-accent: theme('colors.indigo.500');
+    --boomi-muted:  theme('colors.gray.500');
+    --boomi-map-bg: transparent;
+    --boomi-map-fg: inherit;
+    --boomi-map-line-highlight: red;
+    --boomi-map-line-dim: 0.35;
+    --boomi-map-line: theme('colors.gray.600');
+    --boomi-map-line-width: 1.4px;
+    --boomi-map-heading-fg: theme('colors.gray.800');
+    --boomi-map-card-bg: theme('colors.white');
+    --boomi-map-card-border: theme('colors.gray.300');
+    --boomi-map-card-shadow: 0 1px 2px rgba(0,0,0,.06);
+    --boomi-map-card-shadow-hover: 0 8px 20px rgba(99,102,241,.15);
+    --boomi-map-card-transform-hover: scale(1.01);
+    --boomi-map-source-bg: theme('colors.white');
+    --boomi-map-source-bg-mapped: theme('colors.blue.50');
+    --boomi-map-source-border-mapped: theme('colors.blue.400');
+    --boomi-map-source-outline: theme('colors.blue.400');
+    --boomi-map-target-bg: theme('colors.white');
+    --boomi-map-target-bg-mapped: theme('colors.green.50');
+    --boomi-map-target-border-mapped: theme('colors.green.400');
+    --boomi-map-target-outline: theme('colors.green.400');
+    --boomi-map-func-bg: theme('colors.gray.50');
+    --boomi-map-func-fg: theme('colors.gray.800');
+    --boomi-map-func-title-fg: theme('colors.indigo.600');
+    --boomi-map-func-subtle-fg: theme('colors.gray.500');
+    --boomi-map-pin-source-bg: theme('colors.indigo.500');
+    --boomi-map-pin-target-bg: theme('colors.green.500');
+    --boomi-map-pin-input-bg:  theme('colors.yellow.500');
+    --boomi-map-pin-output-bg: theme('colors.purple.500');
+    --boomi-map-pin-badge-bg: theme('colors.red.600');
+    --boomi-map-pin-badge-fg: theme('colors.white');
+    --boomi-map-pin-danger-bg: theme('colors.red.500');
+    --boomi-map-pulse-color: rgba(46, 170, 220, 0.35);
+    --boomi-map-pulse-border: var(--boomi-accent, #2eabdc);
+    --boomi-map-pin-output-bg-active: theme('colors.purple.400');
+    --boomi-map-pin-output-border-active: theme('colors.purple.500');
+    --boomi-map-add-bg: theme('colors.gray.200');
+    --boomi-map-add-fg: theme('colors.gray.700');
+    --boomi-map-add-border: theme('colors.gray.300');
+    --boomi-map-add-bg-hover: theme('colors.gray.300');
+
+    /* Schedule */
+    --boomi-schedule-bg: #FFFFFF;
+    --boomi-schedule-fg: #1F2937;       
+    --boomi-schedule-border: #D1D5DB;        
+    --boomi-schedule-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    --boomi-schedule-title-fg: #111827;       
+    --boomi-schedule-content-fg: #374151;   
+    --boomi-schedule-accordion-bg: #F9FAFB;    
+    --boomi-schedule-accordion-border: #E5E7EB; 
+    --boomi-schedule-btn-bg: #2563EB;       
+    --boomi-schedule-btn-fg: #FFFFFF;
+    --boomi-schedule-btn-border: #1D4ED8;    
+    --boomi-schedule-btn-bg-hover: #1D4ED8;
+    --boomi-schedule-btn-bg-active: #1E40AF;  
+    --boomi-schedule-input-bg: #FFFFFF;
+    --boomi-schedule-input-fg: #111827;
+    --boomi-schedule-input-border: #D1D5DB;
+    --boomi-schedule-input-border-focus: #2563EB;
+    --boomi-schedule-input-bg-disabled: #F3F4F6;
+    --boomi-schedule-input-fg-disabled: #9CA3AF;
+    --boomi-schedule-input-border-disabled: #E5E7EB;
+
+    /* Connections */
+    --boomi-conn-bg: theme('colors.white');
+    --boomi-conn-border: theme('colors.gray.200');
+    --boomi-conn-heading-fg: theme('colors.gray.700');
+    --boomi-conn-field-bg: theme('colors.gray.50');
+    --boomi-conn-field-border: theme('colors.gray.300');
+    --boomi-conn-field-label-fg: theme('colors.gray.800');
+    --boomi-conn-field-error-fg: var(--boomi-danger-fg);
+    --boomi-conn-btn-save-bg: theme('colors.green.600');
+    --boomi-conn-btn-save-fg: theme('colors.white');
+    --boomi-conn-btn-auth-bg: theme('colors.indigo.600');
+    --boomi-conn-btn-auth-fg: theme('colors.white');
+    --boomi-conn-btn-disabled-bg: theme('colors.gray.400');
+    --boomi-conn-btn-disabled-fg: theme('colors.white');
+
+    /* SweetAlert (light) */
+    --boomi-swal-bg: var(--boomi-modal-bg, theme('colors.white'));
+    --boomi-swal-fg: var(--boomi-modal-fg, theme('colors.gray.800'));
+    --boomi-swal-border: var(--boomi-modal-border, 1px solid theme('colors.gray.200'));
+    --boomi-swal-shadow: var(--boomi-modal-shadow,
+      0 20px 25px -5px rgba(0,0,0,0.10),
+      0 8px 10px -6px rgba(0,0,0,0.10)
+    );
+    --boomi-swal-title-fg: var(--boomi-update-title-fg, theme('colors.gray.800'));
+    --boomi-swal-desc-fg:  var(--boomi-update-desc-fg,  theme('colors.gray.600'));
+    --boomi-swal-icon-success: theme('colors.green.600');
+    --boomi-swal-icon-warning: theme('colors.amber.500');
+    --boomi-swal-icon-error: var(--boomi-danger);
+    --boomi-swal-overlay-bg:   var(--boomi-modal-overlay-bg, rgba(0,0,0,.5));
+
+    /* Agents */
+    --boomi-agent-bg: var(--boomi-card-bg);
+    --boomi-agent-fg: var(--boomi-page-fg-color);
+    --boomi-agent-border: var(--boomi-card-border);
+    --boomi-agent-shadow:
+      0 20px 40px -16px rgba(15, 23, 42, .18),
+      0 8px 20px -12px rgba(15, 23, 42, .10);
+    --boomi-agent-header-bg: var(--boomi-modal-bg);
+    --boomi-agent-tab-bg: var(--boomi-tab-bg);
+    --boomi-agent-tab-fg: var(--boomi-tab-fg);
+    --boomi-agent-tab-border: var(--boomi-tab-border);
+    --boomi-agent-tab-bg-active: var(--boomi-tab-bg-active);
+    --boomi-agent-tab-fg-active: var(--boomi-tab-fg-active);
+    --boomi-agent-tab-border-active: var(--boomi-tab-border-active);
+    --boomi-agent-section-bg: var(--boomi-update-content-bg);
+    --boomi-agent-section-fg: var(--boomi-update-content-fg);
+    --boomi-agent-section-border: var(--boomi-update-border);
+    --boomi-agent-chat-bg: var(--boomi-card-bg);
+    --boomi-agent-chat-border: var(--boomi-card-border);
+    --boomi-agent-bubble-agent-bg: var(--boomi-update-content-bg);
+    --boomi-agent-bubble-agent-fg: var(--boomi-update-content-fg);
+    --boomi-agent-bubble-agent-border: var(--boomi-update-border);
+    --boomi-agent-bubble-user-bg: color-mix(in srgb, var(--boomi-accent) 12%, transparent);
+    --boomi-agent-bubble-user-border: color-mix(in srgb, var(--boomi-accent) 30%, transparent);
+    --boomi-agent-update-bg: var(--boomi-card-bg, theme('colors.white'));
+    --boomi-uagent-pdate-fg: var(--boomi-page-fg-color, theme('colors.gray.700'));
+    --boomi-agent-update-border: var(--boomi-card-border, theme('colors.gray.200'));
+    --boomi-agent-update-shadow: var(--boomi-card-shadow,
+      0 4px 6px -1px rgba(0,0,0,0.08),
+      0 2px 4px -2px rgba(0,0,0,0.06)
+    );
+    --boomi-agent-update-title-fg: theme('colors.gray.800');
+    --boomi-agent-update-desc-fg: theme('colors.gray.600');
+    --boomi-agent-update-content-bg: theme('colors.white');
+    --boomi-agent-update-content-fg: theme('colors.gray.800');
+    --boomi-agent-thread-separator: color-mix(in srgb, var(--boomi-card-border) 70%, transparent);
+
+    /* subtle background tints for Agent items */
+    --boomi-agent-card-tint: color-mix(in srgb, var(--boomi-accent) 7%, transparent);
+    --boomi-agent-row-tint:  color-mix(in srgb, var(--boomi-accent) 5%, transparent);
+    --boomi-agent-pane-bg: var(--boomi-agent-pane-bg-color, var(--boomi-page-bg-color));
+    --boomi-agent-pane-fg: var(--boomi-agent-pane-fg-color, var(--boomi-page-fg-color));
+    --boomi-agent-compose-bg: color-mix(in srgb, var(--boomi-card-bg) 96%, transparent);
+    --boomi-agent-compose-border: var(--boomi-card-border);
+    --boomi-agent-compose-shadow: 0 -1px 2px color-mix(in srgb, var(--boomi-card-border) 45%, transparent);
+    --boomi-agent-compose-input-bg: var(--boomi-input-bg);
+    --boomi-agent-compose-input-border: color-mix(in srgb, var(--boomi-input-border) 95%, transparent);
+    --boomi-agent-compose-secondary-bg: color-mix(in srgb, var(--boomi-card-bg) 90%, transparent);
+    --boomi-agent-compose-secondary-border: color-mix(in srgb, var(--boomi-card-border) 80%, transparent);
+
+    /* shimmer colors & behavior */
+    --boomi-agent-shimmer-1: theme('colors.indigo.500');
+    --boomi-agent-shimmer-2: theme('colors.sky.400');
+    --boomi-agent-shimmer-opacity: .35;
+    --boomi-agent-row-shimmer-opacity: .22;
+    --boomi-agent-shimmer-speed: 8s;
+
+    /* Chips */
+    /* Generic / accent-driven */
+    --boomi-chip-bg: color-mix(in srgb, var(--boomi-accent) 12%, transparent);
+    --boomi-chip-fg: color-mix(in srgb, var(--boomi-accent) 85%, currentColor);
+    --boomi-chip-border: color-mix(in srgb, var(--boomi-accent) 40%, transparent);
+
+    /* Status variants */
+    --boomi-chip-success-bg: theme('colors.green.100');
+    --boomi-chip-success-fg: theme('colors.green.800');
+    --boomi-chip-success-border: theme('colors.green.300');
+
+    --boomi-chip-warning-bg: theme('colors.amber.100');
+    --boomi-chip-warning-fg: theme('colors.amber.800');
+    --boomi-chip-warning-border: theme('colors.amber.300');
+
+    --boomi-chip-error-bg: color-mix(in srgb, var(--boomi-danger) 12%, transparent);
+    --boomi-chip-error-fg: var(--boomi-danger-fg);
+    --boomi-chip-error-border: color-mix(in srgb, var(--boomi-danger) 40%, transparent);
+
+    --boomi-scrollbar-width:        10px;     /* total track size */
+    --boomi-scrollbar-radius:       999px;    /* pill */
+    --boomi-scrollbar-bg:           color-mix(in srgb, var(--boomi-update-border, #e5e7eb) 35%, transparent);
+    --boomi-scrollbar-thumb:        color-mix(in srgb, var(--boomi-page-fg-color, #111827) 18%, transparent);
+    --boomi-scrollbar-thumb-hover:  color-mix(in srgb, var(--boomi-accent, #6366f1) 28%, transparent);
+    --boomi-scrollbar-thumb-active: color-mix(in srgb, var(--boomi-accent, #6366f1) 40%, transparent);
+    --boomi-scrollbar-corner:       transparent; /* avoids hard square in corners */
+
+  }
+
+  /* Dark theme */
+  :host([data-theme="dark"]) {
+
+    /* Core danger tokens */
+    --boomi-danger: theme('colors.rose.400');
+    --boomi-danger-contrast: theme('colors.white');
+    --boomi-danger-fg: var(--boomi-danger);
+    --boomi-danger-border: var(--boomi-danger);
+    --boomi-danger-bg: color-mix(in srgb, var(--boomi-danger) 18%, transparent);
+    --boomi-danger-ring: 0 0 0 2px color-mix(in srgb, var(--boomi-danger) 45%, transparent);
+    --boomi-error-soft: color-mix(in srgb, var(--boomi-danger) 55%, theme('colors.gray.100'));
+
+    /* Primary Button */
+    --boomi-btn-primary-bg: theme('colors.indigo.500');
+    --boomi-btn-primary-fg: theme('colors.white');
+    --boomi-btn-primary-border: theme('colors.indigo.600');
+    --boomi-btn-primary-shadow:
+      0 4px 6px -1px color-mix(in srgb, theme('colors.indigo.600') 10%, transparent),
+      0 2px 4px -2px color-mix(in srgb, theme('colors.indigo.600') 10%, transparent);
+    --boomi-btn-primary-bg-hover: theme('colors.indigo.600');
+    --boomi-btn-primary-bg-active: theme('colors.indigo.700');
+
+    /* Secondary Button */  
+    --boomi-btn-secondary-bg: theme('colors.gray.700');
+    --boomi-btn-secondary-fg: theme('colors.gray.100');
+    --boomi-btn-secondary-border: theme('colors.gray.600');
+    --boomi-btn-secondary-shadow:
+      0 4px 6px -1px color-mix(in srgb, theme('colors.gray.600') 10%, transparent),
+      0 2px 4px -2px color-mix(in srgb, theme('colors.gray.600') 10%, transparent);
+    --boomi-btn-secondary-bg-hover: theme('colors.gray.600');
+    --boomi-btn-secondary-bg-active: theme('colors.gray.500');
+
+    /* Input */
+    --boomi-input-bg: theme('colors.gray.800');
+    --boomi-input-fg: theme('colors.gray.100');
+    --boomi-input-placeholder: theme('colors.gray.400');
+    --boomi-input-border: theme('colors.indigo.600');
+    --boomi-input-shadow: 0 0 0 0 rgba(0,0,0,0);
+    --boomi-input-border-focus: theme('colors.indigo.400');
+    --boomi-input-shadow-focus:
+      0 0 0 2px color-mix(in srgb, theme('colors.indigo.400') 35%, transparent);
+    --boomi-input-outline-focus: var(--boomi-input-border-focus);
+    --boomi-input-border-invalid: var(--boomi-danger);
+    --boomi-input-outline-invalid: var(--boomi-danger);
+    --boomi-input-bg-disabled: theme('colors.gray.800');
+    --boomi-input-fg-disabled: theme('colors.gray.400');
+    --boomi-input-border-disabled: theme('colors.gray.700');
+
+    /* Root */
+    --boomi-root-bg-color: theme('colors.gray.900');
+    --boomi-root-fg-color: theme('colors.white');
+
+    /* Page */
+    --boomi-page-bg-color: theme('colors.gray.900');
+    --boomi-page-fg-color: theme('colors.white');
+
+    /* Header */
+    --boomi-show-header: 1;
+    --boomi-header-bg-color: theme('colors.gray.900');
+    --boomi-header-fg-color: theme('colors.white');
+    --boomi-header-fg-hover: theme('colors.indigo.100'); 
+    --boomi-header-border-color: theme('colors.indigo.500');
+    --boomi-header-shadow:
+      0 4px 6px -1px color-mix(in srgb, theme('colors.indigo.500') 10%, transparent),
+      0 2px 4px -2px color-mix(in srgb, theme('colors.indigo.500') 10%, transparent);
+
+    /* Table Row */
+    --boomi-table-header-bg: theme('colors.indigo.500');
+    --boomi-table-header-fg: theme('colors.white');
+    --boomi-table-header-border: theme('colors.gray.700');
+    --boomi-table-row-odd-bg: theme('colors.gray.800');
+    --boomi-table-row-even-bg: theme('colors.gray.700');
+    --boomi-table-row-hover-shadow:
+      0 4px 6px -1px rgba(255,255,255,0.05),
+      0 2px 4px -2px rgba(255,255,255,0.05);
+
+    /* Cards */
+    --boomi-card-border: theme('colors.indigo.500');
+    --boomi-card-bg: theme('colors.gray.800');
+    --boomi-card-shadow:
+      0 4px 6px -1px rgba(255,255,255,0.05),
+      0 2px 4px -2px rgba(255,255,255,0.05);
+    --boomi-card-hover-shadow:
+      0 8px 10px -1px rgba(165,180,252,0.15),
+      0 4px 6px -2px rgba(165,180,252,0.1);
+
+    /* Agent text responses */
+    --boomi-agent-text-bg: color-mix(in srgb, var(--boomi-agent-pane-bg, theme('colors.gray.900')) 88%, var(--boomi-page-fg-color, #e5e7eb) 12%);
+    --boomi-agent-text-border: color-mix(in srgb, var(--boomi-page-fg-color, #e5e7eb) 18%, transparent);
+    --boomi-agent-text-fg: var(--boomi-page-fg-color);
+    --boomi-agent-text-copy-bg: color-mix(in srgb, var(--boomi-agent-text-border) 55%, transparent);
+    --boomi-agent-text-copy-bg-hover: color-mix(in srgb, var(--boomi-agent-text-border) 75%, transparent);
+    --boomi-agent-text-copy-fg: var(--boomi-page-fg-color);
+
+    /* Sidebar */
+    --boomi-sidebar-bg: color-mix(in srgb, var(--boomi-card-bg) 94%, transparent);
+    --boomi-sidebar-fg: var(--boomi-page-fg-color);
+    --boomi-sidebar-header-bg: color-mix(in srgb, var(--boomi-card-bg) 85%, transparent);
+    --boomi-sidebar-border: var(--boomi-card-border);
+    --boomi-sidebar-header-shadow: 0 1px 2px color-mix(in srgb, theme('colors.gray.900') 60%, transparent);
+    --boomi-sidebar-btn-bg: var(--boomi-btn-primary-bg);
+    --boomi-sidebar-btn-bg-hover: var(--boomi-btn-primary-bg-hover);
+    --boomi-sidebar-btn-fg: var(--boomi-btn-primary-fg);
+    --boomi-sidebar-btn-border: var(--boomi-btn-primary-border);
+    --boomi-sidebar-secondary-btn-bg: var(--boomi-btn-secondary-bg);
+    --boomi-sidebar-secondary-btn-bg-hover: var(--boomi-btn-secondary-bg-hover);
+    --boomi-sidebar-secondary-btn-fg: var(--boomi-btn-secondary-fg);
+    --boomi-sidebar-secondary-btn-border: var(--boomi-btn-secondary-border);
+
+     /* Menus */    
+    --boomi-menu-bg: theme('colors.gray.900');
+    --boomi-menu-fg: theme('colors.gray.100');
+    --boomi-menu-border: theme('colors.gray.700');
+    --boomi-menu-shadow:
+      0 4px 6px -1px rgba(255,255,255,0.06),
+      0 2px 4px -2px rgba(255,255,255,0.04);
+    --boomi-menu-item-bg: theme('colors.gray.900');
+    --boomi-menu-item-bg-hover: theme('colors.gray.800');
+    --boomi-menu-item-fg: theme('colors.gray.100');
+    --boomi-menu-item-fg-hover: theme('colors.gray.50');
+    --boomi-menu-divider: theme('colors.gray.700');
+    --boomi-menu-danger-fg: var(--boomi-danger-fg);
+    --boomi-menu-danger-fg-hover: var(--boomi-danger-fg);
+    --boomi-menu-danger-bg-hover: color-mix(in srgb, var(--boomi-danger) 10%, transparent);
+
+    /* Modals */    
+    --boomi-modal-overlay-bg: rgba(0, 0, 0, 0.55);
+    --boomi-modal-bg: theme('colors.gray.900');
+    --boomi-modal-fg: theme('colors.gray.100');
+    --boomi-modal-border: 1px solid theme('colors.gray.700');
+    --boomi-modal-shadow:
+      0 20px 25px -5px rgba(255,255,255,0.07),
+      0 8px 10px -6px rgba(255,255,255,0.05);
+    --boomi-modal-close-fg: theme('colors.gray.400');
+    --boomi-modal-close-hover-fg: theme('colors.gray.100');
+
+    /* Inputs */    
+    --boomi-form-label-fg: theme('colors.gray.200');
+    --boomi-form-helper-fg: theme('colors.gray.400');
+    --boomi-form-error-fg: var(--boomi-danger-fg);
+    --boomi-form-required-fg: theme('colors.rose.300');
+
+    /* Select */   
+    --boomi-select-bg: theme('colors.gray.900');
+    --boomi-select-fg: theme('colors.gray.100');
+    --boomi-select-border: theme('colors.gray.700');
+    --boomi-select-shadow: 0 0 0 0 rgba(0,0,0,0);
+    --boomi-select-border-focus: theme('colors.indigo.400');
+    --boomi-select-shadow-focus: 0 0 0 2px color-mix(in srgb, theme('colors.indigo.400') 35%, transparent);
+    --boomi-select-icon: theme('colors.gray.400');
+    --boomi-select-bg-disabled: theme('colors.gray.800');
+    --boomi-select-fg-disabled: theme('colors.gray.500');
+    --boomi-select-border-disabled: theme('colors.gray.700');
+    --boomi-select-border-invalid: var(--boomi-danger);
+    --boomi-options-bg: theme('colors.gray.900');
+    --boomi-options-fg: theme('colors.gray.100');
+    --boomi-options-border: theme('colors.gray.700');
+    --boomi-options-shadow:
+      0 10px 15px -3px rgba(255,255,255,0.06),
+      0 4px 6px -4px rgba(255,255,255,0.04);
+    --boomi-options-search-bg: theme('colors.gray.900');
+    --boomi-option-bg-active: theme('colors.gray.700');
+    --boomi-option-fg-active: theme('colors.white');
+    --boomi-option-bg-selected: var(--boomi-option-bg-active);
+    --boomi-option-fg-selected: theme('colors.white');
+    --boomi-select-icon: theme('colors.gray.300');
+
+    /* Ajax Loader */
+    --boomi-loader-dot-bg: theme('colors.gray.100');
+    --boomi-loader-dot1-opacity: 0.3;
+    --boomi-loader-dot2-opacity: 0.7;
+    --boomi-loader-dot3-opacity: 1;
+    --boomi-loader-msg-fg: theme('colors.gray.300');
+
+    /* Wizard */
+    --boomi-spinner-overlay-bg: rgba(0, 0, 0, 0.6);
+    --boomi-spinner-overlay-blur: 4px;
+    --boomi-spinner-overlay-contained-bg: color-mix(in srgb, theme('colors.gray.900') 70%, transparent);
+    --boomi-spinner-overlay-contained-blur: 3px;
+    --boomi-spinner-ring-color: theme('colors.amber.400');
+    --boomi-spinner-ping-color: theme('colors.amber.300');
+    --boomi-spinner-message-fg: theme('colors.gray.200');
+    --boomi-wizard-step-dot-bg: theme('colors.gray.700');
+    --boomi-wizard-step-dot-fg: theme('colors.gray.100');
+    --boomi-wizard-step-dot-border: theme('colors.gray.600');
+    --boomi-wizard-step-dot-shadow: 0 1px 2px rgba(255,255,255,0.06);
+    --boomi-wizard-step-dot-bg-active: theme('colors.indigo.500');
+    --boomi-wizard-step-dot-fg-active: theme('colors.white');
+    --boomi-wizard-step-dot-border-active: theme('colors.indigo.400');
+    --boomi-wizard-step-dot-bg-completed: theme('colors.indigo.400');
+    --boomi-wizard-step-dot-fg-completed: theme('colors.white');
+    --boomi-wizard-step-dot-border-completed: theme('colors.indigo.300');
+    --boomi-wizard-connector-bg: theme('colors.gray.600');
+    --boomi-wizard-label-fg: theme('colors.gray.200');
+    --boomi-wizard-card-bg: theme('colors.gray.900');
+    --boomi-wizard-card-fg: theme('colors.gray.100');
+    --boomi-wizard-card-border: theme('colors.gray.700');
+    --boomi-wizard-card-shadow:
+      0 4px 6px -1px rgba(255,255,255,0.06),
+      0 2px 4px -2px rgba(255,255,255,0.04);
+    --boomi-wizard-link-fg: theme('colors.indigo.300');
+    --boomi-wizard-link-fg-hover: theme('colors.indigo.200');
+    --boomi-wizard-link-strong-fg: theme('colors.indigo.200');
+  
+    /* Notificatoins */
+    --boomi-notice-bg: var(--boomi-notice-warning-bg);
+    --boomi-notice-fg: var(--boomi-notice-warning-fg);
+    --boomi-notice-border: var(--boomi-notice-warning-border);
+    --boomi-notice-shadow: var(--boomi-notice-warning-shadow, 0 0 0 0 transparent);
+
+    /* Update Panels */
+    --boomi-update-bg: var(--boomi-card-bg, theme('colors.gray.800'));
+    --boomi-update-fg: var(--boomi-page-fg-color, theme('colors.gray.100'));
+    --boomi-update-border: var(--boomi-card-border, theme('colors.gray.700'));
+    --boomi-update-shadow: var(--boomi-card-shadow,
+      0 4px 6px -1px rgba(255,255,255,0.05),
+      0 2px 4px -2px rgba(255,255,255,0.05)
+    );
+    --boomi-update-title-fg: theme('colors.gray.100');
+    --boomi-update-desc-fg: theme('colors.gray.300');
+    --boomi-update-content-bg: theme('colors.gray.600');
+    --boomi-update-content-fg: theme('colors.white');
+    --boomi-thread-separator: color-mix(in srgb, var(--boomi-card-border) 60%, transparent);
+
+    /* Tabs */
+    --boomi-tablist-border: theme('colors.gray.700');
+    --boomi-tab-bg: theme('colors.gray.800');
+    --boomi-tab-fg: theme('colors.gray.100');
+    --boomi-tab-border: theme('colors.gray.700');
+    --boomi-tab-bg-hover: theme('colors.gray.700');
+    --boomi-tab-fg-hover: theme('colors.gray.50');
+    --boomi-tab-border-hover: theme('colors.gray.600');
+    --boomi-tab-bg-active: theme('colors.indigo.500');
+    --boomi-tab-fg-active: theme('colors.white');
+    --boomi-tab-border-active: theme('colors.indigo.400');
+
+    /* Mapping Canvas */
+    --boomi-accent: theme('colors.indigo.300');
+    --boomi-muted:  theme('colors.gray.400');
+    --boomi-map-line-highlight: red;
+    --boomi-map-line-dim: 0.35;
+    --boomi-map-line: theme('colors.gray.300');
+    --boomi-map-heading-fg: theme('colors.gray.100');
+    --boomi-map-card-bg: theme('colors.gray.800');
+    --boomi-map-card-border: theme('colors.gray.700');
+    --boomi-map-card-shadow: 0 1px 2px rgba(255,255,255,.06);
+    --boomi-map-card-shadow-hover: 0 8px 20px rgba(165,180,252,.12);
+    --boomi-map-source-bg: theme('colors.gray.800');
+    --boomi-map-source-bg-mapped: theme('colors.indigo.900');
+    --boomi-map-source-border-mapped: theme('colors.indigo.500');
+    --boomi-map-source-outline: theme('colors.indigo.400');
+    --boomi-map-target-bg: theme('colors.gray.800');
+    --boomi-map-target-bg-mapped: theme('colors.emerald.900');
+    --boomi-map-target-border-mapped: theme('colors.emerald.500');
+    --boomi-map-target-outline: theme('colors.emerald.400');
+    --boomi-map-func-bg: theme('colors.gray.700');
+    --boomi-map-func-fg: theme('colors.gray.100');
+    --boomi-map-func-title-fg: theme('colors.indigo.300');
+    --boomi-map-func-subtle-fg: theme('colors.gray.400');
+    --boomi-map-pin-source-bg: theme('colors.indigo.400');
+    --boomi-map-pin-target-bg: theme('colors.emerald.400');
+    --boomi-map-pin-input-bg:  theme('colors.amber.400');
+    --boomi-map-pin-output-bg: theme('colors.violet.400');
+    --boomi-map-pin-badge-bg: theme('colors.red.400');
+    --boomi-map-pin-badge-fg: theme('colors.white');
+    --boomi-map-pulse-color: rgba(46, 170, 220, 0.45);
+    --boomi-map-pulse-border: var(--boomi-accent, #5cc8f0);
+    --boomi-map-pin-output-bg-active: theme('colors.violet.300');
+    --boomi-map-pin-output-border-active: theme('colors.violet.400');
+    --boomi-map-add-bg: theme('colors.gray.700');
+    --boomi-map-add-fg: theme('colors.gray.100');
+    --boomi-map-add-border: theme('colors.gray.600');
+    --boomi-map-add-bg-hover: theme('colors.gray.600');
+
+    /* Schedule */
+    --boomi-schedule-bg: #1F2937;             
+    --boomi-schedule-fg: #F9FAFB;        
+    --boomi-schedule-border: #374151;       
+    --boomi-schedule-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    --boomi-schedule-title-fg: #FFFFFF;
+    --boomi-schedule-content-fg: #D1D5DB;       
+    --boomi-schedule-accordion-bg: #111827;     
+    --boomi-schedule-accordion-border: #374151; 
+    --boomi-schedule-btn-bg: #3B82F6;          
+    --boomi-schedule-btn-fg: #FFFFFF;
+    --boomi-schedule-btn-border: #2563EB;     
+    --boomi-schedule-btn-bg-hover: #2563EB;
+    --boomi-schedule-btn-bg-active: #1D4ED8;
+    --boomi-schedule-input-bg: #111827;
+    --boomi-schedule-input-fg: #F9FAFB;
+    --boomi-schedule-input-border: #374151;
+    --boomi-schedule-input-border-focus: #3B82F6;
+    --boomi-schedule-input-bg-disabled: #1F2937;
+    --boomi-schedule-input-fg-disabled: #6B7280;
+    --boomi-schedule-input-border-disabled: #374151;
+
+    /* Connections */
+    --boomi-conn-bg: theme('colors.gray.800');
+    --boomi-conn-border: theme('colors.gray.700');
+    --boomi-conn-heading-fg: theme('colors.gray.100');
+    --boomi-conn-field-bg: theme('colors.gray.700');
+    --boomi-conn-field-border: theme('colors.gray.600');
+    --boomi-conn-field-label-fg: theme('colors.gray.200');
+    --boomi-conn-field-error-fg: var(--boomi-danger-fg);
+    --boomi-conn-btn-save-bg: theme('colors.green.500');
+    --boomi-conn-btn-save-fg: theme('colors.white');
+    --boomi-conn-btn-auth-bg: theme('colors.indigo.500');
+    --boomi-conn-btn-auth-fg: theme('colors.white');
+    --boomi-conn-btn-disabled-bg: theme('colors.gray.500');
+    --boomi-conn-btn-disabled-fg: theme('colors.gray.300');
+
+    /* SweetAlert (dark) */
+    --boomi-swal-bg: var(--boomi-modal-bg, theme('colors.gray.900'));
+    --boomi-swal-fg: var(--boomi-modal-fg, theme('colors.gray.100'));
+    --boomi-swal-border: var(--boomi-modal-border, 1px solid theme('colors.gray.700'));
+    --boomi-swal-shadow: var(--boomi-modal-shadow,
+      0 20px 25px -5px rgba(255,255,255,0.07),
+      0 8px 10px -6px rgba(255,255,255,0.05)
+    );
+    --boomi-swal-title-fg: var(--boomi-update-title-fg, theme('colors.gray.100'));
+    --boomi-swal-desc-fg:  var(--boomi-update-desc-fg,  theme('colors.gray.300'));
+    --boomi-swal-icon-success: theme('colors.green.400');
+    --boomi-swal-icon-warning: theme('colors.amber.400');
+    --boomi-swal-icon-error: var(--boomi-danger);
+    --boomi-swal-overlay-bg:   var(--boomi-modal-overlay-bg, rgba(0,0,0,.55));
+
+    /* Agents */
+    --boomi-agent-bg: var(--boomi-card-bg);
+    --boomi-agent-fg: var(--boomi-page-fg-color);
+    --boomi-agent-border: var(--boomi-card-border);
+    --boomi-agent-shadow:
+      0 24px 44px -18px rgba(0,0,0,.45),
+      0 10px 24px -12px rgba(0,0,0,.35);
+    --boomi-agent-header-bg: var(--boomi-modal-bg);
+    --boomi-agent-bubble-user-bg: color-mix(in srgb, var(--boomi-accent) 26%, transparent);
+    --boomi-agent-bubble-user-border: color-mix(in srgb, var(--boomi-accent) 40%, transparent);
+    --boomi-agent-card-tint: color-mix(in srgb, var(--boomi-accent) 10%, transparent);
+    --boomi-agent-row-tint:  color-mix(in srgb, var(--boomi-accent) 7%, transparent);
+    --boomi-agent-pane-bg: color-mix(in srgb, var(--boomi-page-bg-color) 98%, transparent);
+    --boomi-agent-pane-fg: var(--boomi-page-fg-color);
+    --boomi-agent-compose-bg: color-mix(in srgb, var(--boomi-card-bg) 95%, transparent);
+    --boomi-agent-compose-border: color-mix(in srgb, var(--boomi-card-border) 92%, transparent);
+    --boomi-agent-compose-shadow: 0 -1px 2px color-mix(in srgb, theme('colors.sky.200') 45%, transparent);
+    --boomi-agent-compose-input-bg: var(--boomi-input-bg);
+    --boomi-agent-compose-input-border: color-mix(in srgb, var(--boomi-input-border) 80%, theme('colors.white') 20%);
+    --boomi-agent-compose-secondary-bg: color-mix(in srgb, var(--boomi-card-bg) 88%, transparent);
+    --boomi-agent-compose-secondary-border: color-mix(in srgb, var(--boomi-card-border) 82%, transparent);
+    --boomi-agent-shimmer-1: theme('colors.violet.300');
+    --boomi-agent-shimmer-2: theme('colors.indigo.300');
+    --boomi-agent-shimmer-opacity: .28;   
+    --boomi-agent-row-shimmer-opacity: .18;
+    --boomi-agent-shimmer-speed: 9s;
+    --boomi-uagent-pdate-bg: var(--boomi-card-bg, theme('colors.gray.800'));
+    --boomi-uagent-pdate-fg: var(--boomi-page-fg-color, theme('colors.gray.100'));
+    --boomi-uagent-pdate-border: var(--boomi-card-border, theme('colors.gray.700'));
+    --boomi-agent-update-shadow: var(--boomi-card-shadow,
+      0 4px 6px -1px rgba(255,255,255,0.05),
+      0 2px 4px -2px rgba(255,255,255,0.05)
+    );
+    --boomi-uagent-pdate-title-fg: theme('colors.gray.100');
+    --boomi-agent-update-desc-fg: theme('colors.gray.300');
+    --boomi-agent-update-content-bg: theme('colors.gray.600');
+    --boomi-agent-update-content-fg: theme('colors.white');
+    --boomi-agent-thread-separator: color-mix(in srgb, var(--boomi-card-border) 60%, transparent);
+
+    /* Generic / accent-driven */
+    --boomi-chip-bg: color-mix(in srgb, var(--boomi-accent) 24%, transparent);
+    --boomi-chip-fg: color-mix(in srgb, var(--boomi-accent) 92%, theme('colors.gray.100'));
+    --boomi-chip-border: color-mix(in srgb, var(--boomi-accent) 50%, transparent);
+
+    /* Status variants (deeper fills, lighter text) */
+    --boomi-chip-success-bg: color-mix(in srgb, theme('colors.green.500') 22%, transparent);
+    --boomi-chip-success-fg: theme('colors.green.100');
+    --boomi-chip-success-border: theme('colors.green.500');
+
+    --boomi-chip-warning-bg: color-mix(in srgb, theme('colors.amber.500') 22%, transparent);
+    --boomi-chip-warning-fg: theme('colors.amber.100');
+    --boomi-chip-warning-border: theme('colors.amber.500');
+
+    --boomi-chip-error-bg: color-mix(in srgb, var(--boomi-danger) 24%, transparent);
+    --boomi-chip-error-fg: theme('colors.rose.100');
+    --boomi-chip-error-border: var(--boomi-danger);
+
+    --boomi-scrollbar-bg:           color-mix(in srgb, var(--boomi-update-border, #374151) 35%, transparent);
+    --boomi-scrollbar-thumb:        color-mix(in srgb, var(--boomi-page-fg-color, #ffffff) 18%, transparent);
+    --boomi-scrollbar-thumb-hover:  color-mix(in srgb, var(--boomi-accent, #818cf8) 32%, transparent);
+    --boomi-scrollbar-thumb-active: color-mix(in srgb, var(--boomi-accent, #818cf8) 45%, transparent);
+  }
+
+  /* Boomi theme */
+  :host([data-theme="boomi"]) {
+
+    /* Core danger tokens */
+    --boomi-danger: theme('colors.rose.600');
+    --boomi-danger-contrast: theme('colors.white');
+    --boomi-danger-fg: var(--boomi-danger);
+    --boomi-danger-border: var(--boomi-danger);
+    --boomi-danger-bg: color-mix(in srgb, var(--boomi-danger) 10%, transparent);
+    --boomi-danger-ring: 0 0 0 2px color-mix(in srgb, var(--boomi-danger) 35%, transparent);
+    --boomi-error-soft: color-mix(in srgb, var(--boomi-danger) 70%, theme('colors.sky.50'));
+
+    /* Primary Button */
+    --boomi-btn-primary-bg: theme('colors.sky.600');
+    --boomi-btn-primary-fg: theme('colors.white');
+    --boomi-btn-primary-border: theme('colors.sky.700');
+    --boomi-btn-primary-shadow:
+      0 4px 6px -1px color-mix(in srgb, theme('colors.sky.700') 10%, transparent),
+      0 2px 4px -2px color-mix(in srgb, theme('colors.sky.700') 10%, transparent);
+    --boomi-btn-primary-bg-hover: theme('colors.sky.700');
+    --boomi-btn-primary-bg-active: theme('colors.sky.800');
+
+    /* Secondary Button */
+    --boomi-btn-secondary-bg: theme('colors.sky.100');
+    --boomi-btn-secondary-fg: theme('colors.sky.900');
+    --boomi-btn-secondary-border: theme('colors.sky.200');
+    --boomi-btn-secondary-shadow:
+      0 4px 6px -1px color-mix(in srgb, theme('colors.sky.200') 10%, transparent),
+      0 2px 4px -2px color-mix(in srgb, theme('colors.sky.200') 10%, transparent);
+    --boomi-btn-secondary-bg-hover: theme('colors.sky.200');
+    --boomi-btn-secondary-bg-active: theme('colors.sky.300');
+
+    /* Root */
+    --boomi-root-bg-color: theme('colors.sky.50');
+    --boomi-root-fg-color: theme('colors.gray.700');
+
+    /* Page */
+    --boomi-page-bg-color: theme('colors.sky.50');
+    --boomi-page-fg-color: theme('colors.gray.700');
+
+    /* Header */
+    --boomi-show-header: 1;
+    --boomi-header-bg-color: theme('colors.white');
+    --boomi-header-fg-color: theme('colors.gray.700');
+    --boomi-header-fg-hover: theme('colors.gray.600');
+    --boomi-header-border-color: theme('colors.sky.200');
+    --boomi-header-shadow:
+      0 4px 6px -1px color-mix(in srgb, theme('colors.sky.200') 10%, transparent),
+      0 2px 4px -2px color-mix(in srgb, theme('colors.sky.200') 10%, transparent);
+
+    /* Table Row */
+    --boomi-table-header-bg: theme('colors.sky.100');
+    --boomi-table-header-fg: theme('colors.sky.900');
+    --boomi-table-header-border: theme('colors.sky.300');
+    --boomi-table-row-odd-bg: theme('colors.sky.50');
+    --boomi-table-row-even-bg: theme('colors.sky.100');
+    --boomi-table-row-hover-shadow:
+      0 4px 6px -1px rgba(14,165,233,0.1), /* sky-500 */
+      0 2px 4px -2px rgba(14,165,233,0.1);
+
+    /* Cards */
+    --boomi-card-border: theme('colors.sky.300');
+    --boomi-card-bg: theme('colors.white');
+    --boomi-card-shadow:
+      0 4px 6px -1px rgba(14,165,233,0.1),
+      0 2px 4px -2px rgba(14,165,233,0.1);
+    --boomi-card-hover-shadow:
+      0 8px 10px -1px rgba(14,165,233,0.15),
+      0 4px 6px -2px rgba(14,165,233,0.1);
+    --boomi-card-hover-scale: scale(1.01);
+
+    /* Agent text responses */
+    --boomi-agent-text-bg: color-mix(in srgb, var(--boomi-agent-pane-bg, theme('colors.sky.50')) 92%, transparent);
+    --boomi-agent-text-border: color-mix(in srgb, var(--boomi-agent-pane-fg, theme('colors.gray.700')) 16%, transparent);
+    --boomi-agent-text-fg: var(--boomi-agent-pane-fg, theme('colors.gray.700'));
+    --boomi-agent-text-copy-bg: color-mix(in srgb, var(--boomi-agent-text-border) 45%, transparent);
+    --boomi-agent-text-copy-bg-hover: color-mix(in srgb, var(--boomi-agent-text-border) 65%, transparent);
+    --boomi-agent-text-copy-fg: var(--boomi-agent-pane-fg, theme('colors.gray.700'));
+
+    /* Sidebar */
+    --boomi-sidebar-bg: color-mix(in srgb, var(--boomi-card-bg) 95%, transparent);
+    --boomi-sidebar-fg: var(--boomi-page-fg-color);
+    --boomi-sidebar-header-bg: color-mix(in srgb, var(--boomi-card-bg) 88%, transparent);
+    --boomi-sidebar-border: var(--boomi-card-border);
+    --boomi-sidebar-header-shadow: 0 1px 2px color-mix(in srgb, theme('colors.sky.300') 40%, transparent);
+    --boomi-sidebar-btn-bg: var(--boomi-btn-primary-bg);
+    --boomi-sidebar-btn-bg-hover: var(--boomi-btn-primary-bg-hover);
+    --boomi-sidebar-btn-fg: var(--boomi-btn-primary-fg);
+    --boomi-sidebar-btn-border: var(--boomi-btn-primary-border);
+    --boomi-sidebar-secondary-btn-bg: var(--boomi-btn-secondary-bg);
+    --boomi-sidebar-secondary-btn-bg-hover: var(--boomi-btn-secondary-bg-hover);
+    --boomi-sidebar-secondary-btn-fg: var(--boomi-btn-secondary-fg);
+    --boomi-sidebar-secondary-btn-border: var(--boomi-btn-secondary-border);
+
+    /* Menus */    
+    --boomi-menu-bg: theme('colors.white');
+    --boomi-menu-fg: theme('colors.gray.700');
+    --boomi-menu-border: theme('colors.sky.200');
+    --boomi-menu-shadow:
+      0 4px 6px -1px rgba(14,165,233,0.10),
+      0 2px 4px -2px rgba(14,165,233,0.10);
+    --boomi-menu-item-bg: transparent;
+    --boomi-menu-item-bg-hover: theme('colors.sky.100');
+    --boomi-menu-item-fg: theme('colors.gray.700');
+    --boomi-menu-item-fg-hover: theme('colors.gray.900');
+    --boomi-menu-divider: theme('colors.sky.200');
+    --boomi-menu-danger-fg: var(--boomi-danger-fg);
+    --boomi-menu-danger-fg-hover: var(--boomi-danger-fg);
+    --boomi-menu-danger-bg-hover: color-mix(in srgb, var(--boomi-danger) 10%, transparent);
+
+    /* Modals */    
+    --boomi-modal-overlay-bg: color-mix(in srgb, theme('colors.sky.900') 45%, transparent);
+    --boomi-modal-bg: theme('colors.white');
+    --boomi-modal-fg: theme('colors.gray.800');
+    --boomi-modal-border: 1px solid theme('colors.sky.200');
+    --boomi-modal-shadow:
+      0 20px 25px -5px rgba(14,165,233,0.10),
+      0 8px 10px -6px rgba(14,165,233,0.08);
+    --boomi-modal-close-fg: theme('colors.sky.500');
+    --boomi-modal-close-hover-fg: theme('colors.sky.700');
+
+    /* Inputs */    
+    --boomi-form-label-fg: theme('colors.gray.700');
+    --boomi-form-helper-fg: theme('colors.sky.700');
+    --boomi-form-error-fg: var(--boomi-danger-fg);
+    --boomi-form-required-fg: theme('colors.rose.400');
+
+    /* Select */  
+    --boomi-select-bg: theme('colors.white');
+    --boomi-select-fg: theme('colors.gray.800');
+    --boomi-select-border: theme('colors.sky.200');
+    --boomi-select-border: theme('colors.sky.200');
+    --boomi-select-shadow: 0 0 0 0 rgba(0,0,0,0);
+    --boomi-select-border-focus: theme('colors.sky.500');
+    --boomi-select-shadow-focus: 0 0 0 2px color-mix(in srgb, theme('colors.sky.500') 35%, transparent);
+    --boomi-select-icon: theme('colors.sky.500');
+    --boomi-select-bg-disabled: theme('colors.sky.50');
+    --boomi-select-fg-disabled: theme('colors.gray.500');
+    --boomi-select-border-disabled: theme('colors.sky.100');
+    --boomi-select-border-invalid: var(--boomi-danger);
+    --boomi-options-bg: theme('colors.white');
+    --boomi-options-fg: theme('colors.gray.800');
+    --boomi-options-border: theme('colors.sky.200');
+    --boomi-options-shadow:
+      0 10px 15px -3px rgba(14,165,233,0.10),
+      0 4px 6px -4px rgba(14,165,233,0.08);
+    --boomi-options-search-bg: theme('colors.white');
+    --boomi-option-bg-active: theme('colors.sky.100');
+    --boomi-option-fg-selected: theme('colors.gray.900');
+
+    /* Ajax Loader */
+    --boomi-loader-dot-bg: theme('colors.sky.600');
+    --boomi-loader-dot1-opacity: 0.3;
+    --boomi-loader-dot2-opacity: 0.7;
+    --boomi-loader-dot3-opacity: 1;
+    --boomi-loader-msg-fg: theme('colors.sky.800');
+
+    /* Wizard */
+    --boomi-spinner-overlay-bg: rgba(153, 246, 228, 0.6); 
+    --boomi-spinner-overlay-blur: 4px;
+    --boomi-spinner-overlay-contained-bg: color-mix(in srgb, theme('colors.sky.200') 55%, transparent);
+    --boomi-spinner-overlay-contained-blur: 2px;
+    --boomi-spinner-ring-color: theme('colors.sky.500');
+    --boomi-spinner-ping-color: theme('colors.sky.300');
+    --boomi-spinner-message-fg: theme('colors.teal.900');
+    --boomi-wizard-step-dot-bg: theme('colors.sky.100');
+    --boomi-wizard-step-dot-fg: theme('colors.gray.800');
+    --boomi-wizard-step-dot-border: theme('colors.sky.200');
+    --boomi-wizard-step-dot-bg-active: theme('colors.sky.400');
+    --boomi-wizard-step-dot-fg-active: theme('colors.white');
+    --boomi-wizard-step-dot-border-active: theme('colors.sky.500');
+    --boomi-wizard-step-dot-bg-completed: theme('colors.sky.300');
+    --boomi-wizard-step-dot-fg-completed: theme('colors.white');
+    --boomi-wizard-step-dot-border-completed: theme('colors.sky.400');
+    --boomi-wizard-connector-bg: theme('colors.sky.200');
+    --boomi-wizard-label-fg: theme('colors.gray.700');
+    --boomi-wizard-card-bg: theme('colors.white');
+    --boomi-wizard-card-fg: theme('colors.gray.800');
+    --boomi-wizard-card-border: theme('colors.sky.200');
+    --boomi-wizard-card-shadow:
+      0 4px 6px -1px rgba(14,165,233,0.10),
+      0 2px 4px -2px rgba(14,165,233,0.08);
+    --boomi-wizard-link-fg: theme('colors.sky.600');
+    --boomi-wizard-link-fg-hover: theme('colors.sky.700');
+    --boomi-wizard-link-strong-fg: theme('colors.sky.700');
+
+  
+    /* Notificatoins */
+    --boomi-notice-bg: var(--boomi-notice-success-bg);
+    --boomi-notice-fg: var(--boomi-notice-success-fg);
+    --boomi-notice-border: var(--boomi-notice-success-border);
+    --boomi-notice-shadow: var(--boomi-notice-success-shadow, 0 0 0 0 transparent);
+
+    /* Update Panels */
+    --boomi-update-bg: var(--boomi-card-bg, theme('colors.white'));
+    --boomi-update-fg: var(--boomi-page-fg-color, theme('colors.gray.700'));
+    --boomi-update-border: var(--boomi-card-border, theme('colors.sky.200'));
+    --boomi-update-shadow: var(--boomi-card-shadow,
+      0 4px 6px -1px rgba(14,165,233,0.10),
+      0 2px 4px -2px rgba(14,165,233,0.10)
+    );
+    --boomi-update-title-fg: theme('colors.gray.800');
+    --boomi-update-desc-fg: theme('colors.gray.600');
+    --boomi-update-content-bg: theme('colors.white');
+    --boomi-update-content-fg: theme('colors.gray.800');
+    --boomi-thread-separator: color-mix(in srgb, var(--boomi-card-border) 75%, transparent);
+
+    /* Tabs */
+    --boomi-tablist-border: theme('colors.sky.200');
+    --boomi-tab-bg: theme('colors.sky.100');
+    --boomi-tab-fg: theme('colors.gray.800');
+    --boomi-tab-border: theme('colors.sky.200');
+    --boomi-tab-bg-hover: theme('colors.sky.200');
+    --boomi-tab-fg-hover: theme('colors.gray.900');
+    --boomi-tab-border-hover: theme('colors.sky.300');
+    --boomi-tab-bg-active: theme('colors.sky.600');
+    --boomi-tab-fg-active: theme('colors.white');
+    --boomi-tab-border-active: theme('colors.sky.700');
+
+    /* Mapping Canvas */
+    --boomi-accent: theme('colors.sky.600');
+    --boomi-muted:  theme('colors.gray.600');
+    --boomi-map-line-highlight: red;
+    --boomi-map-line-dim: 0.35;
+    --boomi-map-line: theme('colors.sky.500');
+    --boomi-map-heading-fg: theme('colors.gray.700');
+    --boomi-map-card-bg: theme('colors.white');
+    --boomi-map-card-border: theme('colors.sky.200');
+    --boomi-map-card-shadow:
+      0 4px 6px -1px rgba(14,165,233,0.10),
+      0 2px 4px -2px rgba(14,165,233,0.10);
+    --boomi-map-card-shadow-hover:
+      0 8px 10px -1px rgba(14,165,233,0.15),
+      0 4px 6px -2px rgba(14,165,233,0.10);
+    --boomi-map-source-bg-mapped: theme('colors.sky.50');
+    --boomi-map-source-border-mapped: theme('colors.sky.400');
+    --boomi-map-source-outline: theme('colors.sky.500');
+    --boomi-map-target-bg-mapped: theme('colors.sky.50');
+    --boomi-map-target-border-mapped: theme('colors.sky.400');
+    --boomi-map-target-outline: theme('colors.sky.500');
+    --boomi-map-func-bg: theme('colors.sky.50');
+    --boomi-map-func-fg: theme('colors.gray.800');
+    --boomi-map-func-title-fg: theme('colors.sky.700');
+    --boomi-map-pin-source-bg: theme('colors.sky.600');
+    --boomi-map-pin-target-bg: theme('colors.teal.500');
+    --boomi-map-pin-input-bg:  theme('colors.amber.500');
+    --boomi-map-pin-output-bg: theme('colors.indigo.500');
+    --boomi-map-pin-badge-bg: theme('colors.red.500');
+    --boomi-map-pin-badge-fg: theme('colors.white');
+    --boomi-map-pulse-color: rgba(0, 184, 217, 0.35);
+    --boomi-map-pulse-border: var(--boomi-accent, #00b8d9);
+    --boomi-map-pin-output-bg-active: theme('colors.indigo.400');
+    --boomi-map-pin-output-border-active: theme('colors.indigo.500');
+    --boomi-map-add-bg: theme('colors.sky.100');
+    --boomi-map-add-fg: theme('colors.gray.700');
+    --boomi-map-add-border: theme('colors.sky.300');
+    --boomi-map-add-bg-hover: theme('colors.sky.200');
+
+    /* Schedule */
+    --boomi-schedule-bg: #FFF8E7;
+    --boomi-schedule-fg: #000000;
+    --boomi-schedule-border: #000000;
+    --boomi-schedule-shadow: 6px 6px 0 #000000;
+    --boomi-schedule-title-fg: #000000;
+    --boomi-schedule-content-fg: #222222;
+    --boomi-schedule-accordion-bg: #FFFFFF;
+    --boomi-schedule-accordion-border: #000000;
+    --boomi-schedule-btn-bg: #FFDE59;
+    --boomi-schedule-btn-fg: #111111;
+    --boomi-schedule-btn-border: #000000;
+    --boomi-schedule-btn-bg-hover: #FFD633;
+    --boomi-schedule-btn-bg-active: #FFCC00;
+    --boomi-schedule-input-bg: #FFFFFF;
+    --boomi-schedule-input-fg: #2B2B2B;
+    --boomi-schedule-input-border: #000000;
+    --boomi-schedule-input-border-focus: #FF90B3;
+    --boomi-schedule-input-bg-disabled: #FEF9C3;
+    --boomi-schedule-input-fg-disabled: #9CA3AF;
+    --boomi-schedule-input-border-disabled: #FDE68A;
+
+    /* Connections */
+    --boomi-conn-bg: theme('colors.blue.50');
+    --boomi-conn-border: theme('colors.blue.200');
+    --boomi-conn-heading-fg: theme('colors.blue.900');
+    --boomi-conn-field-bg: theme('colors.white');
+    --boomi-conn-field-border: theme('colors.blue.300');
+    --boomi-conn-field-label-fg: theme('colors.blue.900');
+    --boomi-conn-field-error-fg: var(--boomi-danger-fg);
+    --boomi-conn-btn-save-bg: theme('colors.green.600');
+    --boomi-conn-btn-save-fg: theme('colors.white');
+    --boomi-conn-btn-auth-bg: theme('colors.indigo.600');
+    --boomi-conn-btn-auth-fg: theme('colors.white');
+    --boomi-conn-btn-disabled-bg: theme('colors.gray.400');
+    --boomi-conn-btn-disabled-fg: theme('colors.white');
+
+    /* SweetAlert (boomi) */
+    --boomi-swal-bg: var(--boomi-modal-bg, theme('colors.white'));
+    --boomi-swal-fg: var(--boomi-modal-fg, theme('colors.gray.800'));
+    --boomi-swal-border: var(--boomi-modal-border, 1px solid theme('colors.sky.200'));
+    --boomi-swal-shadow: var(--boomi-modal-shadow,
+      0 20px 25px -5px rgba(14,165,233,0.10),
+      0 8px 10px -6px rgba(14,165,233,0.08)
+    );
+    --boomi-swal-title-fg: var(--boomi-update-title-fg, theme('colors.gray.800'));
+    --boomi-swal-desc-fg:  var(--boomi-update-desc-fg,  theme('colors.gray.600'));
+    --boomi-swal-icon-success: theme('colors.teal.600');
+    --boomi-swal-icon-warning: theme('colors.amber.500');
+    --boomi-swal-icon-error: var(--boomi-danger);
+    --boomi-swal-overlay-bg:   var(--boomi-modal-overlay-bg, color-mix(in srgb, theme('colors.sky.900') 45%, transparent));
+
+    /* Agents */
+    --boomi-agent-bg: var(--boomi-card-bg);
+    --boomi-agent-fg: var(--boomi-page-fg-color);
+    --boomi-agent-border: var(--boomi-card-border);
+    --boomi-agent-shadow:
+      0 22px 44px -14px color-mix(in srgb, theme('colors.sky.900') 25%, transparent),
+      0 10px 24px -12px color-mix(in srgb, theme('colors.sky.900') 18%, transparent);
+    --boomi-agent-header-bg: var(--boomi-modal-bg);
+    --boomi-agent-bubble-user-bg: color-mix(in srgb, var(--boomi-accent) 16%, transparent);
+    --boomi-agent-bubble-user-border: color-mix(in srgb, var(--boomi-accent) 35%, transparent);
+    --boomi-agent-card-tint: color-mix(in srgb, var(--boomi-accent) 10%, transparent);
+    --boomi-agent-row-tint:  color-mix(in srgb, var(--boomi-accent) 7%, transparent);
+    --boomi-agent-shimmer-1: theme('colors.violet.300');
+    --boomi-agent-shimmer-2: theme('colors.indigo.300');
+    --boomi-agent-shimmer-opacity: .28;       
+    --boomi-agent-row-shimmer-opacity: .18;
+    --boomi-agent-shimmer-speed: 9s;
+    --boomi-agent-update-bg: var(--boomi-card-bg, theme('colors.white'));
+    --boomi-agent-update-fg: var(--boomi-page-fg-color, theme('colors.gray.700'));
+    --boomi-agent-update-border: var(--boomi-card-border, theme('colors.sky.200'));
+    --boomi-agent-update-shadow: var(--boomi-card-shadow,
+      0 4px 6px -1px rgba(14,165,233,0.10),
+      0 2px 4px -2px rgba(14,165,233,0.10)
+    );
+    --boomi-agent-update-title-fg: theme('colors.gray.800');
+    --boomi-agent-update-desc-fg: theme('colors.gray.600');
+    --boomi-agent-update-content-bg: theme('colors.white');
+    --boomi-agent-update-content-fg: theme('colors.gray.800');
+    --boomi-agent-thread-separator: color-mix(in srgb, var(--boomi-card-border) 75%, transparent);
+
+    /* Generic / accent-driven (sky-forward) */
+    --boomi-accent: theme('colors.sky.600');
+    --boomi-chip-bg: color-mix(in srgb, var(--boomi-accent) 14%, transparent);
+    --boomi-chip-fg: color-mix(in srgb, var(--boomi-accent) 85%, theme('colors.gray.900'));
+    --boomi-chip-border: color-mix(in srgb, var(--boomi-accent) 42%, transparent);
+
+    /* Status variants tuned to brand */
+    --boomi-chip-success-bg: theme('colors.teal.100');
+    --boomi-chip-success-fg: theme('colors.teal.900');
+    --boomi-chip-success-border: theme('colors.teal.300');
+
+    --boomi-chip-warning-bg: theme('colors.amber.100');
+    --boomi-chip-warning-fg: theme('colors.amber.900');
+    --boomi-chip-warning-border: theme('colors.amber.300');
+
+    --boomi-chip-error-bg: color-mix(in srgb, var(--boomi-danger) 12%, transparent);
+    --boomi-chip-error-fg: var(--boomi-danger-fg);
+    --boomi-chip-error-border: color-mix(in srgb, var(--boomi-danger) 40%, transparent);
+
+    --boomi-scrollbar-thumb:        color-mix(in srgb, var(--boomi-accent, #0284c7) 22%, transparent);
+    --boomi-scrollbar-thumb-hover:  color-mix(in srgb, var(--boomi-accent, #0284c7) 36%, transparent);
+    --boomi-scrollbar-thumb-active: color-mix(in srgb, var(--boomi-accent, #0284c7) 48%, transparent);
+  }
+}
+  .boomi-agent-thread-separator {
+    height: 1px;
+    width: min(1024px, 90%);
+    margin: 1.5rem auto;
+    background: var(--boomi-thread-separator, color-mix(in srgb, var(--boomi-card-border) 55%, transparent));
+    opacity: .65;
+  }
