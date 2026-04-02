@@ -2,6 +2,8 @@
 
 **Boomi EmbedKit** (`@boomi/embedkit`) is a white-label embeddable plugin that lets you surface Boomi-powered experiences — Integrations, Connections, Scheduling, Data Mapping, and AI Agents — directly inside your own application. It runs inside a Shadow DOM so its styles are fully isolated from your host app, and it ships its own React/ReactDOM bundle so no dependencies are required on the host page.
 
+This is the official Boomi EmbedKit. If you fork or change this code, you should not use the name Boomi for your version.
+
 ### What You Can Embed
 
 | Component | Description |
