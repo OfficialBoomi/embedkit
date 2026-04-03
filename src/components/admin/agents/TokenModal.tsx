@@ -140,8 +140,7 @@ const TokenModal: React.FC<TokenModalProps> = ({
     const effectiveTokenId = tokenId ?? generatedTokenId;
     if (!effectiveTokenId) return '';
     const singleId = selectedSingleAgentId || agentId || '';
-    const multiIds = selectedAgentIds.length ? selectedAgentIds : (singleId ? [singleId] : []);
-    return `<link rel="stylesheet" href="https://cdn.boomi.space/cdn/embedkit-cdn.css" />\n<script>\n  window.BoomiEmbed = {\n    publicToken: "${effectiveTokenId}",\n    agentId: "${singleId || 'project-id'}",\n    mountId: "boomi-agent",\n    serverBase: "https://api.boomi.space/api/v1"\n  };\n</script>\n<script src=\"https://cdn.boomi.space/embedkit-cdn.umd.cjs\" async></script>\n<div id=\"boomi-agent\"></div>`;
+    return `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.css" />\n<script>\n  window.BoomiEmbed = {\n    publicToken: "${effectiveTokenId}",\n    agentId: "${singleId || 'project-id'}",\n    mountId: "boomi-agent",\n    serverBase: "https://api.boomi.space/api/v1"\n  };\n</script>\n<script src=\"https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.umd.cjs\" async></script>\n<div id=\"boomi-agent\"></div>`;
   }, [agentId, tokenId, generatedTokenId, snippetMode, selectedAgentIds, selectedSingleAgentId]);
 
   const copyText = async (text: string, setCopied: (v: boolean) => void) => {
