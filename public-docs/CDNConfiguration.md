@@ -48,12 +48,14 @@ Your Website                  EmbedKit CDN Server            EmbedKit API Server
 
 The CDN bundle is entirely self-contained — React and ReactDOM are bundled in. Nothing additional is required on the host page.
 
-**Assets:**
+**Assets (via jsDelivr):**
 
 | File | Purpose |
 |------|---------|
-| `https://cdn.boomi.space/embedkit-cdn.umd.cjs` | JavaScript bundle (UMD — works in all browsers) |
-| `https://cdn.boomi.space/cdn/embedkit-cdn.css` | Required stylesheet |
+| `https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.umd.cjs` | JavaScript bundle (UMD — works in all browsers) |
+| `https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.css` | Required stylesheet |
+
+The files are served from the [`@boomi/embedkit-cdn`](https://www.npmjs.com/package/@boomi/embedkit-cdn) npm package via [jsDelivr](https://www.jsdelivr.com/). You can also reference them via [unpkg](https://unpkg.com/) by replacing `cdn.jsdelivr.net/npm` with `unpkg.com`.
 
 ---
 
@@ -859,7 +861,7 @@ Add the following to any HTML page, just before `</body>`:
 
 ```html
 <!-- 1. EmbedKit Stylesheet -->
-<link rel="stylesheet" href="https://cdn.boomi.space/cdn/embedkit-cdn.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.css" />
 
 <!-- 2. Configure the embed -->
 <script>
@@ -872,7 +874,7 @@ Add the following to any HTML page, just before `</body>`:
 </script>
 
 <!-- 3. Load the CDN bundle -->
-<script src="https://cdn.boomi.space/embedkit-cdn.umd.cjs" async></script>
+<script src="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.umd.cjs" async></script>
 
 <!-- 4. Mount target element -->
 <div id="boomi-agent"></div>
@@ -909,7 +911,7 @@ This is a complete, self-contained HTML page with the EmbedKit CDN embedded:
   <title>My Website</title>
 
   <!-- EmbedKit Stylesheet -->
-  <link rel="stylesheet" href="https://cdn.boomi.space/cdn/embedkit-cdn.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.css" />
 
   <style>
     /* Your existing site styles here */
@@ -940,7 +942,7 @@ This is a complete, self-contained HTML page with the EmbedKit CDN embedded:
       userId: "user-12345"
     };
   </script>
-  <script src="https://cdn.boomi.space/embedkit-cdn.umd.cjs" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.umd.cjs" async></script>
 
 </body>
 </html>
@@ -957,11 +959,11 @@ Add the following to your theme's `functions.php` or use a custom HTML block:
 function embedkit_cdn_enqueue() {
     wp_enqueue_style(
         'embedkit-css',
-        'https://cdn.boomi.space/cdn/embedkit-cdn.css'
+        'https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.css'
     );
     wp_enqueue_script(
         'embedkit-cdn',
-        'https://cdn.boomi.space/embedkit-cdn.umd.cjs',
+        'https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.umd.cjs',
         [],
         null,
         true  // Load in footer
@@ -987,7 +989,7 @@ Add `<div id="boomi-agent"></div>` wherever you want the agent to mount (typical
 
 ```html
 <!-- In a custom HTML component or Experience Builder page -->
-<link rel="stylesheet" href="https://cdn.boomi.space/cdn/embedkit-cdn.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.css" />
 
 <script>
   window.BoomiEmbed = {
@@ -997,7 +999,7 @@ Add `<div id="boomi-agent"></div>` wherever you want the agent to mount (typical
     serverBase:  "https://api.boomi.space/api/v1"
   };
 </script>
-<script src="https://cdn.boomi.space/embedkit-cdn.umd.cjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.umd.cjs"></script>
 
 <div id="boomi-agent"></div>
 ```
@@ -1010,8 +1012,8 @@ If your site uses a Content Security Policy, you will need to add the following 
 
 ```
 Content-Security-Policy:
-  script-src  'self' https://cdn.boomi.space;
-  style-src   'self' https://cdn.boomi.space;
+  script-src  'self' https://cdn.jsdelivr.net;
+  style-src   'self' https://cdn.jsdelivr.net;
   connect-src 'self' https://api.boomi.space;
   frame-src   'none';
 ```
@@ -1033,7 +1035,7 @@ If you need to control when the agent initializes (e.g., after a user logs in or
     autoInit:    false
   };
 </script>
-<script src="https://cdn.boomi.space/embedkit-cdn.umd.cjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.umd.cjs"></script>
 
 <script>
   // Call this whenever you are ready to show the agent

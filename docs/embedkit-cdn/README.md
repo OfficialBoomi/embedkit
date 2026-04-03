@@ -16,8 +16,10 @@ Output files:
 - `dist/embedkit-cdn.es.js`
 
 ## Deploy
-Host the CDN file on your static host or CDN.
-Recommended for browsers: `dist/embedkit-cdn.umd.js`.
+The CDN files are published to npm as [`@boomi/embedkit-cdn`](https://www.npmjs.com/package/@boomi/embedkit-cdn) and served via public CDN providers:
+
+- **jsDelivr:** `https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/`
+- **unpkg:** `https://unpkg.com/@boomi/embedkit-cdn/`
 
 Make sure the EmbedKit server is deployed with the public session endpoint:
 - `POST /api/v1/embed/session`
@@ -39,7 +41,7 @@ The CDN bundle is self-contained (React + ReactDOM are bundled), so no extra glo
 </script>
 
 <!-- EmbedKit CDN bundle -->
-<script src="https://cdn.yourdomain.com/embedkit-cdn.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.umd.cjs"></script>
 
 <div id="boomi-agent"></div>
 ```
