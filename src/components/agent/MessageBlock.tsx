@@ -145,6 +145,17 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoo
     }
 
     const text = typeof data === 'string' ? data : data != null ? String(data) : '';
+    // If the content is a raw HTML string (e.g. returned directly by Agent Studio agents),
+    // render it as HTML rather than escaping it as plain text.
+    if (/^\s*<[a-zA-Z]/.test(text)) {
+      return (
+        <div className="w-full">
+          <div className="w-full max-w-[1024px] px-4 md:px-6 leading-7 text-[var(--boomi-page-fg-color)]">
+            <HtmlBlock value={text} treatStringAsHTML />
+          </div>
+        </div>
+      );
+    }
     const html = textToHtml(text);
     return (
       <div className="w-full">
