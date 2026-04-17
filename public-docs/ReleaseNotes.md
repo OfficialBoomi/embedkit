@@ -21,6 +21,9 @@
   - ✅ **Collapsible sidebar** — When `expandable: true` and the sidebar is enabled, a collapse toggle appears in the sidebar header. Collapsing the sidebar hides the chat history rail and expands the main chat area. A single-icon strip allows the user to re-expand it at any time.
   - ✅ **Configuration Reference** — A new [Configuration Reference](./ConfigurationReference.md) document is now available covering every configuration option in detail: initialization, agent config, component config, form config, CDN config, and all CSS design tokens.
 
+  **Bug Fixes**
+  - Fixed an issue where agent responses containing HTML were rendered as raw text in the chat UI. Agent Studio agents that prepend plain text before an HTML block (e.g. a summary sentence followed by a `<div>`) now correctly render the full response as HTML.
+
   **Configuration**
 
   Set `expandable: true` at the root of any agent entry in `boomi.config.js`:
