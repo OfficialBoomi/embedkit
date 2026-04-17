@@ -6,7 +6,7 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.4.8-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.5.0-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
@@ -14,6 +14,40 @@
 ### All Releases
 
 <details open>
+  <summary><strong>v1.5.0</strong> — Expandable Modal & Collapsible Sidebar</summary>
+
+  **Highlights**
+  - ✅ **Expandable modal** — Agents configured with `expandable: true` now show a maximize/minimize button in the modal header. Clicking it stretches the modal to fill the screen, giving users more space when working with complex responses.
+  - ✅ **Collapsible sidebar** — When `expandable: true` and the sidebar is enabled, a collapse toggle appears in the sidebar header. Collapsing the sidebar hides the chat history rail and expands the main chat area. A single-icon strip allows the user to re-expand it at any time.
+  - ✅ **Configuration Reference** — A new [Configuration Reference](./ConfigurationReference.md) document is now available covering every configuration option in detail: initialization, agent config, component config, form config, CDN config, and all CSS design tokens.
+
+  **Configuration**
+
+  Set `expandable: true` at the root of any agent entry in `boomi.config.js`:
+
+  ```js
+  agents: {
+    'my-agent-id': {
+      expandable: true,   // enables both modal expand and sidebar collapse
+      ui: {
+        mode: 'modal',
+        sidebar: { show: true },
+        // ...
+      },
+    },
+  }
+  ```
+
+  | Behavior | Applies When |
+  |----------|-------------|
+  | Modal expand/collapse button | `expandable: true` and `ui.mode: 'modal'` |
+  | Sidebar collapse/expand toggle | `expandable: true` and `ui.sidebar.show: true` |
+
+</details>
+
+---
+
+<details>
   <summary><strong>v1.4.8</strong> — HTML Content Rendering & Stability</summary>
 
   **Highlights**
