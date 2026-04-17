@@ -149,6 +149,7 @@ agents: {
 
 | Property | Type | Description |
 |----------|------|-------------|
+| `expandable` | `boolean` | When `true`, shows an expand/collapse button in the modal header (modal mode) and a collapse toggle on the sidebar. Allows users to stretch the modal to fill the screen and collapse/expand the chat history sidebar. |
 | `environmentId` | `string` | Boomi environment ID to target for this agent. |
 | `boomiAgentId` | `string` | The Boomi agent ID used when transport is `boomi-direct`. |
 | `transport` | `'boomi-proxy' \| 'boomi-direct'` | Message routing strategy. `boomi-direct` sends messages directly to Boomi; `boomi-proxy` routes through the EmbedKit Server. Defaults to `boomi-proxy`. |

@@ -30,14 +30,34 @@ type SidebarProps = {
   activeId: string | null;
   onEditSettings: () => void;
   showSettings?: boolean;
+  expandable?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
   onSelect: (id: string) => void;
   onCreate?: () => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
 };
 
 const Sidebar: React.FC<SidebarProps> = ({
-  loading, error, threads, activeId, onEditSettings, showSettings = true, onSelect, onCreate, onDelete,
+  loading, error, threads, activeId, onEditSettings, showSettings = true,
+  expandable = false, collapsed = false, onToggleCollapse,
+  onSelect, onCreate, onDelete,
 }) => {
+
+  if (collapsed) {
+    return (
+      <aside className="h-full min-h-0 flex flex-col items-center pt-2 border-r border-[var(--boomi-sidebar-border,var(--boomi-card-border))] bg-[var(--boomi-sidebar-bg,var(--boomi-card-bg))]">
+        <button
+          type="button"
+          title="Expand sidebar"
+          className="inline-flex items-center justify-center rounded-lg border p-2 transition-colors border-[var(--boomi-sidebar-secondary-btn-border,var(--boomi-btn-secondary-border))] bg-[var(--boomi-sidebar-secondary-btn-bg,var(--boomi-btn-secondary-bg))] text-[var(--boomi-sidebar-secondary-btn-fg,var(--boomi-btn-secondary-fg))] hover:bg-[var(--boomi-sidebar-secondary-btn-bg-hover,var(--boomi-btn-secondary-bg-hover))]"
+          onClick={onToggleCollapse}
+        >
+          <ChevronLeft size={16} style={{ transform: 'rotate(180deg)' }} />
+        </button>
+      </aside>
+    );
+  }
 
   return (
     <aside className="h-full min-h-0 overflow-y-auto border-r border-[var(--boomi-sidebar-border,var(--boomi-card-border))] boomi-scroll bg-[var(--boomi-sidebar-bg,var(--boomi-card-bg))] text-[var(--boomi-sidebar-fg,var(--boomi-page-fg-color))]">
@@ -57,6 +77,16 @@ const Sidebar: React.FC<SidebarProps> = ({
               onClick={onEditSettings}
             >
               <Settings size={18}/>
+            </button>
+          )}
+          {expandable && (
+            <button
+              type="button"
+              title="Collapse sidebar"
+              className="inline-flex items-center justify-center rounded-lg border px-2 cursor-pointer transition-colors border-[var(--boomi-sidebar-secondary-btn-border,var(--boomi-btn-secondary-border))] bg-[var(--boomi-sidebar-secondary-btn-bg,var(--boomi-btn-secondary-bg))] text-[var(--boomi-sidebar-secondary-btn-fg,var(--boomi-btn-secondary-fg))] hover:bg-[var(--boomi-sidebar-secondary-btn-bg-hover,var(--boomi-btn-secondary-bg-hover))]"
+              onClick={onToggleCollapse}
+            >
+              <ChevronLeft size={16} />
             </button>
           )}
         </div>

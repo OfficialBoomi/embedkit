@@ -112,8 +112,10 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
 
   const sidebarCfg = agentCfg?.ui?.sidebar;
   const uiMode = agentCfg?.ui?.mode ?? 'full';
+  const expandable = agentCfg?.expandable ?? false;
   const showSidebar = !useMountSession && sidebarCfg?.show !== false && (sidebarCfg?.width ?? 280) > 0;
   const sidebarWidth = Math.max(1, sidebarCfg?.width ?? 280);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const showHeaderConfigure =
     !isBoomiDirect &&
     uiMode === 'modal' &&
@@ -169,7 +171,9 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
       <div
         className="boomi-agent-workspace w-full h-full min-h-0 overflow-hidden grid"
         style={{
-          gridTemplateColumns: showSidebar ? `${sidebarWidth}px minmax(0,1fr)` : '1fr',
+          gridTemplateColumns: showSidebar
+          ? (sidebarCollapsed ? '40px minmax(0,1fr)' : `${sidebarWidth}px minmax(0,1fr)`)
+          : '1fr',
           position: 'relative',
         }}
       >
@@ -180,10 +184,13 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
             loading={sessionsLoading}
             error={(sessionsError as any)?.message ?? null}
             threads={sidebarItems}
-            activeId={activeSessionId}  
+            activeId={activeSessionId}
             showSettings={!isBoomiDirect}
+            expandable={expandable}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
             onEditSettings={() => { if (!mustConfigure) setIsConfigureSettings(v => !v); }}
-            onSelect={(sid) => { if (!mustConfigure) selectSession(sid); }}  // <-- use hook
+            onSelect={(sid) => { if (!mustConfigure) selectSession(sid); }}
             onCreate={async () => {
               if (!mustConfigure) {
                 const sid = await createSession();

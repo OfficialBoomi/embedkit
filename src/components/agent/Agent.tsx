@@ -11,6 +11,7 @@
  * @return {JSX.Element} 
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import { FiMaximize2 as Maximize, FiMinimize2 as Minimize } from 'react-icons/fi';
 import { usePlugin } from '../../context/pluginContext';
 import { IntegrationPackInstance } from '@boomi/embedkit-sdk';
 import AjaxLoader from '../ui/AjaxLoader';
@@ -34,6 +35,7 @@ const Agent: React.FC<AgentProps> = ({
   const hideIcon = boomiConfig?.agents?.[integrationPackId]?.hideIcon;
   const name = boomiConfig?.agents?.[integrationPackId]?.installAsName ?? 'Agent'
   const transport = boomiConfig?.agents?.[integrationPackId]?.transport;
+  const expandable = boomiConfig?.agents?.[integrationPackId]?.expandable ?? false;
   const { instance, installed, loading } = useAgentStatus(
     integrationPackId || '',
     environmentId || '',
@@ -41,6 +43,7 @@ const Agent: React.FC<AgentProps> = ({
     transport
   );
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [mode, setMode] = useState<'info' | 'configure' | 'chat'>('info');
   const [headerActions, setHeaderActions] = useState<React.ReactNode | null>(null);
   const uiConfig = boomiConfig?.agents?.[integrationPackId]?.ui;
@@ -112,7 +115,10 @@ const Agent: React.FC<AgentProps> = ({
   }, [open]);
 
   useEffect(() => {
-    if (!open) setHeaderActions(null);
+    if (!open) {
+      setHeaderActions(null);
+      setExpanded(false);
+    }
   }, [open]);
 
   const overlayContent = () => {
@@ -134,12 +140,22 @@ const Agent: React.FC<AgentProps> = ({
 
     if (modeSetting === 'modal') {
       return (
-        <ModalShell size={modalSize} style={modalPositionStyle}>
+        <ModalShell size={modalSize} style={modalPositionStyle} expanded={expanded}>
           <div className="boomi-agent-overlay__inner">
             <div className="boomi-agent-overlay__header">
               <div className="boomi-agent-overlay__title">{label || 'Agent'}</div>
               <div className="boomi-agent-overlay__header-actions">
                 {headerActions}
+                {expandable && (
+                  <button
+                    type="button"
+                    aria-label={expanded ? 'Collapse agent' : 'Expand agent'}
+                    className="boomi-agent-overlay__close"
+                    onClick={() => setExpanded((e) => !e)}
+                  >
+                    {expanded ? <Minimize size={14} /> : <Maximize size={14} />}
+                  </button>
+                )}
                 <button
                   type="button"
                   aria-label="Close agent"

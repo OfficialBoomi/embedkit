@@ -84,6 +84,9 @@ export type AgentUiConfig = {
 };
 
 export type AgentConfig = {
+  /** Allow the user to expand the modal and sidebar to fill more of the screen */
+  expandable?: boolean;
+
   /** The environment to use for this agent */
   allowFreeTextPrompts?: boolean;
 

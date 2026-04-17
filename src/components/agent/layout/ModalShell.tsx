@@ -16,11 +16,16 @@ const ModalShell: React.FC<{
   children: React.ReactNode;
   size: { w: number; h: number };
   style?: React.CSSProperties;
-}> = ({ children, size, style }) => {
+  expanded?: boolean;
+}> = ({ children, size, style, expanded = false }) => {
+  const modalStyle: React.CSSProperties = expanded
+    ? { inset: 20, width: 'auto', height: 'auto', borderRadius: 8, ...style }
+    : { width: size.w, height: size.h, ...style };
+
   return (
     <div className="boomi-agent-overlay boomi-agent-overlay--modal">
       <div className="boomi-agent-overlay__scrim" />
-      <div className="boomi-agent-overlay__modal" style={{ width: size.w, height: size.h, ...style }}>
+      <div className="boomi-agent-overlay__modal" style={modalStyle}>
         {children}
       </div>
     </div>
