@@ -6,7 +6,7 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.5.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.4.10-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
@@ -14,7 +14,7 @@
 ### All Releases
 
 <details open>
-  <summary><strong>v1.5.0</strong> — Expandable Modal & Collapsible Sidebar</summary>
+  <summary><strong>v1.4.10</strong> — Expandable Modal & Collapsible Sidebar</summary>
 
   **Highlights**
   - ✅ **Expandable modal** — Agents configured with `expandable: true` now show a maximize/minimize button in the modal header. Clicking it stretches the modal to fill the screen, giving users more space when working with complex responses.
