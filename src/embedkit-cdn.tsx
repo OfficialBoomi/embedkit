@@ -51,7 +51,8 @@ let pluginConfig: PluginConfig | null = null;
 
 declare global {
   interface Window {
-    __BoomiPublicEmbedInitialized?: boolean;
+    BoomiEmbed?: PublicEmbedConfig | PublicEmbedConfig[];
+    __BoomiInitializedMounts?: Set<string>;
     __BoomiAccessToken?: string;
     rootRefs?: Record<string, React.RefObject<RootRef | null>>;
   }
@@ -642,9 +643,14 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
 
 if (typeof window !== 'undefined') {
   const w = window as Window;
-  const cfg = w.BoomiEmbed;
-  if (cfg && cfg.autoInit !== false && !w.__BoomiPublicEmbedInitialized) {
-    w.__BoomiPublicEmbedInitialized = true;
+  const raw = w.BoomiEmbed;
+  const cfgs = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+  w.__BoomiInitializedMounts ??= new Set();
+  for (const cfg of cfgs) {
+    if (cfg.autoInit === false) continue;
+    const key = `${cfg.publicToken}::${cfg.mountId ?? 'boomi-agent'}`;
+    if (w.__BoomiInitializedMounts.has(key)) continue;
+    w.__BoomiInitializedMounts.add(key);
     BoomiPublicEmbed(cfg).catch((err) => {
       logger.error('Public embed init failed:', err?.message || err);
     });

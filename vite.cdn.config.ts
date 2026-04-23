@@ -18,7 +18,7 @@ export default defineConfig({
     lib: {
       entry: './src/embedkit-cdn.tsx',
       name: 'BoomiEmbedKitCdn',
-      fileName: 'embedkit-cdn',
+      fileName: (format) => format === 'umd' ? 'embedkit-cdn.umd.js' : 'embedkit-cdn.js',
       formats: ['es', 'umd'],
     },
     rollupOptions: {

@@ -68,10 +68,10 @@ function languageToAceMode(lang?: string, fallbackGuess?: 'json'|'text'|'xml'|'y
 
 async function ensureMode(mode: string) {
   try {
-    await import(`ace-builds/src-min-noconflict/mode-${mode}.js`);
+    await import(/* @vite-ignore */ `ace-builds/src-min-noconflict/mode-${mode}.js`);
   } catch {/* ignore */}
   try {
-    await import(`ace-builds/src-min-noconflict/worker-${mode}.js`);
+    await import(/* @vite-ignore */ `ace-builds/src-min-noconflict/worker-${mode}.js`);
   } catch {/* ignore */}
 }
 
