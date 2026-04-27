@@ -202,6 +202,39 @@ Passed as `agents[id].ui`.
 | `maxFiles` | `number` | — | Maximum number of files the user can attach per message. |
 | `maxTotalBytes` | `number` | — | Maximum combined file size in bytes, e.g. `10 * 1024 * 1024` for 10 MB. |
 | `prompts` | `Array<{ title: string; prompt: string }>` | — | Preset prompt cards shown on the welcome screen. Users click them to send the associated prompt. |
+| `promptsAlign` | `'left' \| 'center' \| 'right'` | `'center'` | Horizontal alignment of the prompt card row. |
+| `promptsLocation` | `'input' \| 'welcome'` | `'input'` | Where the prompt cards are rendered. `'input'` places them below the compose bar; `'welcome'` places them below the welcome title and subtitle. |
+
+#### Suggested Prompts Example
+
+```js
+agents: {
+  'my-agent-id': {
+    ui: {
+      mode: 'modal',
+      welcome: { title: 'How can I help?', subtitle: 'Choose a topic or type your own question.' },
+
+      // Prompt cards shown on the welcome screen
+      prompts: [
+        { title: 'Check process status',  prompt: 'What is the current status of my running processes?' },
+        { title: 'Summarize recent errors', prompt: 'Summarize any errors from the last 24 hours.' },
+        { title: 'Help me get started',   prompt: 'Walk me through how to set up a new integration.' },
+      ],
+
+      // 'left' | 'center' (default) | 'right'
+      promptsAlign: 'center',
+
+      // 'input' (default, below compose bar) | 'welcome' (below title + subtitle)
+      promptsLocation: 'welcome',
+
+      // Set to false to hide the free-text input and force users to use preset prompts only
+      allowFreeTextPrompt: true,
+    },
+  },
+},
+```
+
+> **Tip:** Set `allowFreeTextPrompt: false` together with `prompts` to create a guided, button-only interface where users can only select from the preset cards.
 
 #### Page Header (full mode only)
 

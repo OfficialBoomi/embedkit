@@ -224,6 +224,9 @@ export function useAgentApi(args: {
   const skipAutoSelectRef = useRef(false);
   // Effective session used everywhere
   const activeSessionId = isControlled ? (controlledSid ?? null) : uncontrolledSid;
+  // Stable ref so reloadSessions can check the active session without a dep
+  const activeSessionIdRef = useRef(activeSessionId);
+  useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
 
   // ---- conversation state
   const [fetchingConvo, setFetchingConvo] = useState(false);
@@ -284,7 +287,23 @@ export function useAgentApi(args: {
           const byPack = item.integrationPackId && item.integrationPackId === integration.integrationPackId;
           return byPack;
         });
-        setSessions((prev) => (sessionsShallowEqual(prev, filtered) ? prev : filtered));
+        // If the currently-active session was dropped by the server (e.g. its
+        // integrationPackId hasn't propagated yet after the first message),
+        // keep the previous entry rather than silently removing it from the
+        // sidebar. This prevents the session from disappearing mid-conversation.
+        setSessions((prev) => {
+          const activeSid = activeSessionIdRef.current;
+          const list =
+            activeSid && !filtered.some((s) => s.sessionId === activeSid)
+              ? [
+                  ...(prev.find((s) => s.sessionId === activeSid)
+                    ? [prev.find((s) => s.sessionId === activeSid)!]
+                    : []),
+                  ...filtered,
+                ]
+              : filtered;
+          return sessionsShallowEqual(prev, list) ? prev : list;
+        });
         lastListAtRef.current = Date.now();
       } catch (e) {
         setSessErr(e);
@@ -310,7 +329,13 @@ export function useAgentApi(args: {
       const convo = await convoRef.current({ sessionId: sid, limit: 200 });
       // IMPORTANT: do not include 'status' frames in history
       const list = (convo.messages ?? []).filter((m: any) => m?.type !== 'status') as ChatMessage[];
-      dispatch({ type: 'reset', list });
+      // Only overwrite state when the server returned real history. If the
+      // session is empty (new session), skip the reset — E3 already cleared
+      // messages synchronously, and resetting here would wipe any optimistic
+      // message the user dispatched while this fetch was in-flight.
+      if (list.length > 0) {
+        dispatch({ type: 'reset', list });
+      }
     } catch (e) {
       logger.warn({ e }, 'fetchConversation failed');
       setChatError(e);
@@ -598,6 +623,13 @@ export function useAgentApi(args: {
     }
   }, [isControlled, shouldPersist, storageKey, sessions, uncontrolledSid]);
 
+  // Keep a stable ref to createSession so E3 doesn't re-fire when createSession
+  // gets a new reference (createSession depends on activeSessionId, which would
+  // cause E3 to fire twice on every session change — second firing wipes messages
+  // while the first fetch is still in-flight, leaving a blank conversation).
+  const createSessionRef = useRef(createSession);
+  useEffect(() => { createSessionRef.current = createSession; }, [createSession]);
+
   // E3: when effective session changes, reset and fetch
   useEffect(() => {
     dispatch({ type: 'reset', list: [] });
@@ -609,7 +641,7 @@ export function useAgentApi(args: {
         ensuredSessionsRef.current.add(activeSessionId);
         void (async () => {
           try {
-            await createSession(activeSessionId);
+            await createSessionRef.current(activeSessionId);
           } catch (e) {
             ensuredSessionsRef.current.delete(activeSessionId);
             logger.warn({ e }, 'ensureSession failed');
@@ -622,7 +654,7 @@ export function useAgentApi(args: {
     }
 
     void fetchConversationOnce(activeSessionId);
-  }, [activeSessionId, fetchConversationOnce, createSession, args.ensureSession]);
+  }, [activeSessionId, fetchConversationOnce, args.ensureSession]);
 
   // E4: SSE merge + status (no status in messages)
   const lastSidebarRefreshRef = useRef(0);

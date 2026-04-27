@@ -174,14 +174,16 @@ class AuthManager {
         this.phase = 'refreshing';
         const headers = new Headers({ 'Content-Type': 'application/json' });
         if (this.tenantId) headers.set('X-Tenant-Id', this.tenantId);
-        const r = await fetch(`${this.serverBase}/auth/refresh`, {
-          method: 'POST', credentials: 'include', headers, cache: 'no-store'
-        });
         let tok: string | null = null;
-        if (r.ok) {
-          const j = await r.json().catch(() => ({}));
-          tok = typeof j?.accessToken === 'string' ? j.accessToken : null;
-        }
+        try {
+          const r = await fetch(`${this.serverBase}/auth/refresh`, {
+            method: 'POST', credentials: 'include', headers, cache: 'no-store'
+          });
+          if (r.ok) {
+            const j = await r.json().catch(() => ({}));
+            tok = typeof j?.accessToken === 'string' ? j.accessToken : null;
+          }
+        } catch { /* network/CORS error — fall through to customRefresher */ }
         if (!tok && this.customRefresher) {
           tok = await this.customRefresher().catch(() => null);
         }

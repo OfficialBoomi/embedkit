@@ -79,7 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <Settings size={18}/>
             </button>
           )}
-          {expandable && (
+          {onToggleCollapse && (
             <button
               type="button"
               title="Collapse sidebar"

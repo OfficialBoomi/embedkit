@@ -171,6 +171,51 @@ const AgentOverlay: React.FC<{
   );
 };
 
+// Inline chat view for page-mode agents — no overlay, just chat in the container.
+const InlineAgentView: React.FC<{ agentId: string; onBack: () => void }> = ({ agentId, onBack }) => {
+  const { boomiConfig } = usePlugin();
+  const agentCfg = boomiConfig?.agents?.[agentId];
+  const environmentId = agentCfg?.environmentId ?? '';
+  const transport = agentCfg?.transport;
+  const label =
+    agentCfg?.label ||
+    agentCfg?.installAsName ||
+    agentCfg?.ui?.pageTitle ||
+    agentCfg?.ui?.welcome?.title ||
+    'Agent';
+  const { instance, installed, loading } = useAgentStatus(agentId, environmentId, String(label), transport);
+  const [headerActions, setHeaderActions] = useState<ReactNode | null>(null);
+
+  const integration = useMemo<IntegrationPackInstance>(() => ({
+    id: instance?.id ?? agentId,
+    integrationPackId: agentId,
+    environmentId,
+    installationType: 'MULTI',
+  }), [agentId, environmentId, instance?.id]);
+
+  return (
+    <div className="flex h-full w-full flex-col">
+      <div className="boomi-agent-overlay__header">
+        <button type="button" className="boomi-agent-overlay__close" onClick={onBack} aria-label="Back to agents list">
+          ← Back
+        </button>
+        <div className="boomi-agent-overlay__title">{String(label)}</div>
+        <div className="boomi-agent-overlay__header-actions">{headerActions}</div>
+      </div>
+      <div className="boomi-agent-overlay__body flex-1 min-h-0">
+        {loading || !instance || !installed
+          ? (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-4">
+              <AjaxLoader message="Preparing agent..." />
+            </div>
+          )
+          : <AgentChatGPTLayout integration={integration} onHeaderActionsChange={setHeaderActions} />
+        }
+      </div>
+    </div>
+  );
+};
+
 const AgentTiles: React.FC<AgentTilesProps> = ({ agentIds }) => {
   const { boomiConfig, componentKey } = usePlugin();
   const storageKey = `embed-agents-view:${componentKey || 'public'}`;
@@ -236,6 +281,14 @@ const AgentTiles: React.FC<AgentTilesProps> = ({ agentIds }) => {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Page mode: show agent inline (replacing tile grid) when an agent is active
+  const activeAgentMode = activeAgentId
+    ? (boomiConfig?.agents?.[activeAgentId]?.ui?.mode ?? 'full')
+    : null;
+  if (activeAgentId && activeAgentMode === 'page') {
+    return <InlineAgentView agentId={activeAgentId} onBack={() => setActiveAgentId(null)} />;
+  }
 
   return (
     <>

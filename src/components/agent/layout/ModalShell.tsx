@@ -18,8 +18,11 @@ const ModalShell: React.FC<{
   style?: React.CSSProperties;
   expanded?: boolean;
 }> = ({ children, size, style, expanded = false }) => {
+  // Expanded: fill the overlay container (position: fixed; inset: 0) using
+  // position: absolute so corner-offset styles don't fight the inset.
+  // Un-expanded: restore the configured size and position.
   const modalStyle: React.CSSProperties = expanded
-    ? { inset: 20, width: 'auto', height: 'auto', borderRadius: 8, ...style }
+    ? { position: 'absolute', inset: 20, width: 'auto', height: 'auto', borderRadius: 8 }
     : { width: size.w, height: size.h, ...style };
 
   return (

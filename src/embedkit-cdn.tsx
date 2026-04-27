@@ -628,9 +628,11 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
   const renderAgentIds = shouldUseMulti
     ? (shouldRestrictIds ? resolvedAgentIds.filter((id: string) => explicitAgents.has(id)) : resolvedAgentIds)
     : [];
+  // When the list is configured for page mode, render tiles inline (no floating launcher button).
+  const agentListPageMode = (boomiConfig as any)?.components?.agentList?.mode === 'page';
   const componentToRender =
     shouldUseMulti
-      ? (useAgentList ? 'AgentListLauncher' : 'AgentTiles')
+      ? (useAgentList && !agentListPageMode ? 'AgentListLauncher' : 'AgentTiles')
       : 'Agent';
 
   RenderComponent({

@@ -81,6 +81,9 @@ export default function MainChat({
 
   const allowFreeTextPrompt: boolean = uiCfg?.allowFreeTextPrompt !== false;
   const promptDefs: Array<{ title: string; prompt: string }> = Array.isArray(uiCfg?.prompts) ? uiCfg.prompts : [];
+  const promptsAlign: 'left' | 'center' | 'right' = uiCfg?.promptsAlign ?? 'center';
+  const promptsLocation: 'input' | 'welcome' = uiCfg?.promptsLocation ?? 'input';
+  const promptAlignClass = promptsAlign === 'left' ? 'justify-start' : promptsAlign === 'right' ? 'justify-end' : 'justify-center';
 
   const fileAttachmentSupported: boolean = !!uiCfg?.fileAttachmentSupported;
   const fileAttachmentRequired: boolean = !!uiCfg?.fileAttachmentRequired;
@@ -313,8 +316,32 @@ export default function MainChat({
         ) : emptyState ? (
           <div className="h-full w-full flex items-center justify-center">
             <div className="text-center max-w-[720px] px-6 py-10">
-              <div className="text-3xl font-extrabold mb-3">{title}</div>
-              <p className="opacity-70">{subtitle}</p>
+              <div className="text-3xl font-extrabold mb-3" dangerouslySetInnerHTML={{ __html: title }} />
+              <p className="opacity-70" dangerouslySetInnerHTML={{ __html: subtitle }} />
+              {promptsLocation === 'welcome' && promptDefs.length > 0 && (
+                <div className={`flex flex-wrap gap-2 mt-6 ${promptAlignClass}`}>
+                  {promptDefs.map((p, i) => (
+                    <button
+                      key={`${p.title}-${i}`}
+                      type="button"
+                      disabled={!canSend}
+                      onClick={() => void handlePromptClick(p.prompt)}
+                      className={[
+                        "group relative overflow-hidden",
+                        "rounded-2xl px-3 py-2",
+                        "border border-[var(--boomi-card-border)]",
+                        "bg-[var(--boomi-card-bg)]/70 backdrop-blur-[1px]",
+                        "hover:shadow hover:-translate-y-[1px] transition-all",
+                        "disabled:opacity-50 disabled:cursor-not-allowed",
+                      ].join(' ')}
+                      title={p.prompt}
+                    >
+                      <span className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-0 transition will-change-transform [background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)]" />
+                      <span className="text-sm font-medium">{p.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -449,9 +476,9 @@ export default function MainChat({
           </div>
 
           {/* Prompts row */}
-          {Array.isArray(promptDefs) && promptDefs.length > 0 && (
+          {Array.isArray(promptDefs) && promptDefs.length > 0 && promptsLocation === 'input' && (
             <>
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              <div className={`flex flex-wrap items-center ${promptAlignClass} gap-2 pt-1`}>
                 {promptDefs.map((p, i) => (
                   <button
                     key={`${p.title}-${i}`}
@@ -474,7 +501,7 @@ export default function MainChat({
                 ))}
               </div>
               {allowFreeTextPrompt && (
-                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                <div className={`flex flex-wrap items-center ${promptAlignClass} gap-2 pt-1`}>
                   <div className="text-[11px] opacity-60">
                     Press Enter to send • Shift + Enter for new line
                   </div>

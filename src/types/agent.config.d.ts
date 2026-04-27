@@ -35,8 +35,8 @@ export type AgentUiConfig = {
     subtitle: string;
   }
 
-  /** 'full' fills parent; 'modal' renders a centered dialog */
-  mode: 'modal' | 'full';
+  /** 'full' fills parent; 'modal' renders a centered dialog; 'page' renders inline with no launcher */
+  mode: 'modal' | 'full' | 'page';
 
   /** Sidebar options (left column) */
   sidebar?: {
@@ -77,10 +77,16 @@ export type AgentUiConfig = {
   maxTotalBytes?: number;
 
   /** pre configured prompts */
-  prompts?: Array<{ 
-    title: string; 
-    prompt: string; 
+  prompts?: Array<{
+    title: string;
+    prompt: string;
   }>;
+
+  /** Horizontal alignment of prompt cards. Defaults to 'center'. */
+  promptsAlign?: 'left' | 'center' | 'right';
+
+  /** Where to render the prompt cards. 'input' = below the compose bar (default); 'welcome' = below the welcome title/subtitle. */
+  promptsLocation?: 'input' | 'welcome';
 };
 
 export type AgentConfig = {

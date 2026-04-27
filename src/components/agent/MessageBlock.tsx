@@ -9,6 +9,8 @@
  * The client interprets only content.data based on type.
  */
 import React from 'react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { CodeBlock } from './CodeBlock';
 import { ErrorBlock } from './ErrorBlock';
 import { HtmlBlock } from './HtmlBlock';
@@ -20,22 +22,13 @@ type MessageBlockProps = {
   isBoomiDirect?: boolean;
 };
 
-const escapeHtml = (str: string) =>
-  str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+// Configure marked: keep line breaks inside paragraphs, don't mangle links.
+marked.setOptions({ breaks: true, gfm: true });
 
-const textToHtml = (text: string) => {
-  const blocks = text.split(/\n{2,}/);
-  return blocks
-    .map((block) => {
-      const lines = block.split('\n').map((line) => escapeHtml(line));
-      return `<p>${lines.join('<br />')}</p>`;
-    })
-    .join('');
+// Parse markdown → sanitized HTML. Passes through plain text and raw HTML safely.
+const markdownToHtml = (text: string): string => {
+  const raw = marked.parse(text) as string;
+  return DOMPurify.sanitize(raw, { USE_PROFILES: { html: true } });
 };
 
 export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoomiDirect = false }) => {
@@ -127,6 +120,30 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoo
     );
   }
 
+  // Catch error-shaped payloads that arrived without type='error'
+  // (e.g. { success: false, error: "Agent not found" } from the platform).
+  if (data && typeof data === 'object') {
+    const d = data as any;
+    const errStr =
+      (d.success === false && typeof d.error === 'string' && d.error.trim()) ||
+      (d.success === false && typeof d.message === 'string' && d.message.trim()) ||
+      '';
+    if (errStr) {
+      const errorPayload = { title: 'Agent error', message: errStr, raw: data };
+      return (
+        <div className="w-full">
+          <ErrorBlock
+            error={errorPayload}
+            title="Agent error"
+            defaultOpen
+            showStackToggle={false}
+            showRawToggle={false}
+          />
+        </div>
+      );
+    }
+  }
+
   // TEXT (with optional rich html rendering)
   if (m?.type === 'text') {
     // If data carries html/title, render as rich HTML
@@ -145,22 +162,10 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoo
     }
 
     const text = typeof data === 'string' ? data : data != null ? String(data) : '';
-    // If the content contains HTML (e.g. returned directly by Agent Studio agents),
-    // render it as HTML. The agent may prepend plain text before the HTML block.
-    if (/<[a-zA-Z][^>]*>/.test(text)) {
-      return (
-        <div className="w-full">
-          <div className="w-full max-w-[1024px] px-4 md:px-6 leading-7 text-[var(--boomi-page-fg-color)]">
-            <HtmlBlock value={text} treatStringAsHTML />
-          </div>
-        </div>
-      );
-    }
-    const html = textToHtml(text);
     return (
       <div className="w-full">
         <div className="w-full max-w-[1024px] px-4 md:px-6 leading-7 text-[var(--boomi-page-fg-color)]">
-          <HtmlBlock value={html} treatStringAsHTML />
+          <HtmlBlock value={markdownToHtml(text)} treatStringAsHTML />
         </div>
       </div>
     );

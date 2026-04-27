@@ -121,6 +121,31 @@ const Agent: React.FC<AgentProps> = ({
     }
   }, [open]);
 
+  // Page mode: render the agent chat directly in the container div — no launcher, no overlay.
+  if (modeSetting === 'page') {
+    return (
+      <div className="h-full w-full">
+        {loading
+          ? (
+            <div className="flex h-full w-full items-center justify-center">
+              <AjaxLoader message="Preparing agent..." />
+            </div>
+          )
+          : !instance
+          ? (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-4">
+              <AjaxLoader message="Preparing agent..." />
+              <p className="text-sm opacity-70">
+                This agent is not fully installed yet. Configure it to start chatting.
+              </p>
+            </div>
+          )
+          : <AgentChatGPTLayout integration={integration} onHeaderActionsChange={setHeaderActions} />
+        }
+      </div>
+    );
+  }
+
   const overlayContent = () => {
     if (!instance) {
       return (

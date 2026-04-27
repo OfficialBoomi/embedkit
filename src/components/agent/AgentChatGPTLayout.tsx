@@ -71,7 +71,7 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
   } = useAgentApi({
     integration,
     sessionId: useMountSession ? mountSessionId : undefined,
-    persistMode: 'none',
+    persistMode: useMountSession ? 'none' : 'modal',
     ensureSession: useMountSession,
   });
   const isSingle = integration.installationType === 'SINGLE';
