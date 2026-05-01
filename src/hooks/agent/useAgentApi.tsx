@@ -188,6 +188,9 @@ export function useAgentApi(args: {
   }, [args.storageKey, integration.id]);
 
   const shouldPersist = !isControlled && persistMode === 'modal';
+  // Persist session list so sessions appear instantly on re-mount (close/reopen).
+  // Scoped per agent so different agents don't share lists.
+  const sessionsListKey = `boomi:sesslist:${integration.integrationPackId ?? integration.id ?? 'default'}`;
   const agentCfg = integration.integrationPackId
     ? boomiConfig?.agents?.[integration.integrationPackId]
     : undefined;
@@ -215,8 +218,22 @@ export function useAgentApi(args: {
   }, [svc, useBoomiDirect]);
 
   // ---- sessions & selection
-  const [sessions, setSessions] = useState<SessionItem[]>([]);
-  const [sessLoading, setSessLoading] = useState(false);
+  // Initialize from localStorage cache so sessions appear instantly on re-mount.
+  // sessLoading stays true so auto-create and other guards still wait for the
+  // server response before acting.
+  const [sessions, setSessions] = useState<SessionItem[]>(() => {
+    try {
+      const raw = localStorage.getItem(sessionsListKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as SessionItem[];
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+  // Start as true so effects that guard on !sessionsLoading don't fire before
+  // the first server load completes (avoids auto-create race on initial render).
+  const [sessLoading, setSessLoading] = useState(true);
   const [sessErr, setSessErr] = useState<unknown>(null);
 
   // Uncontrolled local selection
@@ -251,12 +268,21 @@ export function useAgentApi(args: {
   const lastListAtRef     = useRef<number>(0);
   const LIST_TTL_MS       = 1500;
   const ensuredSessionsRef = useRef<Set<string>>(new Set());
+  // Tracks sessions that have been optimistically removed locally but may still
+  // appear in stale server responses.
+  const deletedSessionIdsRef = useRef<Set<string>>(new Set());
 
   // ===== sessions loader =====
   const reloadSessions = useCallback(async (force = false) => {
     const now = Date.now();
     if (!force && now - lastListAtRef.current < LIST_TTL_MS) return;
-    if (listInflightRef.current) return;
+    if (listInflightRef.current) {
+      // Non-forced: skip if already loading.
+      // Forced: wait for the current request to finish, then run a fresh one so
+      // we never miss a create/delete that happened while a request was in flight.
+      if (!force) return;
+      await listInflightRef.current;
+    }
 
     const p = (async () => {
       setSessLoading(true);
@@ -284,25 +310,40 @@ export function useAgentApi(args: {
         });
         const filtered = adapted.filter((item) => {
           if (!integration.integrationPackId) return true;
-          const byPack = item.integrationPackId && item.integrationPackId === integration.integrationPackId;
-          return byPack;
+          // Include sessions without integrationPackId: they were created before
+          // the pack was set (or stored with an empty value on the server).
+          // Strict mismatch is the only reason to exclude.
+          if (!item.integrationPackId) return true;
+          return item.integrationPackId === integration.integrationPackId;
         });
-        // If the currently-active session was dropped by the server (e.g. its
-        // integrationPackId hasn't propagated yet after the first message),
-        // keep the previous entry rather than silently removing it from the
-        // sidebar. This prevents the session from disappearing mid-conversation.
+
+        // Once the server confirms a session is gone, clear it from our deleted set.
+        for (const sid of Array.from(deletedSessionIdsRef.current)) {
+          if (!filtered.some(s => s.sessionId === sid)) deletedSessionIdsRef.current.delete(sid);
+        }
+
+        // Exclude any sessions we've already optimistically removed.
+        const visible = filtered.filter(s => !deletedSessionIdsRef.current.has(s.sessionId));
+
         setSessions((prev) => {
-          const activeSid = activeSessionIdRef.current;
-          const list =
-            activeSid && !filtered.some((s) => s.sessionId === activeSid)
-              ? [
-                  ...(prev.find((s) => s.sessionId === activeSid)
-                    ? [prev.find((s) => s.sessionId === activeSid)!]
-                    : []),
-                  ...filtered,
-                ]
-              : filtered;
-          return sessionsShallowEqual(prev, list) ? prev : list;
+          // Never drop a session the client already knows about unless it was
+          // explicitly deleted. Server list races (just-created, stale read)
+          // can cause sessions to be temporarily absent from the response.
+          const visibleIds = new Set(visible.map((s) => s.sessionId));
+          const preserved = prev.filter(
+            (s) => !visibleIds.has(s.sessionId) && !deletedSessionIdsRef.current.has(s.sessionId)
+          );
+          // Merge server list with any client-only sessions not yet confirmed by server,
+          // then sort by lastAt descending so order is stable across reloads.
+          const list = [...visible, ...preserved].sort((a, b) => {
+            const ta = new Date(a.lastAt).getTime() || 0;
+            const tb = new Date(b.lastAt).getTime() || 0;
+            return tb - ta;
+          });
+          if (sessionsShallowEqual(prev, list)) return prev;
+          // Persist the confirmed list so sessions appear instantly on next mount.
+          try { localStorage.setItem(sessionsListKey, JSON.stringify(list)); } catch {}
+          return list;
         });
         lastListAtRef.current = Date.now();
       } catch (e) {
@@ -329,16 +370,15 @@ export function useAgentApi(args: {
       const convo = await convoRef.current({ sessionId: sid, limit: 200 });
       // IMPORTANT: do not include 'status' frames in history
       const list = (convo.messages ?? []).filter((m: any) => m?.type !== 'status') as ChatMessage[];
-      // Only overwrite state when the server returned real history. If the
-      // session is empty (new session), skip the reset — E3 already cleared
-      // messages synchronously, and resetting here would wipe any optimistic
-      // message the user dispatched while this fetch was in-flight.
-      if (list.length > 0) {
+      // Guard against stale responses: if the user switched sessions while this
+      // fetch was in-flight, discard the result — don't overwrite the new
+      // session's (blank) view with the previous session's messages.
+      if (list.length > 0 && activeSessionIdRef.current === sid) {
         dispatch({ type: 'reset', list });
       }
     } catch (e) {
       logger.warn({ e }, 'fetchConversation failed');
-      setChatError(e);
+      if (activeSessionIdRef.current === sid) setChatError(e);
     } finally {
       setFetchingConvo(false);
       if (convoInflightRef.current === sid) convoInflightRef.current = null;
@@ -363,9 +403,25 @@ export function useAgentApi(args: {
         onNewSessionId?.(sid);
       } else {
         if (shouldPersist) { try { localStorage.setItem(storageKey, sid); } catch {} }
-        await reloadSessions(true);
+        // Optimistically insert so the session appears in the sidebar immediately.
+        // Must happen before reloadSessions so the active-session guard in
+        // setSessions can preserve it when the server response arrives.
+        setSessions(prev => {
+          if (prev.some(s => s.sessionId === sid)) return prev;
+          const now = new Date().toISOString();
+          const next = [
+            { sessionId: sid, integrationPackId: integration.integrationPackId, lastAt: now, createdAt: now, messageCount: 0 },
+            ...prev,
+          ];
+          try { localStorage.setItem(sessionsListKey, JSON.stringify(next)); } catch {}
+          return next;
+        });
+        // Set selection and update the ref directly so reloadSessions sees the
+        // new active session even if React hasn't re-rendered yet.
         setUncontrolledSid(sid);
+        activeSessionIdRef.current = sid;
         skipAutoSelectRef.current = false;
+        void reloadSessions(true);
       }
       return sid;
     } catch (e) {
@@ -388,8 +444,22 @@ export function useAgentApi(args: {
   const deleteSession = useCallback(async (sid: string) => {
     const wasActive = activeSessionId === sid;
 
+    // Optimistically remove from the sidebar immediately so the UI updates
+    // without waiting for a server round-trip or reload.
+    deletedSessionIdsRef.current.add(sid);
+    setSessions(prev => {
+      const next = prev.filter(s => s.sessionId !== sid);
+      try { localStorage.setItem(sessionsListKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+
     if (!isControlled) {
-      if (wasActive) skipAutoSelectRef.current = true;
+      if (wasActive) {
+        skipAutoSelectRef.current = true;
+        // Update ref immediately so the active-session guard in reloadSessions
+        // doesn't try to re-add this session before the next render.
+        activeSessionIdRef.current = null;
+      }
       setUncontrolledSid((cur) => (cur === sid ? null : cur));
       if (shouldPersist) {
         try {
@@ -408,13 +478,16 @@ export function useAgentApi(args: {
     try {
       await delRef.current({ sessionId: sid });
     } finally {
-      await reloadSessions(true);
+      // Fire-and-forget: optimistic removal already updated the UI.
+      // This just keeps the list in sync with the server.
+      void reloadSessions(true);
     }
   }, [isControlled, shouldPersist, storageKey, reloadSessions, activeSessionId, dispatch, setAgentStatus, setAgentNote]);
 
   const selectSession = useCallback((sid: string) => {
     if (isControlled) return; // parent owns selection
     skipAutoSelectRef.current = false;
+    activeSessionIdRef.current = sid; // update ref immediately so stale fetches are discarded
     setUncontrolledSid(sid);
     if (shouldPersist) { try { localStorage.setItem(storageKey, sid); } catch {} }
   }, [isControlled, shouldPersist, storageKey]);
@@ -603,7 +676,7 @@ export function useAgentApi(args: {
   useEffect(() => {
     if (isControlled) return;
     if (skipAutoSelectRef.current) return;
-    if (uncontrolledSid) return;
+    if (uncontrolledSid && sessions.some(s => s.sessionId === uncontrolledSid)) return;
     if (shouldPersist) {
       try {
         const sid = localStorage.getItem(storageKey) || '';

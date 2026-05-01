@@ -45,12 +45,39 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
   const agentCfg = boomiConfig?.agents?.[integration.integrationPackId ?? ''];
   const isBoomiDirect = agentCfg?.transport === 'boomi-direct';
   const sessionScope = agentCfg?.ui?.sessionScope ?? 'multi';
+  const useMountSession = sessionScope === 'mount';
+  const mountStorageKey = `boomi:mount-sid:${integration.integrationPackId ?? 'default'}`;
   const mountSessionIdRef = useRef<string | null>(null);
   if (!mountSessionIdRef.current) {
-    mountSessionIdRef.current = createMountSessionId();
+    // In mount mode, restore the same session across page reloads so history persists.
+    // In multi mode, mountSessionId is unused, so we skip localStorage entirely.
+    let sid: string | null = null;
+    if (useMountSession) {
+      try { sid = localStorage.getItem(mountStorageKey); } catch {}
+    }
+    if (!sid) {
+      sid = createMountSessionId();
+      if (useMountSession) {
+        try { localStorage.setItem(mountStorageKey, sid); } catch {}
+      }
+    }
+    mountSessionIdRef.current = sid;
   }
   const mountSessionId = mountSessionIdRef.current ?? '';
-  const useMountSession = sessionScope === 'mount';
+
+  // Multi mode: derive a stable browser-specific session ID from localStorage so
+  // the same session survives close/reopen. Only used when sessionScope !== 'mount'.
+  const multiDefaultStorageKey = `boomi:multi-sid:${integration.integrationPackId ?? 'default'}`;
+  const multiDefaultSidRef = useRef<string | null>(null);
+  if (!multiDefaultSidRef.current && !useMountSession) {
+    let sid: string | null = null;
+    try { sid = localStorage.getItem(multiDefaultStorageKey); } catch {}
+    if (!sid) {
+      sid = createMountSessionId();
+      try { localStorage.setItem(multiDefaultStorageKey, sid); } catch {}
+    }
+    multiDefaultSidRef.current = sid;
+  }
 
   const {
     sessions,
@@ -99,6 +126,18 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
     void fetchStatus();
   }, [fetchStatus]);
 
+  // Multi mode: auto-create a session on first open (sessions empty after load)
+  // so there is always a session ready with a stable per-browser ID. On close/reopen,
+  // useAgentApi's E2 finds the session via localStorage[storageKey] and selects it.
+  const autoCreateDoneRef = useRef(false);
+  useEffect(() => {
+    if (useMountSession) return;
+    if (sessionsLoading) return;
+    if (sessions.length > 0 || activeSessionId) return;
+    if (autoCreateDoneRef.current) return;
+    autoCreateDoneRef.current = true;
+    void createSession(multiDefaultSidRef.current ?? undefined);
+  }, [useMountSession, sessionsLoading, sessions, activeSessionId, createSession]);
 
   const sidebarItems = useMemo(
     () =>

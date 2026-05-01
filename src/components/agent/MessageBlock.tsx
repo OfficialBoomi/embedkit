@@ -26,9 +26,11 @@ type MessageBlockProps = {
 marked.setOptions({ breaks: true, gfm: true });
 
 // Parse markdown → sanitized HTML. Passes through plain text and raw HTML safely.
+// ADD_ATTR: ['target', 'rel'] — DOMPurify strips target by default (phishing mitigation),
+// but agent responses may legitimately include target="_blank" links.
 const markdownToHtml = (text: string): string => {
   const raw = marked.parse(text) as string;
-  return DOMPurify.sanitize(raw, { USE_PROFILES: { html: true } });
+  return DOMPurify.sanitize(raw, { USE_PROFILES: { html: true }, ADD_ATTR: ['target', 'rel'] });
 };
 
 export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoomiDirect = false }) => {
