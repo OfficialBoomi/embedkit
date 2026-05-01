@@ -486,6 +486,23 @@ function ensureMount(mountId: string) {
   return el;
 }
 
+/** Returns a stable per-browser anonymous ID, creating one on first call. */
+function getBrowserId(): string {
+  const key = '__boomi_bid';
+  try {
+    let id = localStorage.getItem(key);
+    if (!id) {
+      id = `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem(key, id);
+    }
+    return id;
+  } catch {
+    // localStorage unavailable (e.g. private browsing with strict settings):
+    // return a session-scoped ID so at least the current session works.
+    return `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
 export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
   if (!cfg || !cfg.publicToken) {
     throw new Error('publicToken is required');
@@ -498,6 +515,9 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
 
   const serverBase = (cfg.serverBase || '/api/v1').replace(/\/$/, '');
   const origin = cfg.origin || (typeof window !== 'undefined' ? window.location.origin : undefined);
+  // When no explicit userId is provided, send a stable per-browser ID so that
+  // each browser gets its own session namespace (not shared across all users).
+  const browserId = cfg.userId ? undefined : getBrowserId();
   const res = await fetch(`${serverBase}/embed/session`, {
     method: 'POST',
     credentials: 'include',
@@ -508,6 +528,7 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
       origin,
       userId: cfg.userId,
       userToken: cfg.userToken,
+      browserId,
       config: cfg.config,
     }),
   });
@@ -616,6 +637,7 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
           origin,
           userId: cfg.userId,
           userToken: cfg.userToken,
+          browserId: cfg.userId ? undefined : getBrowserId(),
           config: cfg.config,
         }),
       });

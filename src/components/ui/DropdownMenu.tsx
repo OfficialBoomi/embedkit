@@ -62,7 +62,6 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ children }) => {
               leaveTo="transform opacity-0 scale-95"
             >
               <Menu.Items
-                static
                 className="absolute right-0 mt-2 origin-top-right rounded-md py-2 boomi-menu z-[520] shadow-xl text-sm leading-5"
               >
                 {children}
