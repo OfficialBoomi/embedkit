@@ -35,7 +35,20 @@ const markdownToHtml = (text: string): string => {
 
 export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoomiDirect = false }) => {
   const isUser = m?.role === 'user';
-  const rawData = (m?.content as any)?.data ?? (m?.content as any);
+  // History messages arrive with content serialized as a JSON string;
+  // SSE messages arrive with content already parsed as an object.
+  // Normalize to an object first so .data access works in both cases.
+  const normalizedContent: any = (() => {
+    const raw = m?.content;
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try { return JSON.parse(trimmed); } catch {}
+      }
+    }
+    return raw;
+  })();
+  const rawData = normalizedContent?.data ?? normalizedContent;
   let data = rawData;
   if (typeof rawData === 'string') {
     const trimmed = rawData.trim();
