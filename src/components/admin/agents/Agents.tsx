@@ -163,6 +163,7 @@ const Agents: React.FC<AgentsProps> = ({ componentKey, primaryAccountId: primary
       setAvailableAgents(resp.items ?? []);
     } catch (e: any) {
       logger.error({ err: e }, '[Agents] available list failed');
+      setError(e?.message || 'Failed to load available Boomi agents');
       setAvailableAgents([]);
     }
   }, [listAvailableAgents, primaryAccountId]);
