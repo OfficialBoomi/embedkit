@@ -1,0 +1,84 @@
+<!--
+  index.example.html
+  Copy to index.html (git-ignored) for local Vite dev.
+  See docs at ../embedkit-server/docs/embedkit-local-harness.md
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Boomi EmbedKit — Local Harness</title>
+  <link rel="stylesheet" href="index.css" />
+</head>
+<body>
+  <div class="app">
+    <nav class="sidenav">
+      <div class="brand">EmbedKit</div>
+
+      <a href="#" id="login-link">Init Plugin</a>
+      <span class="hint">Initializes BoomiPlugin (requests a nonce, stores config).</span>
+
+      <a href="#" id="render-link">Render Plugin</a>
+      <span class="hint">Renders the Integrations page into the content pane.</span>
+
+      <a href="#" id="logout-link">Uninit Plugin</a>
+      <span class="hint">Tears down auth and clears the theme.</span>
+
+      <a href="#" id="destroy-link">Destroy Plugin</a>
+      <span class="hint">Full destroy — unmounts and removes the host.</span>
+
+      <div class="sidenav-spacer"></div>
+
+      <div class="ctx-card" id="ctx-card">
+        <div class="ctx-title">
+          <span>Plugin Context</span>
+          <span class="ctx-dot" id="ctx-dot" title="Disconnected"></span>
+        </div>
+        <div class="ctx-row"><span class="ctx-label">Parent Account</span></div>
+        <div class="ctx-row"><strong class="ctx-value" id="ctx-parent">—</strong></div>
+        <div class="ctx-row"><span class="ctx-label">Auth User</span></div>
+        <div class="ctx-row"><strong class="ctx-value" id="ctx-auth">—</strong></div>
+        <div class="ctx-row"><span class="ctx-label">Account Group</span></div>
+        <div class="ctx-row"><strong class="ctx-value" id="ctx-group">—</strong></div>
+        <div class="ctx-row"><span class="ctx-label">Theme Enabled</span></div>
+        <div class="ctx-row"><span class="pill" id="ctx-theme-enabled">Off</span></div>
+        <div class="ctx-row"><span class="ctx-label">Default Theme</span></div>
+        <div class="ctx-row"><strong class="ctx-value" id="ctx-theme-default">—</strong></div>
+        <div class="ctx-row"><span class="ctx-label">AI Enabled</span></div>
+        <div class="ctx-row"><span class="pill" id="ctx-ai-enabled">Off</span></div>
+        <div class="ctx-row"><span class="ctx-label">AI Model</span></div>
+        <div class="ctx-row"><strong class="ctx-value" id="ctx-ai-model">—</strong></div>
+      </div>
+    </nav>
+
+    <main class="content boomi-scroll">
+      <div class="bCard">
+        <div class="workbench">
+          <div id="boomi-test" class="plugin-host boomi-scroll" role="region" aria-label="Boomi Plugin Host"></div>
+          <div class="workbench-resizer" role="separator" aria-label="Resize console" aria-orientation="horizontal" tabindex="0"></div>
+          <div class="console-wrap">
+            <div class="console-header">
+              <strong>Console</strong>
+              <div class="console-actions">
+                <label for="log-level" class="sr-only">Log level</label>
+                <select id="log-level" class="console-level" aria-label="Log level">
+                  <option value="debug" selected>Debug</option>
+                  <option value="info">Info</option>
+                  <option value="warn">Warn</option>
+                  <option value="error">Error</option>
+                  <option value="off">Off</option>
+                </select>
+                <button id="clear-console" type="button" class="console-clear">Clear</button>
+              </div>
+            </div>
+            <div id="inpage-console" class="console boomi-scroll" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="index.js"></script>
+</body>
+</html>
