@@ -14,6 +14,49 @@
 ### All Releases
 
 <details open>
+  <summary><strong>Unreleased</strong> — Chat Composer Backdrop & Wider Config Modal</summary>
+
+  > [!NOTE]
+  > This entry tracks work in progress for the current sprint and has not been
+  > released yet. The version number and date will be set at release time.
+
+  **Highlights**
+  - ✅ **Chat composer backdrop** — The chat input now sits on a dedicated backdrop panel so the conversation no longer bleeds under the input as it scrolls. By default it renders as a soft transparent→solid fade with no divider line, giving the chat a cleaner, more standard look.
+  - ✅ **Fully themeable** — The backdrop is driven by four new CSS design tokens that follow the existing theming system. They cascade with light, dark, `boomi`, and any custom theme, and can be overridden globally (`cssVars`) or per-theme (`cssVarsByTheme`).
+  - ✅ **Admin Console support** — The new tokens are available in the theme builder's CSS Variable Overrides dropdown, so they can be configured per project without code.
+  - ✅ **Wider configuration modal** — The Add/Edit Project modals in the Admin Console are now wider to comfortably fit the CSS variable editor and longer token names.
+  - ✅ **Documentation** — The [Configuration Reference](./ConfigurationReference.md) and [CDN Configuration Guide](./CDNConfiguration.md) now document the composer backdrop tokens with usage examples and a complete working sample.
+
+  **Configuration**
+
+  The backdrop is configured with four CSS variables (defaults shown):
+
+  ```js
+  cssVars: {
+    // Default look — a soft transparent→solid fade with no divider line.
+    '--boomi-agent-composer-backdrop-bg': 'var(--boomi-agent-pane-bg)',
+    '--boomi-agent-composer-backdrop-fade': '2.5rem',  // fade height; 0px = hard solid panel
+    '--boomi-agent-composer-backdrop-line-width': '0',  // >0 to show a divider line
+    '--boomi-agent-composer-backdrop-line-color': 'var(--boomi-agent-chat-border)',
+  }
+  ```
+
+  | Token | Default | Purpose |
+  |-------|---------|---------|
+  | `--boomi-agent-composer-backdrop-bg` | `var(--boomi-agent-pane-bg)` | Solid color the panel resolves to |
+  | `--boomi-agent-composer-backdrop-fade` | `2.5rem` | Transparent→solid fade height (`0px` = solid panel) |
+  | `--boomi-agent-composer-backdrop-line-width` | `0` | Divider line thickness (`0` = no line) |
+  | `--boomi-agent-composer-backdrop-line-color` | `var(--boomi-agent-chat-border)` | Divider line color |
+
+  To get a solid panel with a thin divider line instead, set
+  `--boomi-agent-composer-backdrop-fade: 0px` and
+  `--boomi-agent-composer-backdrop-line-width: 1px`.
+
+</details>
+
+---
+
+<details>
   <summary><strong>v1.4.10</strong> — Expandable Modal & Collapsible Sidebar</summary>
 
   **Highlights**

@@ -28,7 +28,9 @@ import { AiOutlineClose } from 'react-icons/ai';
  * @property {() => void} onClose - Callback invoked when the modal is closed.
  * @property {() => void} [onSubmit] - Optional callback invoked when the modal's submit action is triggered.
  * @property {string} [submitLabel='Submit'] - Optional label for the submit button.
- * @property {string} [width] - Optional CSS width value to control the modal’s width.
+ * @property {'default' | 'wide'} [size='default'] - Controls the modal width.
+ *   `'wide'` is intended for content-heavy modals such as the agent
+ *   configuration builder, where the CSS variable rows need more horizontal room.
  */
 interface ModalProps {
   isOpen: boolean;
@@ -40,6 +42,7 @@ interface ModalProps {
   submitLabel?: string;
   showSaveButton?: boolean;
   showCancelButton?: boolean;
+  size?: 'default' | 'wide';
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -52,6 +55,7 @@ const Modal: React.FC<ModalProps> = ({
   showSaveButton = true,
   showCancelButton = true,
   submitLabel = 'Submit',
+  size = 'default',
 }) => {
   if (!isOpen) return null;
   const showButtons = showSaveButton || showCancelButton;
@@ -71,7 +75,7 @@ const Modal: React.FC<ModalProps> = ({
       role="dialog"
       aria-modal="true"
     >
-      <div className={`boomi-modal-container`}>
+      <div className={`boomi-modal-container${size === 'wide' ? ' boomi-modal-container--wide' : ''}`}>
         <button
           className="boomi-modal-close"
           type="button"

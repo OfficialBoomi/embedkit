@@ -618,6 +618,47 @@ cssVarsByTheme: {
 | `--boomi-agent-compose-secondary-bg` | Secondary compose bar area background |
 | `--boomi-agent-compose-secondary-border` | Secondary compose bar area border |
 
+#### Composer Backdrop
+
+The composer floats over the bottom of the scrolling conversation. The
+**backdrop** is the panel painted behind the input so messages don't bleed
+under it as they scroll. By default it renders as a soft transparent→solid
+fade with no divider line, so the conversation gently dissolves into the input
+area. All four tokens are overridable per-theme (`cssVarsByTheme`) or globally
+(`cssVars`).
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-agent-composer-backdrop-bg` | `var(--boomi-agent-pane-bg)` | Solid color the backdrop panel resolves to. |
+| `--boomi-agent-composer-backdrop-fade` | `2.5rem` | Height of the transparent→solid fade at the top edge. A value like `2.5rem` fades the conversation out into the backdrop; `0px` = a hard solid panel. |
+| `--boomi-agent-composer-backdrop-line-width` | `0` | Thickness of the divider line at the top of the solid region. `0` = no line; set e.g. `1px` to show one. |
+| `--boomi-agent-composer-backdrop-line-color` | `var(--boomi-agent-chat-border)` | Color of the divider line (only visible when the line width is `> 0`). |
+
+**Two common looks:**
+
+```js
+// 1) Default — soft fade, no line (what ships out of the box).
+//    The conversation gradually fades into the input area.
+cssVars: {
+  '--boomi-agent-composer-backdrop-bg': 'var(--boomi-agent-pane-bg)',
+  '--boomi-agent-composer-backdrop-fade': '2.5rem',
+  '--boomi-agent-composer-backdrop-line-width': '0',
+}
+
+// 2) Solid panel + a thin divider line — a hard panel that extends slightly
+//    above the input, capped by a divider line.
+cssVars: {
+  '--boomi-agent-composer-backdrop-fade': '0px',
+  '--boomi-agent-composer-backdrop-line-width': '1px',
+  '--boomi-agent-composer-backdrop-line-color': 'var(--boomi-agent-chat-border)',
+}
+```
+
+> Because `--boomi-agent-composer-backdrop-bg` defaults to the themed
+> `--boomi-agent-pane-bg`, the backdrop automatically matches light, dark, and
+> any custom theme without extra configuration. Override it only when you want
+> the panel to differ from the pane background.
+
 #### Tabs
 
 | Token | Description |

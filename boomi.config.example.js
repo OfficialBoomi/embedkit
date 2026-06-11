@@ -63,6 +63,26 @@ export default {
     },
   },
 
+  // Global CSS variable overrides applied across every theme.
+  // Anything you set here is merged on top of the plugin defaults and can be
+  // further overridden per-theme in cssVarsByTheme below.
+  cssVars: {
+    // --- Chat composer backdrop -------------------------------------------
+    // The panel painted behind the chat input so the conversation no longer
+    // bleeds under the composer. Defaults below match the built-in look
+    // (a soft transparent→solid fade with no divider line).
+    '--boomi-agent-composer-backdrop-bg': 'var(--boomi-agent-pane-bg)',
+    '--boomi-agent-composer-backdrop-fade': '2.5rem',     // height of the transparent→solid fade
+    '--boomi-agent-composer-backdrop-line-width': '0',    // >0 to show a divider line
+    '--boomi-agent-composer-backdrop-line-color':
+      'var(--boomi-agent-chat-border, var(--boomi-card-border))',
+
+    // Alternative "solid panel + thin line" look — use this for a hard panel
+    // with a divider that extends slightly above the input:
+    // '--boomi-agent-composer-backdrop-fade': '0px',
+    // '--boomi-agent-composer-backdrop-line-width': '1px',
+  },
+
   // Per-theme CSS variable overrides. Theme name is the key.
   // Add as many themes as you need; the plugin merges with its defaults.
   cssVarsByTheme: {
@@ -71,6 +91,11 @@ export default {
       '--boomi-btn-primary-bg': '#6348c7',
       '--boomi-btn-primary-fg': '#ffffff',
       '--boomi-accent': '#6348c7',
+      // The composer backdrop is theme-aware too — e.g. give 'oem' a bold
+      // inked divider line and a soft fade:
+      '--boomi-agent-composer-backdrop-fade': '2rem',
+      '--boomi-agent-composer-backdrop-line-width': '2px',
+      '--boomi-agent-composer-backdrop-line-color': '#1a1a1a',
       // ... add the rest of the --boomi-* vars you want to override
     },
   },

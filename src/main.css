@@ -425,6 +425,13 @@
     overflow: auto;
   }
 
+  /* Wide variant for content-heavy modals (e.g. the agent configuration
+     builder, whose CSS variable rows need more horizontal room). */
+  .boomi-modal-container--wide {
+    width: 90%;
+    max-width: 1100px;
+  }
+
   /* Close Button */
   .boomi-modal-close {
     position: absolute;
@@ -1848,6 +1855,40 @@
     background: transparent;
     pointer-events: none;
     z-index: 10;
+    /* Own stacking context so the backdrop layers below sit predictably
+       behind the composer form (which lifts itself with z-10). */
+    isolation: isolate;
+  }
+
+  /* Backdrop fill behind the chat input so messages don't show through as
+     they scroll under the composer. Solid by default; becomes a
+     transparent→solid fade when --boomi-agent-composer-backdrop-fade > 0. */
+  .boomi-agent-composer::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      transparent 0,
+      var(--boomi-agent-composer-backdrop-bg, var(--boomi-agent-pane-bg, var(--boomi-page-bg-color)))
+        var(--boomi-agent-composer-backdrop-fade, 2.5rem)
+    );
+  }
+
+  /* Thin divider line at the top edge of the solid portion of the backdrop.
+     Remove it by setting --boomi-agent-composer-backdrop-line-width: 0. */
+  .boomi-agent-composer::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: var(--boomi-agent-composer-backdrop-fade, 2.5rem);
+    height: var(--boomi-agent-composer-backdrop-line-width, 0);
+    background: var(--boomi-agent-composer-backdrop-line-color,
+      var(--boomi-agent-chat-border, var(--boomi-card-border)));
+    pointer-events: none;
+    z-index: 1;
   }
 
   /* Soft accent bar under the header; theme-aware via tokens */
@@ -2560,6 +2601,21 @@
     --boomi-agent-compose-input-border: color-mix(in srgb, var(--boomi-input-border) 95%, transparent);
     --boomi-agent-compose-secondary-bg: color-mix(in srgb, var(--boomi-card-bg) 90%, transparent);
     --boomi-agent-compose-secondary-border: color-mix(in srgb, var(--boomi-card-border) 80%, transparent);
+
+    /* Composer backdrop — the panel painted behind the chat input so the
+       conversation doesn't bleed under the composer. Defaults to a soft
+       transparent→solid fade with no divider line. All four tokens are
+       overridable per-theme (cssVarsByTheme) or globally (cssVars) from the
+       admin config:
+         …backdrop-bg         solid color the panel resolves to
+         …backdrop-fade       height of the transparent→solid fade at the top
+                              edge (0px = hard solid panel; e.g. 2.5rem = fade)
+         …backdrop-line-width thickness of the divider line (0 = no line)
+         …backdrop-line-color color of the divider line */
+    --boomi-agent-composer-backdrop-bg: var(--boomi-agent-pane-bg, var(--boomi-page-bg-color));
+    --boomi-agent-composer-backdrop-fade: 2.5rem;
+    --boomi-agent-composer-backdrop-line-width: 0;
+    --boomi-agent-composer-backdrop-line-color: var(--boomi-agent-chat-border, var(--boomi-card-border));
 
     /* shimmer colors & behavior */
     --boomi-agent-shimmer-1: theme('colors.indigo.500');

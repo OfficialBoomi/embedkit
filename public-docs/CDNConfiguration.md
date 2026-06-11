@@ -559,6 +559,10 @@ These variables specifically control the agent chat panel.
 | `--boomi-agent-compose-bg` | Compose bar background |
 | `--boomi-agent-compose-border` | Compose bar border |
 | `--boomi-agent-compose-shadow` | Compose bar shadow |
+| `--boomi-agent-composer-backdrop-bg` | Panel painted behind the input so messages don't bleed under it (defaults to the pane background) |
+| `--boomi-agent-composer-backdrop-fade` | Transparent→solid fade height at the top edge — defaults to `2.5rem` (soft fade); use `0px` for a hard solid panel |
+| `--boomi-agent-composer-backdrop-line-width` | Divider line thickness above the input — defaults to `0` (no line); set e.g. `1px` to show one |
+| `--boomi-agent-composer-backdrop-line-color` | Divider line color (defaults to the chat border) |
 | `--boomi-agent-pane-bg-color` | Side pane background |
 | `--boomi-agent-pane-fg-color` | Side pane text |
 | `--boomi-agent-tab-bg` | Tab bar background |
@@ -1073,6 +1077,84 @@ If you have multiple `tiles` or `list` projects on the same page and need more t
 ```
 
 > **Note:** A single page should have one `window.BoomiEmbed` config. Use the `tiles` or `list` embed type to surface multiple agents within a single project.
+
+### Styling the Composer Backdrop
+
+The chat input floats over the bottom of the conversation. The **composer
+backdrop** is the panel painted behind it so messages don't bleed under the
+input as they scroll. Out of the box it's a soft transparent→solid fade with
+no divider line; you can switch it to a solid panel with a thin line.
+
+There are two ways to set the backdrop tokens.
+
+The default is already a soft fade with no line, so you only need to set these
+tokens to change that — for example to switch to a solid panel with a divider.
+
+**A) In the Admin Console Builder (recommended for CDN).** Add them to your
+project's theme under `cssVarsByTheme` (JSON tab). They travel with the project
+config the CDN bundle fetches at runtime:
+
+```json
+"cssVarsByTheme": {
+  "boomi": {
+    "--boomi-agent-composer-backdrop-fade": "0px",
+    "--boomi-agent-composer-backdrop-line-width": "1px"
+  }
+}
+```
+
+**B) Directly on the host page.** Because these are standard CSS custom
+properties, you can set them on the mount element and they cascade into the
+embedded UI — handy for quick experiments. This complete page renders an agent
+and shows how to switch the backdrop look:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>EmbedKit — Composer Backdrop Example</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.css" />
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    #boomi-agent {
+      height: 100vh;
+
+      /* --- Composer backdrop overrides --- */
+      /* Default look (soft fade, no line) — no overrides needed:
+      --boomi-agent-composer-backdrop-fade: 2.5rem;
+      --boomi-agent-composer-backdrop-line-width: 0;
+      */
+
+      /* Switch to a solid panel with a thin divider line: */
+      --boomi-agent-composer-backdrop-fade: 0px;
+      --boomi-agent-composer-backdrop-line-width: 1px;
+      --boomi-agent-composer-backdrop-line-color: var(--boomi-agent-chat-border);
+    }
+  </style>
+
+  <script>
+    window.BoomiEmbed = {
+      publicToken: "pk_...",                       // from the Admin Console
+      agentId:     "project_...",                  // your project ID
+      mountId:     "boomi-agent",
+      serverBase:  "https://api.boomi.space/api/v1"
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.umd.js" async></script>
+</head>
+<body>
+  <div id="boomi-agent"></div>
+</body>
+</html>
+```
+
+> The backdrop color defaults to the themed `--boomi-agent-pane-bg`, so it
+> already matches light, dark, and custom themes. Override
+> `--boomi-agent-composer-backdrop-bg` only if you want the panel to differ
+> from the conversation background.
 
 ---
 

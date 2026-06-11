@@ -269,6 +269,7 @@ const EditAgentModal: React.FC<EditAgentModalProps> = ({
       onSubmit={handleSubmit}
       submitLabel={isSaving ? 'Saving...' : 'Save Changes'}
       showSaveButton={!isSaving}
+      size="wide"
     >
       <div className="boomi-card p-4 space-y-2">
         <div className="text-sm font-semibold">Agent Overview</div>

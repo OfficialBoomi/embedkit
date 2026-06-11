@@ -280,6 +280,7 @@ const AddAgentModal: React.FC<AddAgentModalProps> = ({
       onSubmit={handleSubmit}
       submitLabel={isSaving ? 'Saving...' : 'Create Project'}
       showSaveButton={!isSaving}
+      size="wide"
     >
       <div className="boomi-card p-4 space-y-2">
         <div className="text-sm font-semibold">Project Summary</div>
