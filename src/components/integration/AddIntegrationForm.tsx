@@ -56,7 +56,12 @@ export type AddIntegrationFormResult = {
  * @property {boolean} [componentKey] - Unique key for the component instance
  */
 export interface AddIntegrationsProps {
-  componentKey: string 
+  componentKey: string;
+  /**
+   * Names of already-installed integrations, used to enforce name uniqueness
+   * unless `form.addIntegration.allowDuplicateIntegrationNames` is enabled.
+   */
+  existingIntegrationNames?: string[];
 }
 
 /**
@@ -74,7 +79,8 @@ export type AddIntegrationFormRef = {
 };
 
 const AddIntegrationForm = forwardRef<AddIntegrationFormRef, AddIntegrationsProps>(({
-  componentKey
+  componentKey,
+  existingIntegrationNames = []
 }, ref) => {
     const { boomiConfig } = usePlugin();
     const [integrationPack, setIntegrationPack] = useState<IntegrationPack | null>(null);
@@ -96,6 +102,17 @@ const AddIntegrationForm = forwardRef<AddIntegrationFormRef, AddIntegrationsProp
     const isNameEnabled = !!environment?.id;
     const isNameLocked = integrationPack?.installationType === 'SINGLE';
     const renderType = boomiConfig?.components?.[componentKey]?.renderType || 'integration';
+    const allowDuplicateIntegrationNames = boomiConfig?.components?.[componentKey]?.form?.addIntegration?.allowDuplicateIntegrationNames ?? false;
+
+    const DUPLICATE_NAME_ERROR = 'An integration with this name already exists. Please choose a unique name.';
+
+    /** Case-insensitive check of a name against the already-installed integrations. */
+    const isDuplicateName = useCallback((name: string) => {
+      if (allowDuplicateIntegrationNames) return false;
+      const target = name.trim().toLowerCase();
+      if (!target) return false;
+      return existingIntegrationNames.some((n) => (n ?? '').trim().toLowerCase() === target);
+    }, [allowDuplicateIntegrationNames, existingIntegrationNames]);
 
     useEffect(() => {
       if (integrationPack?.name) {
@@ -152,6 +169,8 @@ const AddIntegrationForm = forwardRef<AddIntegrationFormRef, AddIntegrationsProp
         const regex = boomiConfig?.components?.[componentKey]?.form?.addIntegrationForm?.['integrationName']?.validation;
         if (iName && regex && !new RegExp(regex).test(iName)) {
           errors.integrationName = 'Invalid format';
+        } else if (iName && isDuplicateName(iName)) {
+          errors.integrationName = DUPLICATE_NAME_ERROR;
         }
 
         setFormErrors(errors);
@@ -211,11 +230,15 @@ const AddIntegrationForm = forwardRef<AddIntegrationFormRef, AddIntegrationsProp
           const val = e.target.value;
           if (!val) {
             setFormErrors((prev) => ({ ...prev, integrationName: 'Required' }));
+            return;
+          }
+          const regex = boomiConfig?.components?.[componentKey]?.form?.addIntegrationForm?.['integrationName']?.validation;
+          if (regex && !new RegExp(regex).test(val)) {
+            setFormErrors((prev) => ({ ...prev, integrationName: 'Invalid format' }));
+          } else if (isDuplicateName(val)) {
+            setFormErrors((prev) => ({ ...prev, integrationName: DUPLICATE_NAME_ERROR }));
           } else {
-            const regex = boomiConfig?.components?.[componentKey]?.form?.addIntegrationForm?.['integrationName']?.validation;
-            if (regex && !new RegExp(regex).test(val)) {
-              setFormErrors((prev) => ({ ...prev, integrationName: 'Invalid format' }));
-            }
+            setFormErrors((prev) => ({ ...prev, integrationName: '' }));
           }
         }}
         error={formErrors.integrationName}

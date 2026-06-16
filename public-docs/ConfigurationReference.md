@@ -288,6 +288,36 @@ components: {
 | `description` | `string` | Override text for the component description. |
 | `mapping.useTreeMode` | `boolean` | When `true`, the mapping canvas uses tree view instead of the default layout. |
 
+### Add Integration Form (`form.addIntegration`)
+
+Configures the "Add Integration" install form for an integration component, under `components[componentKey].form.addIntegration`.
+
+```js
+components: {
+  myIntegrations: {
+    renderType: 'integration',
+    form: {
+      addIntegration: {
+        allowDuplicateIntegrationNames: false,   // default — names must be unique
+        showIntegrationPackSelect: true,
+        showEnvironmentSelect: true,
+        integrationPackName: { label: 'Integration Name', editable: true },
+      },
+    },
+  },
+}
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `allowDuplicateIntegrationNames` | `boolean` | When `false` or omitted (default), the integration name must be **unique** among already-installed integrations — the form blocks submission and shows an inline error on a duplicate. When `true`, users may install many integrations with the same name. |
+| `showIntegrationPackSelect` | `boolean` | Show/hide the integration-pack selector. |
+| `defaultIntegrationPackId` | `string` | Preselected pack id when the selector is hidden. |
+| `showEnvironmentSelect` | `boolean` | Show/hide the environment selector. |
+| `defaultEnvironmentId` | `string` | Preselected environment id when the selector is hidden. |
+| `integrationPackSelect.label` / `.loadingMessage` | `string` | Copy for the pack selector. |
+| `integrationPackName.label` / `.editable` / `.defaultIntegrationPackName` | `string` / `boolean` / `string` | Integration-name field options. |
+
 ### Modal Offset (per-component key)
 
 You can also pass a `ModalOffsetConfig` under `boomiConfig.components` to nudge the default modal position for a component:

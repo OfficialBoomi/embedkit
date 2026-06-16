@@ -464,7 +464,13 @@ const Integrations: React.FC<IntegrationsProps> = ({
         onSubmit={handleSubmit}
         submitLabel="Create Integration"
       >
-        <AddIntegrationForm ref={formRef} componentKey={componentKey} />
+        <AddIntegrationForm
+          ref={formRef}
+          componentKey={componentKey}
+          existingIntegrationNames={integrationPackInstances
+            .map((i) => i.integrationPackOverrideName || i.integrationPackName)
+            .filter((n): n is string => !!n)}
+        />
       </Modal>
       <Page
         componentKey={componentKey}
