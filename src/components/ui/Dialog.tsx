@@ -38,27 +38,27 @@ import {
 import { MdErrorOutline } from 'react-icons/md';
 import { UIError } from '../../types/ui';
 
-// Map for the icon to types
+// Map each type to its icon + notice state. Colors are driven by the
+// --boomi-notice-* token family (themeable via boomi.config.js) rather than
+// hardcoded Tailwind classes. The icon color comes from --boomi-notice-icon,
+// which the per-state modifier classes set.
+const iconStyle = { color: 'var(--boomi-notice-icon)' };
 const iconMap = {
   info: {
-    icon: <AiOutlineInfoCircle className="text-blue-500" size={32} />,
-    border: 'border-blue-200',
-    bg: 'bg-blue-50',
+    icon: <AiOutlineInfoCircle style={iconStyle} size={32} />,
+    state: 'info',
   },
   success: {
-    icon: <AiOutlineCheckCircle className="text-green-500" size={32} />,
-    border: 'border-green-200',
-    bg: 'bg-green-50',
+    icon: <AiOutlineCheckCircle style={iconStyle} size={32} />,
+    state: 'success',
   },
   warning: {
-    icon: <AiOutlineWarning className="text-yellow-500" size={32} />,
-    border: 'border-yellow-200',
-    bg: 'bg-yellow-50',
+    icon: <AiOutlineWarning style={iconStyle} size={32} />,
+    state: 'warning',
   },
   error: {
-    icon: <MdErrorOutline className="text-red-500" size={32} />,
-    border: 'border-red-200',
-    bg: 'bg-red-50',
+    icon: <MdErrorOutline style={iconStyle} size={32} />,
+    state: 'error',
   },
 };
 
@@ -99,10 +99,17 @@ const Dialog: React.FC<DialogProps> = ({
   };
 
   if (!visible) return null;
-  const { icon, border, bg } = iconMap[error.errorType || 'info'];
+  const { icon, state } = iconMap[error.errorType || 'info'];
 
   return (
-    <div className={`max-w-lg mx-auto mt-8 p-6 rounded-xl border ${border} ${bg} shadow-md relative flex flex-col`}>
+    <div
+      className={`boomi-notice--${state} max-w-lg mx-auto mt-8 p-6 rounded-xl border shadow-md relative flex flex-col`}
+      style={{
+        background: 'var(--boomi-notice-bg)',
+        borderColor: 'var(--boomi-notice-border)',
+        color: 'var(--boomi-notice-fg)',
+      }}
+    >
       {showCloseButton && (
         <button
           onClick={handleClose}
@@ -116,10 +123,11 @@ const Dialog: React.FC<DialogProps> = ({
       <div className="flex items-start gap-4">
         {icon}
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">{error.header}</h3>
-          <p className="text-sm text-gray-700 mt-1 whitespace-pre-line">{error.message}</p>
+          {/* Title/message inherit the themeable --boomi-notice-fg from the card. */}
+          <h3 className="text-lg font-semibold">{error.header}</h3>
+          <p className="text-sm mt-1 whitespace-pre-line opacity-90">{error.message}</p>
           {error.code && (
-            <p className="text-xs text-gray-400 mt-1">Error Code: {error.code}</p>
+            <p className="text-xs mt-1 opacity-60">Error Code: {error.code}</p>
           )}
         </div>
       </div>

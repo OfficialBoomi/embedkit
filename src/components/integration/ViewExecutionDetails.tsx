@@ -104,23 +104,23 @@ const ViewExecutionDetails: React.FC<ViewExecutionDetailsProps> = ({ record }) =
       </div>
 
       {message && status === 'ERROR' && (
-        <div className="mt-3 bg-red-50 border border-red-300 rounded p-3 text-sm text-red-700">
-          <strong>Error:</strong> {message}
+        <div className="boomi-notice boomi-notice--error mt-3 text-sm">
+          <span className="boomi-notice__text"><strong>Error:</strong> {message}</span>
         </div>
       )}
       {message && status === 'COMPLETE_WARN' && (
-        <div className="mt-3 bg-yellow-50 border border-red-300 rounded p-3 text-sm text-yellow-700">
-          <strong>Error:</strong> {message}
+        <div className="boomi-notice boomi-notice--warning mt-3 text-sm">
+          <span className="boomi-notice__text"><strong>Warning:</strong> {message}</span>
         </div>
       )}
       {message && status === 'DISCARDED' && (
-        <div className="mt-3 bg-yellow-50 border border-red-300 rounded p-3 text-sm text-yellow-700">
-          <strong>Error:</strong> {message}
+        <div className="boomi-notice boomi-notice--warning mt-3 text-sm">
+          <span className="boomi-notice__text"><strong>Discarded:</strong> {message}</span>
         </div>
       )}
       {message && status === 'COMPLETE' && (
-        <div className="mt-3 bg-green-50 border border-red-300 rounded p-3 text-sm text-green-700">
-          <strong>Error:</strong> {message}
+        <div className="boomi-notice boomi-notice--success mt-3 text-sm">
+          <span className="boomi-notice__text"><strong>Completed:</strong> {message}</span>
         </div>
       )}
     </div>

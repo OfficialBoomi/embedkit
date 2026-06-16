@@ -858,18 +858,52 @@
     box-shadow: var(--boomi-notice-shadow, none);
   }
   .boomi-notice__icon {
-    width: 1.25rem; 
+    width: 1.25rem;
     height: 1.25rem;
+    color: var(--boomi-notice-icon, currentColor);
     opacity: var(--boomi-notice-icon-opacity, .95);
   }
   .boomi-notice__text {
-    font-size: .875rem;  
+    font-size: .875rem;
     font-weight: 500;
     line-height: 1.25rem;
   }
   .boomi-notice__label {
     font-weight: 700;
     margin-right: .25rem;
+  }
+
+  /* Notice state modifiers — apply via the BEM class (.boomi-notice--error) or
+     the data-variant attribute. Each maps the generic notice tokens to per-state
+     leaf tokens, with sensible fallbacks so partners can theme via the
+     --boomi-notice-{state}-* variables alone (mirrors the chip pattern). */
+  .boomi-notice--info,
+  .boomi-notice[data-variant="info"] {
+    --boomi-notice-bg: var(--boomi-notice-info-bg, #eff6ff);
+    --boomi-notice-fg: var(--boomi-notice-info-fg, #1e40af);
+    --boomi-notice-border: var(--boomi-notice-info-border, #bfdbfe);
+    --boomi-notice-icon: var(--boomi-notice-info-icon, #3b82f6);
+  }
+  .boomi-notice--success,
+  .boomi-notice[data-variant="success"] {
+    --boomi-notice-bg: var(--boomi-notice-success-bg, #f0fdf4);
+    --boomi-notice-fg: var(--boomi-notice-success-fg, #166534);
+    --boomi-notice-border: var(--boomi-notice-success-border, #bbf7d0);
+    --boomi-notice-icon: var(--boomi-notice-success-icon, #22c55e);
+  }
+  .boomi-notice--warning,
+  .boomi-notice[data-variant="warning"] {
+    --boomi-notice-bg: var(--boomi-notice-warning-bg, #fffbeb);
+    --boomi-notice-fg: var(--boomi-notice-warning-fg, #92400e);
+    --boomi-notice-border: var(--boomi-notice-warning-border, #fde68a);
+    --boomi-notice-icon: var(--boomi-notice-warning-icon, #f59e0b);
+  }
+  .boomi-notice--error,
+  .boomi-notice[data-variant="error"] {
+    --boomi-notice-bg: var(--boomi-notice-error-bg, #fef2f2);
+    --boomi-notice-fg: var(--boomi-notice-error-fg, #991b1b);
+    --boomi-notice-border: var(--boomi-notice-error-border, #fecaca);
+    --boomi-notice-icon: var(--boomi-notice-error-icon, #ef4444);
   }
 
   /* Generic "Update" panel */

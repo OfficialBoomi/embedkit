@@ -19,29 +19,30 @@ import { useFetchExecutionRecords } from '../../hooks/execution-summary-record/u
 
 /**
  * @function getColorForStatus
- * 
+ *
  * @description
- * Maps a Boomi process execution status string to a corresponding Tailwind CSS 
- * background color class for use in status indicators (e.g., pills, charts, legends).
+ * Maps a Boomi process execution status string to a themeable CSS color for use
+ * in status indicators (e.g., pills, charts, legends). Returns a `var(--boomi-status-*)`
+ * expression with the original Tailwind color as the fallback, so partners can
+ * re-theme the timeline via the `--boomi-status-*` tokens in boomi.config.js.
  *
  * @param {string} status - The process execution status (e.g., 'COMPLETE', 'ERROR').
- * @return {string} A Tailwind background color class representing the given status.
+ * @return {string} A CSS color value suitable for an inline `background-color`.
  *
  * @example
- * getColorForStatus('ERROR'); // => 'bg-red-500'
+ * getColorForStatus('ERROR'); // => 'var(--boomi-status-error, #ef4444)'
  */
 const getColorForStatus = (status: string): string => {
   switch (status) {
     case 'COMPLETE':
-      return 'bg-green-500';
+      return 'var(--boomi-status-success, #22c55e)';
     case 'COMPLETE_WARN':
-      return 'bg-yellow-400';
     case 'DISCARDED':
-      return 'bg-yellow-400';
+      return 'var(--boomi-status-warning, #facc15)';
     case 'ERROR':
-      return 'bg-red-500';
+      return 'var(--boomi-status-error, #ef4444)';
     default:
-      return 'bg-gray-300';
+      return 'var(--boomi-status-neutral, #d1d5db)';
   }
 };
 
@@ -103,7 +104,7 @@ const ExecutionTimeline: React.FC<ExecutionTimelineProps> = ({
       ) : (
         <div className="flex items-center w-full pr-6 gap-1">
           {last30Runs.map((record, idx) => {
-            const colorClass = getColorForStatus(record?.status ?? '');
+            const dotColor = getColorForStatus(record?.status ?? '');
             const hasRecord = !!record;
 
             let tooltip = 'No Record.';
@@ -120,9 +121,9 @@ const ExecutionTimeline: React.FC<ExecutionTimelineProps> = ({
                 <div
                   className={classNames(
                     'w-2 h-6 rounded-sm',
-                    hasRecord ? 'cursor-pointer' : 'cursor-default',
-                    colorClass
+                    hasRecord ? 'cursor-pointer' : 'cursor-default'
                   )}
+                  style={{ backgroundColor: dotColor }}
                   onClick={() => {
                     if (hasRecord) onViewDetails(record!);
                   }}

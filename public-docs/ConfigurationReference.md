@@ -826,26 +826,56 @@ cssVars: {
 
 ### Notices / Alerts
 
+These tokens style every notice / alert surface — the `Notification` component, inline
+status panels (e.g. execution details), and the modal error/info `Dialog`. State is
+selected by the `boomi-notice--{state}` class (or a `data-variant` attribute), which maps
+the generic `--boomi-notice-*` tokens to the matching per-state tokens below. Override the
+per-state tokens to theme a single state, or the generic tokens to affect all of them.
+
+#### Generic (shared) tokens
+
 | Token | Description |
 |-------|-------------|
 | `--boomi-notice-bg` | Default notice background |
 | `--boomi-notice-fg` | Default notice text |
 | `--boomi-notice-border` | Default notice border |
+| `--boomi-notice-icon` | Notice icon color |
 | `--boomi-notice-radius` | Notice border radius |
 | `--boomi-notice-shadow` | Notice shadow |
 | `--boomi-notice-icon-opacity` | Notice icon opacity |
-| `--boomi-notice-success-bg` | Success notice background |
-| `--boomi-notice-success-fg` | Success notice text |
-| `--boomi-notice-success-border` | Success notice border |
-| `--boomi-notice-success-shadow` | Success notice shadow |
-| `--boomi-notice-warning-bg` | Warning notice background |
-| `--boomi-notice-warning-fg` | Warning notice text |
-| `--boomi-notice-warning-border` | Warning notice border |
-| `--boomi-notice-warning-shadow` | Warning notice shadow |
-| `--boomi-notice-error-bg` | Error notice background |
-| `--boomi-notice-error-fg` | Error notice text |
-| `--boomi-notice-error-border` | Error notice border |
-| `--boomi-notice-error-shadow` | Error notice shadow |
+
+#### Per-state tokens (`info` · `success` · `warning` · `error`)
+
+| Token | Description |
+|-------|-------------|
+| `--boomi-notice-info-bg` / `-fg` / `-border` / `-icon` | Info notice background / text / border / icon |
+| `--boomi-notice-success-bg` / `-fg` / `-border` / `-icon` | Success notice background / text / border / icon |
+| `--boomi-notice-warning-bg` / `-fg` / `-border` / `-icon` | Warning notice background / text / border / icon |
+| `--boomi-notice-error-bg` / `-fg` / `-border` / `-icon` | Error notice background / text / border / icon |
+
+```js
+cssVars: {
+  // Theme just the error notice/alert state across the whole plugin
+  '--boomi-notice-error-bg':     '#2b0d0d',
+  '--boomi-notice-error-fg':     '#fecaca',
+  '--boomi-notice-error-border': '#7f1d1d',
+  '--boomi-notice-error-icon':   '#f87171',
+},
+```
+
+---
+
+### Status Indicators
+
+Solid status colors used by compact indicators such as the execution-history timeline dots.
+Each falls back to its built-in color when unset.
+
+| Token | Description | Default |
+|-------|-------------|---------|
+| `--boomi-status-success` | Successful run | `#22c55e` |
+| `--boomi-status-warning` | Warning / discarded run | `#facc15` |
+| `--boomi-status-error` | Failed run | `#ef4444` |
+| `--boomi-status-neutral` | No record / unknown | `#d1d5db` |
 
 ---
 
