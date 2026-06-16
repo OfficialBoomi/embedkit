@@ -1185,4 +1185,4 @@ cssVars: {
 
 ---
 
-*For the full setup walkthrough, see [Getting Started](./GettingStarted.md). For the CDN-specific setup, see [CDN Configuration](./CDNConfiguration.md).*
+*For the full setup walkthrough, see [Getting Started](./GettingStarted.md). For the CDN-specific setup, see [CDN Configuration](./CDNConfiguration.md). For authoring Map Extension transformations (including AI-assisted generation), see the [Transformation Editor](./TransformationEditor.md) guide.*

@@ -36,6 +36,7 @@ EmbedKit uses a nonce → JWT exchange pattern. Your server authenticates the us
 |-------|-------------|
 | [Getting Started](./public-docs/GettingStarted.md) | Installation, server-side setup, client initialization, component rendering, theming |
 | [Configuration Reference](./public-docs/ConfigurationReference.md) | Complete reference for all configuration options — initialization, agents, components, theming, CSS design tokens |
+| [Transformation Editor](./public-docs/TransformationEditor.md) | Authoring Map Extension transformations, the script editor, local testing, and AI-assisted generation with guardrails |
 | [CDN Configuration](./public-docs/CDNConfiguration.md) | Full CDN (public embed) setup — Admin Console walkthrough, embed types, configuration reference, troubleshooting |
 | [Release Notes](./public-docs/ReleaseNotes.md) | Version history and upgrade notes |
 | [API Reference](./docs-md/README.md) | Full TypeDoc-generated API reference (types, hooks, functions) |

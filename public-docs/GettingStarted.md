@@ -564,3 +564,10 @@ The following JSON structure defines the request and response profile used by th
 ## Resources
 
 📚 **Documentation**: [Boomi EmbedKit Product Documentation](https://help.boomi.com/)
+
+**EmbedKit guides:**
+
+- [Configuration Reference](./ConfigurationReference.md) — every configuration option and CSS design token.
+- [Transformation Editor](./TransformationEditor.md) — authoring Map Extension transformations, local testing, and AI-assisted generation (`enableAi`).
+- [CDN Configuration](./CDNConfiguration.md) — the public/CDN embed flow.
+- [Release Notes](./ReleaseNotes.md) — version history and upgrade notes.
