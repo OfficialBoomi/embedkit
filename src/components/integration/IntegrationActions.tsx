@@ -106,21 +106,8 @@ const IntegrationActions: React.FC<IntegrationActionsProps> = ({
               </button>
             )}
           </Menu.Item>
-          <Menu.Item>
-            {({ active }) => (
-              <button
-                onClick={onEditSchedule}
-                className="boomi-menu-item"
-                data-headlessui-state={active ? 'active' : undefined}
-              >
-                <AiOutlineCalendar className="boomi-menu-icon" />
-                Edit Schedule
-              </button>
-            )}
-          </Menu.Item>
         </>
       )}
-
       <Menu.Item>
         {({ active }) => (
           <button
