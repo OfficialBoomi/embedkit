@@ -42,13 +42,9 @@ const TOAST_STYLE_ATTR = 'data-boomi-toast-vars';
  * because the toast popup is rendered on `document.body`.
  */
 const TOAST_CSS_VAR_NAMES = [
-  '--boomi-toast-width',
   '--boomi-toast-radius',
-  '--boomi-toast-padding',
   '--boomi-toast-shadow',
   '--boomi-toast-border',
-  '--boomi-toast-font-size',
-  '--boomi-toast-font-family',
   '--boomi-toast-title-fg',
   '--boomi-toast-progress-bar',
 ];
@@ -153,10 +149,14 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({ type, content }) 
     const position = readVar(computed, '--boomi-toast-position', FALLBACK_POSITION) as SweetAlertPosition;
     const timerRaw = Number(readVar(computed, '--boomi-toast-timer', String(FALLBACK_TIMER)));
     const timer = Number.isFinite(timerRaw) && timerRaw > 0 ? timerRaw : undefined;
+    // Width goes through Swal's own `width` option (not forced CSS) so the
+    // toast's grid/icon geometry stays intact.
+    const width = readVar(computed, '--boomi-toast-width', '600px');
 
     const Toast = Swal.mixin({
       toast: true,
       position,
+      width,
       iconColor,
       background,
       color,

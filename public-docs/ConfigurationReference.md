@@ -1188,11 +1188,8 @@ Transient toast messages (`ToastNotification`) are fully themeable. Each toast `
 | `--boomi-toast-timer` | Auto-dismiss time in ms (`0` = stay until dismissed) | `2000` |
 | `--boomi-toast-width` | Toast width | `600px` |
 | `--boomi-toast-radius` | Corner radius | `0.5rem` |
-| `--boomi-toast-padding` | Inner padding | `0.75rem 1rem` |
 | `--boomi-toast-shadow` | Box shadow | `0 6px 16px rgba(0,0,0,0.18)` |
 | `--boomi-toast-border` | Border | `none` |
-| `--boomi-toast-font-size` | Message font size | `0.95rem` |
-| `--boomi-toast-font-family` | Message font family | `inherit` |
 | `--boomi-toast-title-fg` | Title color (defaults to the per-type `fg`) | `inherit` |
 | `--boomi-toast-progress-bar` | Timer progress-bar color | `rgba(255,255,255,0.7)` |
 

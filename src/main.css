@@ -1428,19 +1428,17 @@
   /* Toast notifications — themeable via --boomi-toast-* custom properties.
      Swal renders toasts on document.body, so these rules + the resolved vars
      are extracted into document scope at runtime (see ToastNotification.tsx). */
+  /* Cosmetic only — do NOT override padding/font-size/width here: those feed
+     SweetAlert2's em-based icon geometry and grid, and shrinking them clips the
+     icon under the toast's overflow:hidden. Width is themed via the Swal `width`
+     option instead (see ToastNotification.tsx). */
   .swal2-container .boomi-toast-popup {
-    width: var(--boomi-toast-width, 600px) !important;
-    max-width: 92vw !important;
     border-radius: var(--boomi-toast-radius, 0.5rem) !important;
-    padding: var(--boomi-toast-padding, 0.75rem 1rem) !important;
     box-shadow: var(--boomi-toast-shadow, 0 6px 16px rgba(0,0,0,0.18)) !important;
     border: var(--boomi-toast-border, none) !important;
-    font-size: var(--boomi-toast-font-size, 0.95rem) !important;
-    font-family: var(--boomi-toast-font-family, inherit) !important;
   }
   .swal2-container .boomi-toast-title {
     color: var(--boomi-toast-title-fg, inherit) !important;
-    font-family: var(--boomi-toast-font-family, inherit) !important;
   }
   .swal2-container .boomi-toast-progress {
     background: var(--boomi-toast-progress-bar, rgba(255,255,255,0.7)) !important;
@@ -2634,11 +2632,8 @@
     --boomi-toast-timer:       2000;
     --boomi-toast-width:       600px;
     --boomi-toast-radius:      0.5rem;
-    --boomi-toast-padding:     0.75rem 1rem;
     --boomi-toast-shadow:      0 6px 16px rgba(0,0,0,0.18);
     --boomi-toast-border:      none;
-    --boomi-toast-font-size:   0.95rem;
-    --boomi-toast-font-family: inherit;
     --boomi-toast-title-fg:    inherit;
     --boomi-toast-progress-bar: rgba(255,255,255,0.7);
 
