@@ -3,6 +3,7 @@
 The **Transformation Editor** lets your users create and edit Boomi **Map Extension transformations** — custom JavaScript scripting functions with typed inputs and outputs — directly inside the embedded Mapping experience. It can optionally **generate the script from a natural-language prompt** using AI (OpenAI), with strict guardrails that keep generation scoped to data transformations only.
 
 - 📚 Full Boomi platform docs: **[Boomi Product Documentation](https://help.boomi.com/)**
+- 🤖 Enabling AI Transformation (Boomi Developer Portal): **[Enabling AI Transformation](https://developer.boomi.com/docs/BoomiEmbedded/EmbedKit/enabling_ai_transformation)**
 - 🔧 Configuration tokens & options: **[Configuration Reference](./ConfigurationReference.md)**
 - 🚀 First-time setup: **[Getting Started](./GettingStarted.md)**
 
@@ -89,6 +90,8 @@ If any check fails, the modal stays open and the offending field is flagged.
 ---
 
 ## 4. Enabling AI generation
+
+> See the Boomi Developer Portal guide **[Enabling AI Transformation](https://developer.boomi.com/docs/BoomiEmbedded/EmbedKit/enabling_ai_transformation)** for the platform-side setup (provisioning the AI credentials for your account).
 
 AI generation is gated in **two** places and requires **both** to be satisfied:
 
