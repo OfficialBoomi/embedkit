@@ -343,7 +343,7 @@ const UpdateConnections = forwardRef<UpdateConnectionsRef, UpdateConnectionsProp
               authMessage={authMessage}
             />
 
-            {!wizard || simple && (
+            {(!wizard || simple) && (
               <div className="boomi-update-actions">
                 <Button
                   toggle={false}
