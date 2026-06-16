@@ -15,6 +15,7 @@ import Root from './components/Root';
 import ErrorBoundary from './components/ErrorBoundary';
 import tailwindCss from './main.css?inline';
 import logger from './logger.service';
+import { getBrowserId } from './utils/browserId';
 
 // components
 import Agent from './components/agent/Agent';
@@ -606,6 +607,9 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
 
   const serverBase = (cfg.serverBase || '/api/v1').replace(/\/$/, '');
   const origin = cfg.origin || (typeof window !== 'undefined' ? window.location.origin : undefined);
+  // Stable per-browser id so concurrent browsers sharing a token/creds get
+  // distinct server-side session identities (omit when a userId scopes it).
+  const browserId = cfg.userId ? undefined : getBrowserId();
   const res = await fetch(`${serverBase}/embed/session`, {
     method: 'POST',
     credentials: 'include',
@@ -616,6 +620,7 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
       origin,
       userId: cfg.userId,
       userToken: cfg.userToken,
+      browserId,
       config: cfg.config,
     }),
   });
@@ -655,6 +660,35 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
     nonce: '',
     accessToken,
     boomiConfig,
+  });
+
+  // Public embed sessions are issued without a refresh-token cookie, so the
+  // default /auth/refresh path can never renew them. Register a refresher that
+  // re-mints a session via /embed/session; without this the access token simply
+  // expires (default 10 min) and subsequent calls fail with a missing/expired
+  // bearer. Mirrors the CDN build's behavior.
+  AuthManager.get().setCustomRefresher(async () => {
+    try {
+      const r = await fetch(`${base}/embed/session`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publicToken: cfg.publicToken,
+          agentId: cfg.agentId,
+          origin,
+          userId: cfg.userId,
+          userToken: cfg.userToken,
+          browserId,
+          config: cfg.config,
+        }),
+      });
+      if (!r.ok) return null;
+      const d = await r.json().catch(() => ({}));
+      return typeof d?.accessToken === 'string' ? d.accessToken : null;
+    } catch {
+      return null;
+    }
   });
 
   RenderComponent({

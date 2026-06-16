@@ -11,6 +11,7 @@ import Root from './components/Root';
 import ErrorBoundary from './components/ErrorBoundary';
 import tailwindCss from './main.css?inline';
 import logger from './logger.service';
+import { getBrowserId } from './utils/browserId';
 
 import Agent from './components/agent/Agent';
 import AgentTiles from './components/agent/AgentTiles';
@@ -484,23 +485,6 @@ function ensureMount(mountId: string) {
     document.body.appendChild(el);
   }
   return el;
-}
-
-/** Returns a stable per-browser anonymous ID, creating one on first call. */
-function getBrowserId(): string {
-  const key = '__boomi_bid';
-  try {
-    let id = localStorage.getItem(key);
-    if (!id) {
-      id = `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-      localStorage.setItem(key, id);
-    }
-    return id;
-  } catch {
-    // localStorage unavailable (e.g. private browsing with strict settings):
-    // return a session-scoped ID so at least the current session works.
-    return `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-  }
 }
 
 export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
