@@ -291,13 +291,12 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
               {aiLoading ? 'Generating...' : 'Generate'}
             </button>
           </div>
-          {aiError && 
+          {aiError &&
             <Dialog
               error={{
                 header: "Error Generating Transformation",
                 message: aiError,
                 errorType: "error",
-                onClose: () => {},
               }}
             />
           }

@@ -349,7 +349,10 @@
     border-radius: var(--boomi-menu-radius, 0.5rem);
     font-size: var(--boomi-menu-font-size, 0.875rem);
     padding: 0.25rem;
-    min-width: 12rem;
+    /* Wide enough for the longest action label (e.g. "Delete Transformation")
+       to sit on a single line with its icon + padding; items also use
+       white-space: nowrap so the menu grows further for any longer labels. */
+    min-width: 15rem;
     z-index: 50;
   }
 
@@ -359,10 +362,13 @@
     width: 100%;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.75rem 1rem; 
+    padding: 0.75rem 1rem;
     min-height: 2.75rem;
     line-height: 1.35rem;
-    border-radius: var(--boomi-menu-item-radius, 0.375rem); 
+    /* Keep action labels (e.g. "Edit Transformation") on a single line; the menu
+       has only a min-width, so it grows to fit the widest item instead of wrapping. */
+    white-space: nowrap;
+    border-radius: var(--boomi-menu-item-radius, 0.375rem);
     color: var(--boomi-menu-item-fg, var(--boomi-menu-fg));
     transition: background-color .15s ease, color .15s ease;
   }
