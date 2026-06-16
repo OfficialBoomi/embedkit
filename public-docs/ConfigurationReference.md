@@ -1096,4 +1096,63 @@ cssVars: {
 
 ---
 
+### Toast Notifications
+
+Transient toast messages (`ToastNotification`) are fully themeable. Each toast `type` has its own background, foreground, and icon color, and the shared layout / behavior tokens control position, timing, sizing, and typography. Override these like any other token — globally in `cssVars`, per-theme in `cssVarsByTheme`, or per-component-key in `cssVarsByKey`.
+
+#### Per-type colors
+
+| Token | Description |
+|-------|-------------|
+| `--boomi-toast-success-bg` | Success toast background |
+| `--boomi-toast-success-fg` | Success toast text |
+| `--boomi-toast-success-icon` | Success toast icon color |
+| `--boomi-toast-error-bg` | Error toast background |
+| `--boomi-toast-error-fg` | Error toast text |
+| `--boomi-toast-error-icon` | Error toast icon color |
+| `--boomi-toast-warning-bg` | Warning toast background |
+| `--boomi-toast-warning-fg` | Warning toast text |
+| `--boomi-toast-warning-icon` | Warning toast icon color |
+| `--boomi-toast-info-bg` | Info toast background |
+| `--boomi-toast-info-fg` | Info toast text |
+| `--boomi-toast-info-icon` | Info toast icon color |
+| `--boomi-toast-question-bg` | Question toast background |
+| `--boomi-toast-question-fg` | Question toast text |
+| `--boomi-toast-question-icon` | Question toast icon color |
+
+#### Layout, typography & behavior
+
+| Token | Description | Default |
+|-------|-------------|---------|
+| `--boomi-toast-position` | Toast position: `top`, `top-start`, `top-end`, `center`, `bottom`, `bottom-start`, `bottom-end` | `top` |
+| `--boomi-toast-timer` | Auto-dismiss time in ms (`0` = stay until dismissed) | `2000` |
+| `--boomi-toast-width` | Toast width | `600px` |
+| `--boomi-toast-radius` | Corner radius | `0.5rem` |
+| `--boomi-toast-padding` | Inner padding | `0.75rem 1rem` |
+| `--boomi-toast-shadow` | Box shadow | `0 6px 16px rgba(0,0,0,0.18)` |
+| `--boomi-toast-border` | Border | `none` |
+| `--boomi-toast-font-size` | Message font size | `0.95rem` |
+| `--boomi-toast-font-family` | Message font family | `inherit` |
+| `--boomi-toast-title-fg` | Title color (defaults to the per-type `fg`) | `inherit` |
+| `--boomi-toast-progress-bar` | Timer progress-bar color | `rgba(255,255,255,0.7)` |
+
+#### Example
+
+```js
+cssVars: {
+  // Brand the error toast and move all toasts to the bottom-right, dismiss after 4s
+  '--boomi-toast-error-bg':   '#b91c1c',
+  '--boomi-toast-error-fg':   '#ffffff',
+  '--boomi-toast-error-icon': '#fecaca',
+  '--boomi-toast-position':   'bottom-end',
+  '--boomi-toast-timer':      '4000',
+  '--boomi-toast-radius':     '0.75rem',
+  '--boomi-toast-width':      '420px',
+},
+```
+
+> Toasts render outside the plugin's Shadow DOM (on `document.body`); EmbedKit resolves the active `--boomi-toast-*` values from the host and applies them automatically, so theme switches and per-key overrides are respected.
+
+---
+
 *For the full setup walkthrough, see [Getting Started](./GettingStarted.md). For the CDN-specific setup, see [CDN Configuration](./CDNConfiguration.md).*

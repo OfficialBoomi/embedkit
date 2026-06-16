@@ -1391,6 +1391,27 @@
   }
 
   /* ===== SweetAlert2 (SwalNotification) ===== */
+  /* Toast notifications — themeable via --boomi-toast-* custom properties.
+     Swal renders toasts on document.body, so these rules + the resolved vars
+     are extracted into document scope at runtime (see ToastNotification.tsx). */
+  .swal2-container .boomi-toast-popup {
+    width: var(--boomi-toast-width, 600px) !important;
+    max-width: 92vw !important;
+    border-radius: var(--boomi-toast-radius, 0.5rem) !important;
+    padding: var(--boomi-toast-padding, 0.75rem 1rem) !important;
+    box-shadow: var(--boomi-toast-shadow, 0 6px 16px rgba(0,0,0,0.18)) !important;
+    border: var(--boomi-toast-border, none) !important;
+    font-size: var(--boomi-toast-font-size, 0.95rem) !important;
+    font-family: var(--boomi-toast-font-family, inherit) !important;
+  }
+  .swal2-container .boomi-toast-title {
+    color: var(--boomi-toast-title-fg, inherit) !important;
+    font-family: var(--boomi-toast-font-family, inherit) !important;
+  }
+  .swal2-container .boomi-toast-progress {
+    background: var(--boomi-toast-progress-bar, rgba(255,255,255,0.7)) !important;
+  }
+
   .swal2-container.boomi-swal{
     --boomi-swal-bg: rgba(0, 0, 0, 0.9);
   }
@@ -2558,6 +2579,35 @@
     --boomi-swal-icon-error: var(--boomi-danger);
     --boomi-swal-overlay-bg:   var(--boomi-modal-overlay-bg, rgba(0,0,0,.5));
 
+    /* Toast notifications (base — applies to every theme unless overridden) */
+    --boomi-toast-success-bg:  theme('colors.green.500');
+    --boomi-toast-success-fg:  theme('colors.white');
+    --boomi-toast-success-icon: theme('colors.white');
+    --boomi-toast-error-bg:    theme('colors.red.500');
+    --boomi-toast-error-fg:    theme('colors.white');
+    --boomi-toast-error-icon:  theme('colors.white');
+    --boomi-toast-warning-bg:  theme('colors.yellow.300');
+    --boomi-toast-warning-fg:  theme('colors.black');
+    --boomi-toast-warning-icon: theme('colors.black');
+    --boomi-toast-info-bg:     theme('colors.blue.500');
+    --boomi-toast-info-fg:     theme('colors.white');
+    --boomi-toast-info-icon:   theme('colors.white');
+    --boomi-toast-question-bg: theme('colors.gray.600');
+    --boomi-toast-question-fg: theme('colors.white');
+    --boomi-toast-question-icon: theme('colors.white');
+    /* layout, typography & behavior */
+    --boomi-toast-position:    top;
+    --boomi-toast-timer:       2000;
+    --boomi-toast-width:       600px;
+    --boomi-toast-radius:      0.5rem;
+    --boomi-toast-padding:     0.75rem 1rem;
+    --boomi-toast-shadow:      0 6px 16px rgba(0,0,0,0.18);
+    --boomi-toast-border:      none;
+    --boomi-toast-font-size:   0.95rem;
+    --boomi-toast-font-family: inherit;
+    --boomi-toast-title-fg:    inherit;
+    --boomi-toast-progress-bar: rgba(255,255,255,0.7);
+
     /* Agents */
     --boomi-agent-bg: var(--boomi-card-bg);
     --boomi-agent-fg: var(--boomi-page-fg-color);
@@ -2985,6 +3035,15 @@
     --boomi-swal-icon-error: var(--boomi-danger);
     --boomi-swal-overlay-bg:   var(--boomi-modal-overlay-bg, rgba(0,0,0,.55));
 
+    /* Toast notifications (dark) */
+    --boomi-toast-success-bg:  theme('colors.green.600');
+    --boomi-toast-error-bg:    theme('colors.red.600');
+    --boomi-toast-warning-bg:  theme('colors.amber.500');
+    --boomi-toast-info-bg:     theme('colors.blue.600');
+    --boomi-toast-question-bg: theme('colors.gray.700');
+    --boomi-toast-shadow:      0 6px 16px rgba(0,0,0,0.5);
+    --boomi-toast-progress-bar: rgba(255,255,255,0.6);
+
     /* Agents */
     --boomi-agent-bg: var(--boomi-card-bg);
     --boomi-agent-fg: var(--boomi-page-fg-color);
@@ -3357,6 +3416,12 @@
     --boomi-swal-icon-warning: theme('colors.amber.500');
     --boomi-swal-icon-error: var(--boomi-danger);
     --boomi-swal-overlay-bg:   var(--boomi-modal-overlay-bg, color-mix(in srgb, theme('colors.sky.900') 45%, transparent));
+
+    /* Toast notifications (boomi) */
+    --boomi-toast-success-bg:  theme('colors.teal.600');
+    --boomi-toast-info-bg:     theme('colors.sky.600');
+    --boomi-toast-question-bg: theme('colors.slate.600');
+    --boomi-toast-shadow:      0 6px 16px rgba(14,165,233,0.18);
 
     /* Agents */
     --boomi-agent-bg: var(--boomi-card-bg);
