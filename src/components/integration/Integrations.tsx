@@ -299,7 +299,16 @@ const Integrations: React.FC<IntegrationsProps> = ({
     <>
       {showSearch && (
         <div className="flex-none pr-6 pt-4 pb-4">
-          <SearchBar searchCallback={searchIntegrations}/>
+          <SearchBar
+            searchCallback={searchIntegrations}
+            suggestions={Array.from(
+              new Set(
+                integrationPackInstances
+                  .map((i) => i.integrationPackOverrideName || i.integrationPackName)
+                  .filter((n): n is string => !!n)
+              )
+            )}
+          />
         </div>
       )}
       {showAdd && (
