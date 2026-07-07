@@ -188,6 +188,7 @@ const FieldMappingCanvas = forwardRef((
     setPendingDeleteTransformation(null);
     setPendingDeleteSource(null);
     setShowNotification(false);
+    setShowDeleteNotification(false);
   };
 
   const handleSourceDelete = (source: string) => {

@@ -269,6 +269,7 @@ const FieldMappingCanvasTree = forwardRef((
     setPendingDeleteTransformation(null);
     setPendingDeleteSource(null);
     setShowNotification(false);
+    setShowDeleteNotification(false);
   };
 
   const handleTargetSelect = (rawXPath: string) => {

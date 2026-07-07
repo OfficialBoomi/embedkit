@@ -161,6 +161,25 @@ function injectBaseStyles(shadowRoot: ShadowRoot) {
   shadowRoot.appendChild(style);
 }
 
+/**
+ * Keep editing keystrokes inside the Shadow DOM. Composed keydown events are
+ * retargeted at the shadow boundary, so host-page listeners see the container
+ * div as the target — global guards like "preventDefault Backspace outside
+ * inputs" then cancel deletions typed into our fields. Stop propagation for
+ * keys aimed at an editable element so those guards never fire.
+ */
+const keydownContained = new WeakSet<ShadowRoot>();
+function containEditingKeys(shadowRoot: ShadowRoot) {
+  if (keydownContained.has(shadowRoot)) return;
+  keydownContained.add(shadowRoot);
+  shadowRoot.addEventListener('keydown', (e) => {
+    const t = e.composedPath()[0] as HTMLElement | undefined;
+    if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable)) {
+      e.stopPropagation();
+    }
+  });
+}
+
 function getOrCreateHost(hostId: HostId, componentKey: ComponentKey): HostRecord | null {
   const container = document.getElementById(hostId) as HTMLDivElement | null;
   if (!container) {
@@ -193,8 +212,10 @@ async function ensureRootMountedForHost(host: HostRecord): Promise<boolean> {
   const container = document.getElementById(host.hostId) as HTMLDivElement | null;
   if (!container) return false;
 
-  const shadowRoot = container.shadowRoot ?? container.attachShadow({ mode: 'open' });
+  const shadowRoot =
+    container.shadowRoot ?? container.attachShadow({ mode: 'open', delegatesFocus: true });
   host.shadowRoot = shadowRoot;
+  containEditingKeys(shadowRoot);
 
   let mountPoint = shadowRoot.getElementById('boomi-root') as HTMLElement | null;
   if (!mountPoint) {

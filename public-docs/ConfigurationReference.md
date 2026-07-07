@@ -372,6 +372,37 @@ form: {
 | `errorClass` | `string` | Extra CSS classes on the error message element. |
 | `attrs` | `InputHTMLAttributes` | Additional HTML attributes passed directly to the `<input>` element (e.g. `maxLength`, `autoComplete`). |
 
+### Connection Form Validation
+
+Fields on the **connection form** (shown when a user adds or edits a connection) can be validated client-side with a regex pattern. These live under the reserved form key `connectorForm`, and each entry is keyed by the connection field's **`id`**. Its `validation` value is a regex string.
+
+The pattern is compiled with `new RegExp(pattern)` and tested against the field's value on **blur** and again on **submit**. If it fails, the connection cannot be saved and an error message is shown beneath the field.
+
+#### Example: a field that must be numeric and exactly 10 characters
+
+```js
+form: {
+  connectorForm: {
+    // key = the connection field's `id` (e.g. an account number field)
+    accountNumber: {
+      label:      'Account Number',
+      inputMode:  'numeric',      // numeric keypad on mobile devices
+      validation: '^[0-9]{10}$',  // exactly 10 digits — nothing more, nothing less
+    },
+  },
+}
+```
+
+With `^[0-9]{10}$`, the field accepts only ten numeric characters: `1234567890` passes, while `123`, `12345678901`, and `12345abcde` are rejected and block saving.
+
+**Notes**
+
+- Write the regex **without** surrounding delimiters or flags — use `'^[0-9]{10}$'`, not `'/^[0-9]{10}$/'`.
+- Validation runs on blur and on submit; any failing field blocks the save.
+- The error text is fixed by the component (`is invalid.`, or `is required.` for an empty required field) and is not customizable through this config.
+- Encrypted or secret fields (passwords, client secrets, access tokens) skip regex validation while left untouched, so this is intended for non-secret fields.
+- The key must match the connection field's `id` — the same identifier the platform uses for that connector field.
+
 ---
 
 ## 7. RenderComponent Options

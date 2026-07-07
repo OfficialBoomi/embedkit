@@ -116,23 +116,20 @@ interface ExecutionHistoryTableProps {
 const ExecutionHistoryTable: React.FC<ExecutionHistoryTableProps> = ({ id, onViewDetails }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  const handleSearch = useCallback(
-    (term: string) => {
-      setSearchTerm(term);
-      goToPage(1);
-    },
-    []
-  );
+  // Page reset on search change is handled inside the hook.
+  const handleSearch = useCallback((term: string) => {
+    setSearchTerm(term);
+  }, []);
 
-  const { 
-    records = [], 
-    isLoading, 
-    error, 
+  const {
+    records = [],
+    isLoading,
+    error,
     currentPage,
     totalPages,
     goToPage,
     refetch,
-  } = useFetchExecutionRecords(id, searchTerm); 
+  } = useFetchExecutionRecords(id, searchTerm);
 
   const [sortField, setSortField] = useState<SortField>('executionTime');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -155,43 +152,6 @@ const ExecutionHistoryTable: React.FC<ExecutionHistoryTableProps> = ({ id, onVie
     if (sortField !== field) return null;
     return sortOrder === 'asc' ? ' ▲' : ' ▼';
   };
-
-  const tableBodyContent = (
-    <>
-      {isLoading ? (
-        <tr>
-          <td colSpan={4}>
-            <div className="flex justify-center items-center py-6"><AjaxLoader /></div>
-          </td>
-        </tr>
-      ) : sortedRecords && sortedRecords.length > 0 ? (
-        sortedRecords.map((record, idx) => (
-          <tr key={idx}> 
-            <td className="py-2 pl-2 text-xs">{format(new Date(record.executionTime), 'yyyy-MM-dd HH:mm:ss')}</td>
-            <td className={`py-2 text-xs`}>
-              <span className={`${statusColorMap[record.status] || 'text-gray-600'}`}>
-                {record.status}
-              </span>
-            </td>
-            <td className="py-2 text-xs">{record.message}</td>
-            <td className="px-4 pt-4 text-right">
-              <div className="flex items-end justify-end gap-2">
-                <ExecutionHistoryActions onViewDetails={() => onViewDetails?.(record)} />
-              </div>
-            </td>
-          </tr>
-        ))
-      ) : (
-        <tr>
-          <td colSpan={4}>
-            <div className="flex justify-center items-center py-4">
-              <p className="text-gray-500 text-xs">No execution history found.</p>
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
-  );
 
   return (
     <>
