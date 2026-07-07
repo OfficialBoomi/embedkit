@@ -14,7 +14,7 @@
 ### All Releases
 
 <details open>
-  <summary><strong>v1.4.17</strong> — Bug Fixes: Editing Keys, Execution History Search & Delete Modal</summary>
+  <summary><strong>v1.4.18</strong> — Bug Fixes: Editing Keys, Execution History Search & Delete Modal</summary>
 
   **Highlights**
   - ✅ **Shadow DOM editing keys** — Backspace/Delete and other editing keystrokes typed into embedded inputs are no longer swallowed by host-page key handlers. Composed keydown events targeting an editable element now stop at the shadow boundary, and the shadow root is attached with `delegatesFocus`.
