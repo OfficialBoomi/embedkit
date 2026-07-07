@@ -6,7 +6,7 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.4.10-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.4.16-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
@@ -14,11 +14,7 @@
 ### All Releases
 
 <details open>
-  <summary><strong>Unreleased</strong> — Bug Fixes: Editing Keys, Execution History Search & Delete Modal</summary>
-
-  > [!NOTE]
-  > This entry tracks fixes merged to `main` for the current sprint that have not
-  > been released yet. The version number and date will be set at release time.
+  <summary><strong>v1.4.16</strong> — Bug Fixes: Editing Keys, Execution History Search & Delete Modal</summary>
 
   **Highlights**
   - ✅ **Shadow DOM editing keys** — Backspace/Delete and other editing keystrokes typed into embedded inputs are no longer swallowed by host-page key handlers. Composed keydown events targeting an editable element now stop at the shadow boundary, and the shadow root is attached with `delegatesFocus`.
@@ -31,12 +27,8 @@
 
 ---
 
-<details open>
-  <summary><strong>Unreleased</strong> — Chat Composer Backdrop & Wider Config Modal</summary>
-
-  > [!NOTE]
-  > This entry tracks work in progress for the current sprint and has not been
-  > released yet. The version number and date will be set at release time.
+<details>
+  <summary><strong>v1.4.15</strong> — Chat Composer Backdrop & Wider Config Modal</summary>
 
   **Highlights**
   - ✅ **Chat composer backdrop** — The chat input now sits on a dedicated backdrop panel so the conversation no longer bleeds under the input as it scrolls. By default it renders as a soft transparent→solid fade with no divider line, giving the chat a cleaner, more standard look.
