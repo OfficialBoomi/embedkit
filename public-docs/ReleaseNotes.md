@@ -14,6 +14,24 @@
 ### All Releases
 
 <details open>
+  <summary><strong>Unreleased</strong> — Bug Fixes: Editing Keys, Execution History Search & Delete Modal</summary>
+
+  > [!NOTE]
+  > This entry tracks fixes merged to `main` for the current sprint that have not
+  > been released yet. The version number and date will be set at release time.
+
+  **Highlights**
+  - ✅ **Shadow DOM editing keys** — Backspace/Delete and other editing keystrokes typed into embedded inputs are no longer swallowed by host-page key handlers. Composed keydown events targeting an editable element now stop at the shadow boundary, and the shadow root is attached with `delegatesFocus`.
+  - ✅ **Execution history search now filters** — The search box on the integration execution history filters the fetched records **client-side** and matches across the **message, status, and execution time** columns. Full or partial execution times work (e.g. `2026-07-07`, `2026-07`, `14:30`, `23:59:59`). Pagination is applied to the filtered results, and a fetch loop that caused repeated requests was fixed.
+  - ✅ **Delete transformation modal** — Clicking **Cancel** on the "delete transformation" confirmation in the mapping editor now closes the modal (previously it could not be dismissed).
+  - ✅ **Documentation** — The [Configuration Reference](./ConfigurationReference.md) now documents **connection form validation** via `boomi.config.js`, including an example for a field that must be numeric and exactly 10 characters.
+  - ✅ **Dependency** — Updated `@boomi/embedkit-sdk` to **1.2.22**.
+
+</details>
+
+---
+
+<details open>
   <summary><strong>Unreleased</strong> — Chat Composer Backdrop & Wider Config Modal</summary>
 
   > [!NOTE]
