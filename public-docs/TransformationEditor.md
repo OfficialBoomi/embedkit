@@ -1,6 +1,6 @@
 # Boomi EmbedKit — Transformation Editor
 
-The **Transformation Editor** lets your users create and edit Boomi **Map Extension transformations** — custom JavaScript scripting functions with typed inputs and outputs — directly inside the embedded Mapping experience. It can optionally **generate the script from a natural-language prompt** using AI (OpenAI), with strict guardrails that keep generation scoped to data transformations only.
+The **Transformation Editor** lets your users create and edit Boomi **Map Extension transformations** — custom JavaScript scripting functions with typed inputs and outputs — directly inside the embedded Mapping experience. It can optionally **generate the script from a natural-language prompt** using AI — either **OpenAI** or one of your own **Boomi Agent Studio** agents — with strict guardrails that keep generation scoped to data transformations only.
 
 - 📚 Full Boomi platform docs: **[Boomi Product Documentation](https://help.boomi.com/)**
 - 🤖 Enabling AI Transformation (Boomi Developer Portal): **[Enabling AI Transformation](https://developer.boomi.com/docs/BoomiEmbedded/EmbedKit/enabling_ai_transformation)**
@@ -106,21 +106,63 @@ export default {
 
 When `enableAi` is `false` (the default), the editor still works fully for manual authoring — only the AI **Generate** panel is hidden.
 
-### Server — AI credentials supplied at auth time
+### Server — AI provider supplied at auth time
 
-The EmbedKit server only honors a generation request when the resolved tenant credentials include an enabled AI block:
+The EmbedKit server only honors a generation request when the resolved tenant credentials include an enabled `ai` block. This block is part of the credentials your server posts during the EmbedKit auth/session exchange (`POST /api/v1/auth/login`) and is stored per tenant. **Two providers are supported**, selected with `ai.model`.
+
+#### OpenAI (default)
 
 ```ts
 creds.ai = {
   enabled: true,
-  apiKey: '<OpenAI API key>',
   model:  'gpt-4o-2024-08-06',   // any OpenAI model your account supports
+  apiKey: '<OpenAI API key>',
 }
 ```
 
-These come from the credentials your server provides during the EmbedKit auth/session exchange (stored per tenant). If `enabled`, `apiKey`, or `model` is missing, the endpoint returns an error explaining the feature is not enabled for the account.
-
 > The OpenAI key is **per-tenant** and lives only on the EmbedKit server side — it is never shipped to the browser.
+
+#### Boomi Agent Studio
+
+Generate the transformation with one of your own **Boomi Agent Studio** agents instead of OpenAI. The call is authenticated with the tenant's **existing Boomi platform token** — no OpenAI key required.
+
+```js
+ai: {
+  enabled: true,
+  model: 'boomi-agent-studio',
+  boomiAgentId: '<your Agent Studio agent id>',
+  sessionType: 'single',          // one-shot request (only mode supported today)
+}
+```
+
+A complete working example lives in **`index.js`** at the EmbedKit repo root, inside the `LOGIN_BODY` posted to `/api/v1/auth/login`:
+
+```js
+const LOGIN_BODY = {
+  url:             'https://api.boomi.com/api/rest/v1',
+  parentAccountId: '<parent account id>',
+  apiUserName:     '<api user>',
+  apiToken:        '<api token>',
+  ai: {
+    enabled: true,
+    model: 'boomi-agent-studio',
+    boomiAgentId: '<your Agent Studio agent id>',
+    sessionType: 'single',
+  },
+};
+```
+
+**Agent requirements.** The agent must run in **structured mode**. EmbedKit sends the user's prompt as JSON — `{ "userPrompt": "<description>" }` — and expects the agent to return the transformation as OpenAI-style structured JSON:
+
+```json
+{ "isTransformation": true, "refusalReason": null, "name": "...", "script": "...",
+  "inputs":  [{ "key": "1", "name": "...", "dataType": "CHARACTER" }],
+  "outputs": [{ "key": "1", "name": "..." }] }
+```
+
+The server validates that output against the same schema the OpenAI path uses, then runs the identical guardrails ([§5](#5-ai-generation--guardrails)) and returns the same `TransformationStructuredOutput`. If the agent declines with prose instead of structured output, EmbedKit surfaces a clean **422**.
+
+> **Required fields per provider:** `enabled` + `model` are always required; **OpenAI** also needs `apiKey`; **Boomi Agent Studio** also needs `boomiAgentId`. If a required field is missing, the endpoint returns an error explaining the feature is not enabled for the account.
 
 ---
 
@@ -280,7 +322,8 @@ See [Configuration Reference → CSS Design Tokens](./ConfigurationReference.md#
 | Symptom | Likely cause / fix |
 |---------|--------------------|
 | **No "Generate" panel** in the editor | `enableAi` is not `true` in `boomi.config.js`. Manual authoring still works. |
-| **"AI Transformation feature is not enabled for this account."** | The tenant credentials supplied at auth lack `ai.enabled`, `ai.apiKey`, or `ai.model`. Provide all three server-side. |
+| **"AI Transformation feature is not enabled for this account."** | The tenant `ai` block is missing a required field: always `ai.enabled` + `ai.model`, plus `ai.apiKey` (OpenAI) or `ai.boomiAgentId` (Boomi Agent Studio). Provide them server-side. |
+| **"Agent Studio did not return a parseable transformation response."** (502) | The `boomi-agent-studio` agent returned something other than the expected structured JSON. Ensure the agent runs in **structured mode** and its output schema matches the transformation shape (`isTransformation`, `name`, `script`, `inputs`, `outputs`). |
 | **"This assistant only generates data transformation scripts."** (422) | The prompt was not a field-transformation request (or attempted to steer the model elsewhere). Rephrase as a concrete input→output transformation. |
 | **"The generated transformation was rejected because it attempted to use disallowed operations."** (422) | The generated script referenced a blocked primitive (network, I/O, eval, etc.). Re-describe it as a pure, self-contained transformation. |
 | **Generated prompt error: prompt too long** | Prompts are capped at 2000 characters. |
