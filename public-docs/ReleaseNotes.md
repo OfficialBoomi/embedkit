@@ -6,7 +6,7 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.4.17-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.4.19-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
@@ -14,6 +14,19 @@
 ### All Releases
 
 <details open>
+  <summary><strong>v1.4.19</strong> — Boomi Agent Studio transformation provider</summary>
+
+  **Highlights**
+  - ✅ **Agent Studio as an AI transformation provider** — The Transformation Editor's AI generation can now run against one of your own **Boomi Agent Studio** agents instead of OpenAI. Select it per tenant with `ai.model: 'boomi-agent-studio'` and `boomiAgentId`; the call authenticates with the tenant's existing Boomi platform token — no OpenAI key required. `sessionType: 'single'` (one-shot) is supported today.
+  - ✅ **Same output, same guardrails** — The agent returns OpenAI-style structured JSON, which the server validates and runs through the identical guardrails and output shape as the OpenAI path, so the editor behaves the same. A prose refusal surfaces as a clean 422.
+  - ✅ **Documentation** — The [Transformation Editor](./TransformationEditor.md) guide now documents provider selection, the `boomiAgentId`/`sessionType` config with a working example, the structured-mode agent requirements, and troubleshooting.
+  - ✅ **Dependency** — Updated `@boomi/embedkit-sdk` to **1.2.23** (adds the Agent Studio `AiConfig` fields).
+
+</details>
+
+---
+
+<details>
   <summary><strong>v1.4.18</strong> — Bug Fixes: Editing Keys, Execution History Search & Delete Modal</summary>
 
   **Highlights**
