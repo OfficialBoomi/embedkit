@@ -78,6 +78,7 @@ export default function MainChat({
   const packId = integration.integrationPackId;
   const uiCfg = packId ? (boomiConfig?.agents?.[packId]?.ui as any) ?? undefined : undefined;
   const isBoomiDirect = packId ? boomiConfig?.agents?.[packId]?.transport === 'boomi-direct' : false;
+  const feedbackCfg = packId ? (boomiConfig?.agents?.[packId] as any)?.feedback ?? undefined : undefined;
 
   const allowFreeTextPrompt: boolean = uiCfg?.allowFreeTextPrompt !== false;
   const promptDefs: Array<{ title: string; prompt: string }> = Array.isArray(uiCfg?.prompts) ? uiCfg.prompts : [];
@@ -164,10 +165,31 @@ export default function MainChat({
       const blocks: React.ReactNode[] = [];
       messages.forEach((m: any, idx: number) => {
         const key = m?.id ?? String(idx);
+        const isAgentMsg = !!m?.role && m.role !== 'user' && m.role !== 'system';
+        // The prompt that produced this response = nearest preceding user message.
+        let promptText = '';
+        if (isAgentMsg && feedbackCfg) {
+          for (let j = idx - 1; j >= 0; j--) {
+            if (messages[j]?.role === 'user') {
+              promptText = getMsgText(messages[j]);
+              break;
+            }
+          }
+        }
         blocks.push(
           <div key={key} className="w-full">
             <div className="w-full max-w-[1024px] px-4 md:px-6">
-              <MessageBlock m={m} getMsgText={getMsgText} isBoomiDirect={isBoomiDirect} />
+              <MessageBlock
+                m={m}
+                getMsgText={getMsgText}
+                isBoomiDirect={isBoomiDirect}
+                feedback={isAgentMsg ? feedbackCfg : undefined}
+                feedbackContext={
+                  isAgentMsg
+                    ? { agentId: packId, sessionId, messageId: m?.id, promptText }
+                    : undefined
+                }
+              />
             </div>
           </div>
         );
@@ -182,7 +204,7 @@ export default function MainChat({
       });
       return blocks;
     },
-    [messages]
+    [messages, isBoomiDirect, feedbackCfg, packId, sessionId]
   );
 
   // ---- file helpers ----

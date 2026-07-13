@@ -12,6 +12,54 @@ import type { Component, IntegrationPackInstance } from '@boomi/embedkit-sdk';
 import { FormConfig } from './form.config';
 
 export type AgentType = 'chat' | 'data';
+
+/** A single feedback control (thumbs up / thumbs down / comment) */
+export type AgentFeedbackControlConfig = {
+  /** Show or hide this control (default: true) */
+  show?: boolean;
+  /** Optional custom icon (emoji/text) — falls back to the built-in icon */
+  icon?: string;
+  /** Accessible label / tooltip for the control */
+  label?: string;
+};
+
+/** Feedback (thumbs up / thumbs down / comment) on agent responses */
+export type AgentFeedbackConfig = {
+  /** Master switch. Defaults to true when postUrl is set. */
+  enabled?: boolean;
+
+  /**
+   * URL that receives the feedback POST (JSON). May be absolute
+   * (external endpoint) or relative to the embedding page.
+   */
+  postUrl: string;
+
+  /**
+   * Custom parameters merged into the top level of every feedback
+   * payload. Reserved keys (prompt, response, feedback, context) win.
+   */
+  params?: Record<string, string | number | boolean>;
+
+  /** Extra HTTP headers sent with the feedback POST */
+  headers?: Record<string, string>;
+
+  /** Thumbs-up control */
+  thumbsUp?: AgentFeedbackControlConfig;
+
+  /** Thumbs-down control */
+  thumbsDown?: AgentFeedbackControlConfig;
+
+  /** Free-text comment control */
+  comment?: AgentFeedbackControlConfig & {
+    /** Placeholder text for the comment box */
+    placeholder?: string;
+    /** Label on the comment submit button */
+    submitLabel?: string;
+  };
+
+  /** Message shown after feedback is submitted */
+  thanksText?: string;
+};
 export type AgentCorner = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 export type UIPosition =
   | { corner: AgentCorner; offsetX?: number; offsetY?: number }
@@ -137,6 +185,9 @@ export type AgentConfig = {
 
   /** ChatGPT-style layout configuration */
   ui: AgentUiConfig;
+
+  /** Feedback (thumbs up / thumbs down / comment) on agent responses */
+  feedback?: AgentFeedbackConfig;
 
   /** Form configuration for agent configuration */
   form?: {

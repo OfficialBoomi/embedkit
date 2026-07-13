@@ -14,12 +14,17 @@ import DOMPurify from 'dompurify';
 import { CodeBlock } from './CodeBlock';
 import { ErrorBlock } from './ErrorBlock';
 import { HtmlBlock } from './HtmlBlock';
+import { FeedbackBar, type FeedbackContext } from './FeedbackBar';
+import type { AgentFeedbackConfig } from '../../types/agent.config';
 import logger from '../../logger.service';
 
 type MessageBlockProps = {
   m: any;
   getMsgText: (m: any) => string;
   isBoomiDirect?: boolean;
+  /** When set, renders thumbs up/down + comment controls under the response */
+  feedback?: AgentFeedbackConfig;
+  feedbackContext?: FeedbackContext;
 };
 
 // Configure marked: keep line breaks inside paragraphs, don't mangle links.
@@ -33,7 +38,13 @@ const markdownToHtml = (text: string): string => {
   return DOMPurify.sanitize(raw, { USE_PROFILES: { html: true }, ADD_ATTR: ['target', 'rel'] });
 };
 
-export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoomiDirect = false }) => {
+export const MessageBlock: React.FC<MessageBlockProps> = ({
+  m,
+  getMsgText,
+  isBoomiDirect = false,
+  feedback,
+  feedbackContext,
+}) => {
   const isUser = m?.role === 'user';
   // History messages arrive with content serialized as a JSON string;
   // SSE messages arrive with content already parsed as an object.
@@ -159,6 +170,27 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoo
     }
   }
 
+  // Feedback controls appended under successful agent responses.
+  // The response text mirrors what the user actually sees: plain text,
+  // rich HTML, or the serialized data payload.
+  const responseText: string = (() => {
+    if (typeof data === 'string') return data;
+    if (data && typeof data === 'object' && typeof (data as any).html === 'string') {
+      return (data as any).html;
+    }
+    const fromMsg = getMsgText(m);
+    if (fromMsg) return fromMsg;
+    try { return JSON.stringify(data ?? m?.content); } catch { return ''; }
+  })();
+  const feedbackBar =
+    feedback && feedback.postUrl && feedback.enabled !== false ? (
+      <FeedbackBar
+        config={feedback}
+        responseText={responseText}
+        context={feedbackContext ?? {}}
+      />
+    ) : null;
+
   // TEXT (with optional rich html rendering)
   if (m?.type === 'text') {
     // If data carries html/title, render as rich HTML
@@ -171,6 +203,7 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoo
               value={(data as any).html}
               treatStringAsHTML
             />
+            {feedbackBar}
           </div>
         </div>
       );
@@ -181,6 +214,7 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoo
       <div className="w-full">
         <div className="w-full max-w-[1024px] px-4 md:px-6 leading-7 text-[var(--boomi-page-fg-color)]">
           <HtmlBlock value={markdownToHtml(text)} treatStringAsHTML />
+          {feedbackBar}
         </div>
       </div>
     );
@@ -197,6 +231,7 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoo
             value={(data as any).html}
             treatStringAsHTML
           />
+          {feedbackBar}
         </div>
       </div>
     );
@@ -206,6 +241,7 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({ m, getMsgText, isBoo
     <div className="w-full">
       <div className="w-full max-w-[1024px] px-4 md:px-6 leading-7 text-[var(--boomi-page-fg-color)]">
         <CodeBlock value={data ?? m?.content} language="json" title="Data" />
+        {feedbackBar}
       </div>
     </div>
   );

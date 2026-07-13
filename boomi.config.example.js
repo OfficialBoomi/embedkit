@@ -63,6 +63,35 @@ export default {
     },
   },
 
+  // Per-agent configuration, keyed by integration pack id (or public agent id).
+  // agents: {
+  //   'your-agent-id': {
+  //     ui: { mode: 'modal', welcome: { title: "Let's Talk", subtitle: 'Ask me anything.' } },
+  //
+  //     // Response feedback (thumbs up / thumbs down / comment).
+  //     // When a user rates a response or submits a comment, the payload
+  //     // { prompt, response, feedback, context, ...params } is POSTed as
+  //     // JSON to postUrl.
+  //     feedback: {
+  //       enabled: true,
+  //       postUrl: 'https://example.com/agent-feedback',
+  //       // Static custom parameters merged into every payload:
+  //       params: { environment: 'production', appName: 'my-portal' },
+  //       // Optional extra headers on the POST:
+  //       headers: { 'X-Api-Key': 'public-write-key' },
+  //       // Each control is optional and individually configurable:
+  //       thumbsUp:   { show: true, icon: '👍', label: 'Good response' },
+  //       thumbsDown: { show: true, icon: '👎', label: 'Bad response' },
+  //       comment: {
+  //         show: true,
+  //         placeholder: 'Tell us more about this response…',
+  //         submitLabel: 'Send Feedback',
+  //       },
+  //       thanksText: 'Thanks for your feedback!',
+  //     },
+  //   },
+  // },
+
   // Global CSS variable overrides applied across every theme.
   // Anything you set here is merged on top of the plugin defaults and can be
   // further overridden per-theme in cssVarsByTheme below.
