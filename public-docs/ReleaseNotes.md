@@ -6,7 +6,7 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.4.19-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.5.0-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
@@ -14,6 +14,19 @@
 ### All Releases
 
 <details open>
+  <summary><strong>v1.5.0</strong> — Response feedback & standardized event callbacks</summary>
+
+  **Highlights**
+  - ✅ **Response feedback (thumbs up / down / comment)** — Agent responses now show configurable feedback controls. Ratings and comments are delivered to **your application** together with the user's prompt and the agent's response — EmbedKit never sends feedback over the network itself, so there is no endpoint to secure. Icons, labels, comment box text, and visibility are configurable per agent (`agents.<id>.feedback`), and styling is fully themeable via new `--boomi-agent-feedback-*` design tokens.
+  - ✅ **Standardized event system** — New app-level callback pattern for all EmbedKit events (feedback is the first; future event types follow the same envelope). Every event is `{ type, timestamp, source, data }`. Subscribe with `BoomiPlugin({ onEvent })` (also `window.BoomiEmbed.onEvent` for CDN embeds), `BoomiEvents.on('feedback' | '*', handler)` from the package root, or the `boomi:event` DOM CustomEvent on `window` for plain-JS pages. Subscriber errors are isolated and never break the embed UI.
+  - ✅ **Zero-config enablement** — The feedback bar appears automatically when a programmatic subscriber is registered; `feedback.enabled` force-shows (for DOM-only listeners) or force-hides it.
+  - ✅ **Documentation** — New [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks) section in the Configuration Reference covers the envelope, all three subscription methods, and the feedback event shape; the Agent Configuration section documents the `feedback` config block and CSS tokens.
+
+</details>
+
+---
+
+<details>
   <summary><strong>v1.4.19</strong> — Boomi Agent Studio transformation provider</summary>
 
   **Highlights**
