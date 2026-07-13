@@ -11,6 +11,7 @@ import Root from './components/Root';
 import ErrorBoundary from './components/ErrorBoundary';
 import tailwindCss from './main.css?inline';
 import logger from './logger.service';
+import { BoomiEvents } from './events.service';
 import { getBrowserId } from './utils/browserId';
 
 import Agent from './components/agent/Agent';
@@ -49,6 +50,7 @@ type HostRecord = {
 };
 
 let pluginConfig: PluginConfig | null = null;
+let unsubscribeConfigOnEvent: (() => void) | null = null;
 
 declare global {
   interface Window {
@@ -348,6 +350,16 @@ export function BoomiPlugin(config: PluginConfig) {
     `BoomiPlugin initialized with serverBase=${config?.serverBase} tenantId=${config?.tenantId}, and boomiConfig=${config?.boomiConfig ? 'provided' : 'not provided'}`
   );
 
+  // Event subscription: config.onEvent receives every emitted event. Re-initializing
+  // the plugin replaces the previous config-level subscriber rather than stacking.
+  if (unsubscribeConfigOnEvent) {
+    unsubscribeConfigOnEvent();
+    unsubscribeConfigOnEvent = null;
+  }
+  if (typeof config.onEvent === 'function') {
+    unsubscribeConfigOnEvent = BoomiEvents.on('*', config.onEvent);
+  }
+
   if (config.accessToken && typeof window !== 'undefined') {
     window.__BoomiAccessToken = config.accessToken;
   }
@@ -435,6 +447,8 @@ export type PublicEmbedConfig = {
   config?: Record<string, unknown>;
   autoInit?: boolean;
   sessionScope?: 'mount' | 'multi';
+  /** Receives every EmbedKit event (feedback, etc.). Pages can also listen for the 'boomi:event' DOM CustomEvent on window. */
+  onEvent?: (event: import('./events.service').EmbedKitEvent) => void;
 };
 
 type PublicEmbedSessionResponse = {
@@ -628,6 +642,7 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
     nonce: '',
     accessToken,
     boomiConfig,
+    onEvent: cfg.onEvent,
   });
 
   AuthManager.get().setCustomRefresher(async () => {
@@ -685,5 +700,8 @@ if (typeof window !== 'undefined') {
     });
   }
 }
+
+export { BoomiEvents, BOOMI_EVENT_NAME } from './events.service';
+export type { EmbedKitEvent, EmbedKitEventType, FeedbackEventData } from './events.service';
 
 export default BoomiPublicEmbed;

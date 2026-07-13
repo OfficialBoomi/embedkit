@@ -23,25 +23,22 @@ export type AgentFeedbackControlConfig = {
   label?: string;
 };
 
-/** Feedback (thumbs up / thumbs down / comment) on agent responses */
+/**
+ * Feedback (thumbs up / thumbs down / comment) on agent responses.
+ *
+ * Feedback is delivered as a 'feedback' event through the EmbedKit event
+ * system — subscribe via BoomiPlugin({ onEvent }), BoomiEvents.on('feedback'),
+ * or the 'boomi:event' DOM CustomEvent. EmbedKit never sends feedback over
+ * the network itself; the host application owns the data.
+ */
 export type AgentFeedbackConfig = {
-  /** Master switch. Defaults to true when postUrl is set. */
+  /**
+   * Controls visibility. The feedback bar renders when a programmatic
+   * subscriber is registered (onEvent / BoomiEvents) or when this is
+   * explicitly true (needed when listening only via the DOM event).
+   * Set false to hide the feedback bar regardless of subscribers.
+   */
   enabled?: boolean;
-
-  /**
-   * URL that receives the feedback POST (JSON). May be absolute
-   * (external endpoint) or relative to the embedding page.
-   */
-  postUrl: string;
-
-  /**
-   * Custom parameters merged into the top level of every feedback
-   * payload. Reserved keys (prompt, response, feedback, context) win.
-   */
-  params?: Record<string, string | number | boolean>;
-
-  /** Extra HTTP headers sent with the feedback POST */
-  headers?: Record<string, string>;
 
   /** Thumbs-up control */
   thumbsUp?: AgentFeedbackControlConfig;

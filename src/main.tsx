@@ -16,6 +16,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import tailwindCss from './main.css?inline';
 import logger from './logger.service';
 import { getBrowserId } from './utils/browserId';
+import { BoomiEvents } from './events.service';
 
 // components
 import Agent from './components/agent/Agent';
@@ -72,6 +73,7 @@ type HostRecord = {
  * Global plugin config
  * --------------------------*/
 let pluginConfig: PluginConfig | null = null;
+let unsubscribeConfigOnEvent: (() => void) | null = null;
 declare global {
   interface Window {
     __BoomiPluginInitialized?: boolean;
@@ -448,6 +450,16 @@ export function BoomiPlugin(config: PluginConfig) {
     `BoomiPlugin initialized with serverBase=${config?.serverBase} tenantId=${config?.tenantId}, and boomiConfig=${config?.boomiConfig ? 'provided' : 'not provided'}`
   );
 
+  // Event subscription: config.onEvent receives every emitted event. Re-initializing
+  // the plugin replaces the previous config-level subscriber rather than stacking.
+  if (unsubscribeConfigOnEvent) {
+    unsubscribeConfigOnEvent();
+    unsubscribeConfigOnEvent = null;
+  }
+  if (typeof config.onEvent === 'function') {
+    unsubscribeConfigOnEvent = BoomiEvents.on('*', config.onEvent);
+  }
+
   // Auth bootstrapping:
   if (config.accessToken && typeof window !== 'undefined') {
     window.__BoomiAccessToken = config.accessToken;
@@ -553,6 +565,8 @@ export type PublicEmbedConfig = {
   userToken?: string;
   config?: Record<string, unknown>;
   autoInit?: boolean;
+  /** Receives every EmbedKit event (feedback, etc.). See BoomiEvents / 'boomi:event'. */
+  onEvent?: (event: import('./events.service').EmbedKitEvent) => void;
 };
 
 type PublicEmbedSessionResponse = {
@@ -681,6 +695,7 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
     nonce: '',
     accessToken,
     boomiConfig,
+    onEvent: cfg.onEvent,
   });
 
   // Public embed sessions are issued without a refresh-token cookie, so the

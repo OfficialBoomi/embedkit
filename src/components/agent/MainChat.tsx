@@ -168,7 +168,7 @@ export default function MainChat({
         const isAgentMsg = !!m?.role && m.role !== 'user' && m.role !== 'system';
         // The prompt that produced this response = nearest preceding user message.
         let promptText = '';
-        if (isAgentMsg && feedbackCfg) {
+        if (isAgentMsg) {
           for (let j = idx - 1; j >= 0; j--) {
             if (messages[j]?.role === 'user') {
               promptText = getMsgText(messages[j]);
@@ -183,7 +183,7 @@ export default function MainChat({
                 m={m}
                 getMsgText={getMsgText}
                 isBoomiDirect={isBoomiDirect}
-                feedback={isAgentMsg ? feedbackCfg : undefined}
+                feedback={isAgentMsg ? feedbackCfg ?? {} : undefined}
                 feedbackContext={
                   isAgentMsg
                     ? { agentId: packId, sessionId, messageId: m?.id, promptText }

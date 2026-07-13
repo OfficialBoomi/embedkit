@@ -13,8 +13,6 @@ type AgentOverride = {
 
 type PromptRow = { id: string; title: string; prompt: string };
 
-type FeedbackParamRow = { id: string; key: string; value: string };
-
 type BuilderState = {
   // Theme
   themeSelection: 'boomi' | 'base' | 'custom';
@@ -69,19 +67,6 @@ type BuilderState = {
   agentPrompts: PromptRow[];
   agentPromptsAlign: 'left' | 'center' | 'right';
   agentPromptsLocation: 'input' | 'welcome';
-  // Feedback
-  feedbackEnabled: boolean;
-  feedbackPostUrl: string;
-  feedbackThumbsUpShow: boolean;
-  feedbackThumbsDownShow: boolean;
-  feedbackCommentShow: boolean;
-  feedbackThumbsUpIcon: string;
-  feedbackThumbsDownIcon: string;
-  feedbackCommentIcon: string;
-  feedbackCommentPlaceholder: string;
-  feedbackSubmitLabel: string;
-  feedbackThanksText: string;
-  feedbackParams: FeedbackParamRow[];
   // Advanced
   agentSessionScope: 'mount' | 'multi';
   agentTransport: 'boomi-direct' | 'boomi-proxy';
@@ -171,31 +156,6 @@ const cssVarOptions = [
   '--boomi-agent-composer-backdrop-fade',
   '--boomi-agent-composer-backdrop-line-color',
   '--boomi-agent-composer-backdrop-line-width',
-  '--boomi-agent-feedback-btn-bg',
-  '--boomi-agent-feedback-btn-bg-active',
-  '--boomi-agent-feedback-btn-bg-hover',
-  '--boomi-agent-feedback-btn-border',
-  '--boomi-agent-feedback-btn-border-active',
-  '--boomi-agent-feedback-btn-fg',
-  '--boomi-agent-feedback-btn-fg-active',
-  '--boomi-agent-feedback-btn-radius',
-  '--boomi-agent-feedback-btn-size',
-  '--boomi-agent-feedback-comment-bg',
-  '--boomi-agent-feedback-comment-border',
-  '--boomi-agent-feedback-comment-fg',
-  '--boomi-agent-feedback-comment-radius',
-  '--boomi-agent-feedback-down-fg-active',
-  '--boomi-agent-feedback-error-fg',
-  '--boomi-agent-feedback-fg',
-  '--boomi-agent-feedback-gap',
-  '--boomi-agent-feedback-icon-size',
-  '--boomi-agent-feedback-margin-top',
-  '--boomi-agent-feedback-submit-bg',
-  '--boomi-agent-feedback-submit-border',
-  '--boomi-agent-feedback-submit-fg',
-  '--boomi-agent-feedback-submit-radius',
-  '--boomi-agent-feedback-thanks-fg',
-  '--boomi-agent-feedback-up-fg-active',
   '--boomi-agent-fg',
   '--boomi-agent-header-bg',
   '--boomi-agent-header-border',
@@ -576,18 +536,6 @@ const buildDefaults = (): BuilderState => ({
   agentPrompts: [],
   agentPromptsAlign: 'center',
   agentPromptsLocation: 'input',
-  feedbackEnabled: false,
-  feedbackPostUrl: '',
-  feedbackThumbsUpShow: true,
-  feedbackThumbsDownShow: true,
-  feedbackCommentShow: true,
-  feedbackThumbsUpIcon: '',
-  feedbackThumbsDownIcon: '',
-  feedbackCommentIcon: '',
-  feedbackCommentPlaceholder: '',
-  feedbackSubmitLabel: '',
-  feedbackThanksText: '',
-  feedbackParams: [],
   agentSessionScope: 'multi',
   agentTransport: 'boomi-direct',
   agentExpandable: false,
@@ -610,7 +558,6 @@ const deriveBuilderFromConfig = (
   const next = { ...fallback };
   next.themeCustomVars = [];
   next.agentPrompts = [];
-  next.feedbackParams = [];
   if (!configRaw.trim()) return next;
   try {
     const parsed = JSON.parse(configRaw) as any;
@@ -749,28 +696,6 @@ const deriveBuilderFromConfig = (
     }
     if (ui.promptsLocation === 'input' || ui.promptsLocation === 'welcome') {
       next.agentPromptsLocation = ui.promptsLocation;
-    }
-
-    const feedback = agentCfg?.feedback;
-    if (feedback && typeof feedback === 'object') {
-      next.feedbackEnabled = feedback.enabled !== false && typeof feedback.postUrl === 'string' && !!feedback.postUrl;
-      if (typeof feedback.postUrl === 'string') next.feedbackPostUrl = feedback.postUrl;
-      if (feedback.thumbsUp?.show !== undefined) next.feedbackThumbsUpShow = !!feedback.thumbsUp.show;
-      if (feedback.thumbsDown?.show !== undefined) next.feedbackThumbsDownShow = !!feedback.thumbsDown.show;
-      if (feedback.comment?.show !== undefined) next.feedbackCommentShow = !!feedback.comment.show;
-      if (typeof feedback.thumbsUp?.icon === 'string') next.feedbackThumbsUpIcon = feedback.thumbsUp.icon;
-      if (typeof feedback.thumbsDown?.icon === 'string') next.feedbackThumbsDownIcon = feedback.thumbsDown.icon;
-      if (typeof feedback.comment?.icon === 'string') next.feedbackCommentIcon = feedback.comment.icon;
-      if (typeof feedback.comment?.placeholder === 'string') next.feedbackCommentPlaceholder = feedback.comment.placeholder;
-      if (typeof feedback.comment?.submitLabel === 'string') next.feedbackSubmitLabel = feedback.comment.submitLabel;
-      if (typeof feedback.thanksText === 'string') next.feedbackThanksText = feedback.thanksText;
-      if (feedback.params && typeof feedback.params === 'object') {
-        next.feedbackParams = Object.entries(feedback.params).map(([key, value], idx) => ({
-          id: `fbparam_${idx}_${key}`,
-          key,
-          value: typeof value === 'string' ? value : String(value),
-        }));
-      }
     }
 
     if (embedType === 'list' || embedType === 'tiles') {
@@ -951,35 +876,6 @@ const buildConfigFromBuilder = (
       ...(promptsOutput.length && builder.agentPromptsLocation !== 'input' ? { promptsLocation: builder.agentPromptsLocation } : {}),
     };
 
-    if (builder.feedbackEnabled && builder.feedbackPostUrl.trim()) {
-      const feedbackParams = builder.feedbackParams.reduce<Record<string, string>>((params, row) => {
-        if (row.key.trim()) params[row.key.trim()] = row.value;
-        return params;
-      }, {});
-      entry.feedback = {
-        enabled: true,
-        postUrl: builder.feedbackPostUrl.trim(),
-        ...(Object.keys(feedbackParams).length ? { params: feedbackParams } : {}),
-        ...(!builder.feedbackThumbsUpShow || builder.feedbackThumbsUpIcon
-          ? { thumbsUp: { ...(builder.feedbackThumbsUpShow ? {} : { show: false }), ...(builder.feedbackThumbsUpIcon ? { icon: builder.feedbackThumbsUpIcon } : {}) } }
-          : {}),
-        ...(!builder.feedbackThumbsDownShow || builder.feedbackThumbsDownIcon
-          ? { thumbsDown: { ...(builder.feedbackThumbsDownShow ? {} : { show: false }), ...(builder.feedbackThumbsDownIcon ? { icon: builder.feedbackThumbsDownIcon } : {}) } }
-          : {}),
-        ...(!builder.feedbackCommentShow || builder.feedbackCommentIcon || builder.feedbackCommentPlaceholder || builder.feedbackSubmitLabel
-          ? {
-              comment: {
-                ...(builder.feedbackCommentShow ? {} : { show: false }),
-                ...(builder.feedbackCommentIcon ? { icon: builder.feedbackCommentIcon } : {}),
-                ...(builder.feedbackCommentPlaceholder ? { placeholder: builder.feedbackCommentPlaceholder } : {}),
-                ...(builder.feedbackSubmitLabel ? { submitLabel: builder.feedbackSubmitLabel } : {}),
-              },
-            }
-          : {}),
-        ...(builder.feedbackThanksText ? { thanksText: builder.feedbackThanksText } : {}),
-      };
-    }
-
     acc[id] = entry;
     return acc;
   }, {});
@@ -992,7 +888,7 @@ const buildConfigFromBuilder = (
   return config as Record<string, unknown>;
 };
 
-const TABS = ['Layout', 'Content', 'Chat', 'Feedback', 'Theme', 'Advanced'] as const;
+const TABS = ['Layout', 'Content', 'Chat', 'Theme', 'Advanced'] as const;
 type Tab = typeof TABS[number];
 
 const ConfigBuilderForm = forwardRef<ConfigBuilderFormHandle, ConfigBuilderFormProps>(({
@@ -1073,27 +969,6 @@ const ConfigBuilderForm = forwardRef<ConfigBuilderFormHandle, ConfigBuilderFormP
 
   const removePromptRow = (id: string) => {
     setBuilder((prev) => ({ ...prev, agentPrompts: prev.agentPrompts.filter((row) => row.id !== id) }));
-  };
-
-  const addFeedbackParamRow = () => {
-    setBuilder((prev) => ({
-      ...prev,
-      feedbackParams: [
-        ...prev.feedbackParams,
-        { id: `fbparam_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, key: '', value: '' },
-      ],
-    }));
-  };
-
-  const updateFeedbackParamRow = (id: string, patch: Partial<{ key: string; value: string }>) => {
-    setBuilder((prev) => ({
-      ...prev,
-      feedbackParams: prev.feedbackParams.map((row) => row.id === id ? { ...row, ...patch } : row),
-    }));
-  };
-
-  const removeFeedbackParamRow = (id: string) => {
-    setBuilder((prev) => ({ ...prev, feedbackParams: prev.feedbackParams.filter((row) => row.id !== id) }));
   };
 
   return (
@@ -1524,140 +1399,6 @@ const ConfigBuilderForm = forwardRef<ConfigBuilderFormHandle, ConfigBuilderFormP
         </div>
       )}
 
-      </div>
-
-      {/* ── Feedback tab ── */}
-      <div style={{ gridArea: '1/1', visibility: activeTab === 'Feedback' ? 'visible' : 'hidden' }}>
-      {(
-        <div className="space-y-4">
-          <div className="space-y-3">
-            <div className="text-xs font-semibold uppercase tracking-wide opacity-70">Response Feedback</div>
-            <div className="text-xs opacity-70">
-              Let users rate agent responses (thumbs up / down) and leave a comment. Feedback is posted as JSON
-              to the URL below along with the user's prompt and the agent's response.
-            </div>
-            <label className="boomi-form-label flex items-center gap-4 cursor-pointer">
-              <input type="checkbox" className="h-3.5 w-3.5 shrink-0 cursor-pointer" checked={builder.feedbackEnabled} onChange={(e) => set('feedbackEnabled', e.target.checked)} />
-              Enable response feedback
-            </label>
-          </div>
-
-          {builder.feedbackEnabled && (
-            <>
-              <div className="space-y-3">
-                <label className="boomi-form-label">
-                  Feedback POST URL
-                  <input
-                    className="boomi-input mt-1 w-full rounded-md p-2 text-sm"
-                    value={builder.feedbackPostUrl}
-                    placeholder="https://example.com/feedback"
-                    onChange={(e) => set('feedbackPostUrl', e.target.value)}
-                  />
-                  <span className="text-xs opacity-60 mt-0.5 block">
-                    Receives {'{ prompt, response, feedback, context, ...params }'} as JSON.
-                  </span>
-                </label>
-              </div>
-
-              <div className="space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wide opacity-70">Controls</div>
-                <div className="grid gap-2 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <label className="boomi-form-label flex items-center gap-4 cursor-pointer">
-                      <input type="checkbox" className="h-3.5 w-3.5 shrink-0 cursor-pointer" checked={builder.feedbackThumbsUpShow} onChange={(e) => set('feedbackThumbsUpShow', e.target.checked)} />
-                      Thumbs up
-                    </label>
-                    {builder.feedbackThumbsUpShow && (
-                      <label className="boomi-form-label">
-                        Custom icon
-                        <input className="boomi-input mt-1 w-full rounded-md p-2 text-sm" value={builder.feedbackThumbsUpIcon} placeholder="Default icon" onChange={(e) => set('feedbackThumbsUpIcon', e.target.value)} />
-                      </label>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="boomi-form-label flex items-center gap-4 cursor-pointer">
-                      <input type="checkbox" className="h-3.5 w-3.5 shrink-0 cursor-pointer" checked={builder.feedbackThumbsDownShow} onChange={(e) => set('feedbackThumbsDownShow', e.target.checked)} />
-                      Thumbs down
-                    </label>
-                    {builder.feedbackThumbsDownShow && (
-                      <label className="boomi-form-label">
-                        Custom icon
-                        <input className="boomi-input mt-1 w-full rounded-md p-2 text-sm" value={builder.feedbackThumbsDownIcon} placeholder="Default icon" onChange={(e) => set('feedbackThumbsDownIcon', e.target.value)} />
-                      </label>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="boomi-form-label flex items-center gap-4 cursor-pointer">
-                      <input type="checkbox" className="h-3.5 w-3.5 shrink-0 cursor-pointer" checked={builder.feedbackCommentShow} onChange={(e) => set('feedbackCommentShow', e.target.checked)} />
-                      Comment
-                    </label>
-                    {builder.feedbackCommentShow && (
-                      <label className="boomi-form-label">
-                        Custom icon
-                        <input className="boomi-input mt-1 w-full rounded-md p-2 text-sm" value={builder.feedbackCommentIcon} placeholder="Default icon" onChange={(e) => set('feedbackCommentIcon', e.target.value)} />
-                      </label>
-                    )}
-                  </div>
-                </div>
-                <span className="text-xs opacity-60 block">Custom icons accept emoji or short text (e.g. 👍). Leave blank for the built-in icons.</span>
-              </div>
-
-              {builder.feedbackCommentShow && (
-                <div className="space-y-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide opacity-70">Comment Box</div>
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <label className="boomi-form-label">
-                      Placeholder
-                      <input className="boomi-input mt-1 w-full rounded-md p-2 text-sm" value={builder.feedbackCommentPlaceholder} placeholder="Tell us more about this response…" onChange={(e) => set('feedbackCommentPlaceholder', e.target.value)} />
-                    </label>
-                    <label className="boomi-form-label">
-                      Submit button label
-                      <input className="boomi-input mt-1 w-full rounded-md p-2 text-sm" value={builder.feedbackSubmitLabel} placeholder="Submit" onChange={(e) => set('feedbackSubmitLabel', e.target.value)} />
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <label className="boomi-form-label">
-                  Thank-you message
-                  <input className="boomi-input mt-1 w-full rounded-md p-2 text-sm" value={builder.feedbackThanksText} placeholder="Thanks for your feedback!" onChange={(e) => set('feedbackThanksText', e.target.value)} />
-                </label>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wide opacity-70">Custom Parameters</div>
-                <div className="text-xs opacity-70">Static key/value pairs merged into every feedback payload (e.g. environment, source app).</div>
-                {builder.feedbackParams.length === 0 && <div className="text-xs opacity-50">No custom parameters configured.</div>}
-                <div className="space-y-2">
-                  {builder.feedbackParams.map((row) => (
-                    <div key={row.id} className="flex items-center gap-2 flex-nowrap w-full">
-                      <input
-                        className="boomi-input flex-1 min-w-0 rounded-md p-2 text-sm"
-                        value={row.key}
-                        placeholder="key"
-                        onChange={(e) => updateFeedbackParamRow(row.id, { key: e.target.value })}
-                      />
-                      <input
-                        className="boomi-input flex-1 min-w-0 rounded-md p-2 text-sm"
-                        value={row.value}
-                        placeholder="value"
-                        onChange={(e) => updateFeedbackParamRow(row.id, { value: e.target.value })}
-                      />
-                      <button type="button" className="text-xs text-red-500 whitespace-nowrap shrink-0" onClick={() => removeFeedbackParamRow(row.id)}>
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <button type="button" className="boomi-btn-primary px-3 py-2 text-xs" onClick={addFeedbackParamRow}>
-                  Add Parameter
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
       </div>
 
       {/* ── Theme tab ── */}

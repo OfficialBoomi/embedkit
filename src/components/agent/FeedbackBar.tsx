@@ -6,15 +6,17 @@
  *
  * @description
  * Thumbs up / thumbs down / comment feedback controls for an agent response.
- * Posts { prompt, response, feedback, context, ...params } as JSON to the
- * configured postUrl. Icons, labels, and colors are configurable via
+ * Emits a standardized 'feedback' event through the EmbedKit event system —
+ * the host application subscribes (BoomiPlugin onEvent, BoomiEvents.on, or the
+ * 'boomi:event' DOM event) and decides where the data goes. Nothing is sent
+ * over the network by EmbedKit. Icons, labels, and colors are configurable via
  * AgentFeedbackConfig and --boomi-agent-feedback-* CSS variables.
  */
 
 import React, { useState } from 'react';
 import { FiThumbsUp, FiThumbsDown, FiMessageSquare } from 'react-icons/fi';
 import type { AgentFeedbackConfig } from '../../types/agent.config';
-import logger from '../../logger.service';
+import { emitEmbedKitEvent, type FeedbackEventData } from '../../events.service';
 
 export type FeedbackRating = 'up' | 'down';
 
@@ -31,28 +33,6 @@ type FeedbackBarProps = {
   context: FeedbackContext;
 };
 
-export type FeedbackPayload = {
-  prompt: string;
-  response: string;
-  feedback: { rating: FeedbackRating | null; comment?: string };
-  context: {
-    agentId?: string;
-    sessionId?: string;
-    messageId?: string;
-    submittedAt: string;
-  };
-  [key: string]: unknown;
-};
-
-export async function postFeedback(config: AgentFeedbackConfig, payload: FeedbackPayload): Promise<void> {
-  const res = await fetch(config.postUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(config.headers ?? {}) },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(`Feedback POST failed with status ${res.status}`);
-}
-
 const renderIcon = (custom: string | undefined, fallback: React.ReactNode) =>
   custom ? <span aria-hidden="true">{custom}</span> : fallback;
 
@@ -60,55 +40,36 @@ export const FeedbackBar: React.FC<FeedbackBarProps> = ({ config, responseText, 
   const [rating, setRating] = useState<FeedbackRating | null>(null);
   const [commentOpen, setCommentOpen] = useState(false);
   const [comment, setComment] = useState('');
-  const [sending, setSending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const showUp = config.thumbsUp?.show !== false;
   const showDown = config.thumbsDown?.show !== false;
   const showComment = config.comment?.show !== false;
 
-  const buildPayload = (nextRating: FeedbackRating | null, nextComment: string): FeedbackPayload => ({
-    ...(config.params ?? {}),
-    prompt: context.promptText ?? '',
-    response: responseText,
-    feedback: {
+  const emit = (nextRating: FeedbackRating | null, nextComment: string) => {
+    const data: FeedbackEventData = {
       rating: nextRating,
       ...(nextComment.trim() ? { comment: nextComment.trim() } : {}),
-    },
-    context: {
+      prompt: context.promptText ?? '',
+      response: responseText,
+    };
+    emitEmbedKitEvent('feedback', {
       agentId: context.agentId,
       sessionId: context.sessionId,
       messageId: context.messageId,
-      submittedAt: new Date().toISOString(),
-    },
-  });
-
-  const send = async (nextRating: FeedbackRating | null, nextComment: string) => {
-    setSending(true);
-    setError(null);
-    try {
-      await postFeedback(config, buildPayload(nextRating, nextComment));
-      setSubmitted(true);
-    } catch (e) {
-      logger.error({ err: e }, '[FeedbackBar] feedback post failed');
-      setError('Feedback could not be sent.');
-    } finally {
-      setSending(false);
-    }
+    }, data);
+    setSubmitted(true);
   };
 
   const handleRate = (next: FeedbackRating) => {
-    if (sending) return;
     const resolved = rating === next ? null : next;
     setRating(resolved);
-    setSubmitted(false);
-    void send(resolved, comment);
+    emit(resolved, comment);
   };
 
   const handleSubmitComment = () => {
-    if (sending || !comment.trim()) return;
-    void send(rating, comment);
+    if (!comment.trim()) return;
+    emit(rating, comment);
     setCommentOpen(false);
   };
 
@@ -121,7 +82,6 @@ export const FeedbackBar: React.FC<FeedbackBarProps> = ({ config, responseText, 
           type="button"
           className={`boomi-agent-feedback__btn is-up ${rating === 'up' ? 'is-active' : ''}`}
           onClick={() => handleRate('up')}
-          disabled={sending}
           title={config.thumbsUp?.label ?? 'Good response'}
           aria-label={config.thumbsUp?.label ?? 'Good response'}
           aria-pressed={rating === 'up'}
@@ -134,7 +94,6 @@ export const FeedbackBar: React.FC<FeedbackBarProps> = ({ config, responseText, 
           type="button"
           className={`boomi-agent-feedback__btn is-down ${rating === 'down' ? 'is-active' : ''}`}
           onClick={() => handleRate('down')}
-          disabled={sending}
           title={config.thumbsDown?.label ?? 'Bad response'}
           aria-label={config.thumbsDown?.label ?? 'Bad response'}
           aria-pressed={rating === 'down'}
@@ -147,7 +106,6 @@ export const FeedbackBar: React.FC<FeedbackBarProps> = ({ config, responseText, 
           type="button"
           className={`boomi-agent-feedback__btn is-comment ${commentOpen ? 'is-active' : ''}`}
           onClick={() => setCommentOpen((open) => !open)}
-          disabled={sending}
           title={config.comment?.label ?? 'Add a comment'}
           aria-label={config.comment?.label ?? 'Add a comment'}
           aria-expanded={commentOpen}
@@ -158,7 +116,6 @@ export const FeedbackBar: React.FC<FeedbackBarProps> = ({ config, responseText, 
       {submitted && !commentOpen && (
         <span className="boomi-agent-feedback__thanks" role="status">{thanksText}</span>
       )}
-      {error && <span className="boomi-agent-feedback__error" role="alert">{error}</span>}
       {commentOpen && (
         <div className="boomi-agent-feedback__comment">
           <textarea
@@ -167,15 +124,14 @@ export const FeedbackBar: React.FC<FeedbackBarProps> = ({ config, responseText, 
             onChange={(e) => setComment(e.target.value)}
             placeholder={config.comment?.placeholder ?? 'Tell us more about this response…'}
             rows={3}
-            disabled={sending}
           />
           <button
             type="button"
             className="boomi-agent-feedback__submit"
             onClick={handleSubmitComment}
-            disabled={sending || !comment.trim()}
+            disabled={!comment.trim()}
           >
-            {sending ? 'Sending…' : config.comment?.submitLabel ?? 'Submit'}
+            {config.comment?.submitLabel ?? 'Submit'}
           </button>
         </div>
       )}

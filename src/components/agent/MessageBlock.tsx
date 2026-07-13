@@ -8,13 +8,14 @@
  *
  * The client interprets only content.data based on type.
  */
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { CodeBlock } from './CodeBlock';
 import { ErrorBlock } from './ErrorBlock';
 import { HtmlBlock } from './HtmlBlock';
 import { FeedbackBar, type FeedbackContext } from './FeedbackBar';
+import { BoomiEvents } from '../../events.service';
 import type { AgentFeedbackConfig } from '../../types/agent.config';
 import logger from '../../logger.service';
 
@@ -45,6 +46,14 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({
   feedback,
   feedbackContext,
 }) => {
+  // Feedback renders when the host app can actually receive the event: a
+  // programmatic subscriber exists (onEvent / BoomiEvents), or the agent
+  // config opts in explicitly (required for DOM-event-only listeners, which
+  // cannot be detected). enabled: false always hides it.
+  const hasFeedbackSubscribers = useSyncExternalStore(
+    BoomiEvents.subscribeChanges,
+    () => BoomiEvents.hasSubscribers('feedback')
+  );
   const isUser = m?.role === 'user';
   // History messages arrive with content serialized as a JSON string;
   // SSE messages arrive with content already parsed as an object.
@@ -183,7 +192,9 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({
     try { return JSON.stringify(data ?? m?.content); } catch { return ''; }
   })();
   const feedbackBar =
-    feedback && feedback.postUrl && feedback.enabled !== false ? (
+    feedback &&
+    feedback.enabled !== false &&
+    (hasFeedbackSubscribers || feedback.enabled === true) ? (
       <FeedbackBar
         config={feedback}
         responseText={responseText}

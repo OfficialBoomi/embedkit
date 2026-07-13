@@ -1941,10 +1941,6 @@
     font-size: .75rem;
     color: var(--boomi-agent-feedback-thanks-fg, inherit);
   }
-  .boomi-agent-feedback__error {
-    font-size: .75rem;
-    color: var(--boomi-agent-feedback-error-fg, var(--boomi-form-error-fg, #dc2626));
-  }
   .boomi-agent-feedback__comment {
     width: 100%;
     display: flex;

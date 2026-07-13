@@ -69,17 +69,17 @@ export default {
   //     ui: { mode: 'modal', welcome: { title: "Let's Talk", subtitle: 'Ask me anything.' } },
   //
   //     // Response feedback (thumbs up / thumbs down / comment).
-  //     // When a user rates a response or submits a comment, the payload
-  //     // { prompt, response, feedback, context, ...params } is POSTed as
-  //     // JSON to postUrl.
+  //     // Feedback is delivered to YOUR app as a standardized event — EmbedKit
+  //     // never sends it anywhere itself. Subscribe with one of:
+  //     //   BoomiPlugin({ onEvent: (event) => { ... } })
+  //     //   BoomiEvents.on('feedback', (event) => { ... })
+  //     //   window.addEventListener('boomi:event', (e) => e.detail)
+  //     //
+  //     // The feedback bar appears automatically when a programmatic
+  //     // subscriber is registered. Set `enabled: true` when you only listen
+  //     // via the DOM event; set `enabled: false` to always hide it.
+  //     // All keys below are optional — this block just customizes the look.
   //     feedback: {
-  //       enabled: true,
-  //       postUrl: 'https://example.com/agent-feedback',
-  //       // Static custom parameters merged into every payload:
-  //       params: { environment: 'production', appName: 'my-portal' },
-  //       // Optional extra headers on the POST:
-  //       headers: { 'X-Api-Key': 'public-write-key' },
-  //       // Each control is optional and individually configurable:
   //       thumbsUp:   { show: true, icon: '👍', label: 'Good response' },
   //       thumbsDown: { show: true, icon: '👎', label: 'Bad response' },
   //       comment: {
