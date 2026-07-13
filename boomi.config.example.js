@@ -63,6 +63,35 @@ export default {
     },
   },
 
+  // Per-agent configuration, keyed by integration pack id (or public agent id).
+  // agents: {
+  //   'your-agent-id': {
+  //     ui: { mode: 'modal', welcome: { title: "Let's Talk", subtitle: 'Ask me anything.' } },
+  //
+  //     // Response feedback (thumbs up / thumbs down / comment).
+  //     // Feedback is delivered to YOUR app as a standardized event — EmbedKit
+  //     // never sends it anywhere itself. Subscribe with one of:
+  //     //   BoomiPlugin({ onEvent: (event) => { ... } })
+  //     //   BoomiEvents.on('feedback', (event) => { ... })
+  //     //   window.addEventListener('boomi:event', (e) => e.detail)
+  //     //
+  //     // The feedback bar appears automatically when a programmatic
+  //     // subscriber is registered. Set `enabled: true` when you only listen
+  //     // via the DOM event; set `enabled: false` to always hide it.
+  //     // All keys below are optional — this block just customizes the look.
+  //     feedback: {
+  //       thumbsUp:   { show: true, icon: '👍', label: 'Good response' },
+  //       thumbsDown: { show: true, icon: '👎', label: 'Bad response' },
+  //       comment: {
+  //         show: true,
+  //         placeholder: 'Tell us more about this response…',
+  //         submitLabel: 'Send Feedback',
+  //       },
+  //       thanksText: 'Thanks for your feedback!',
+  //     },
+  //   },
+  // },
+
   // Global CSS variable overrides applied across every theme.
   // Anything you set here is merged on top of the plugin defaults and can be
   // further overridden per-theme in cssVarsByTheme below.

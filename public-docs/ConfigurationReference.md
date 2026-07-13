@@ -15,6 +15,7 @@ This document is the complete reference for all user-facing configuration option
 7. [RenderComponent Options](#7-rendercomponent-options)
 8. [CDN / window.BoomiEmbed Configuration](#8-cdn--windowboomiembed-configuration)
 9. [CSS Design Tokens](#9-css-design-tokens)
+10. [Events & Callbacks](#10-events--callbacks)
 
 ---
 
@@ -165,6 +166,7 @@ agents: {
 | `shape` | `'circle' \| 'pill'` | Shape of the floating launcher button. |
 | `position` | `UIPosition` | Position of the floating launcher. See [UIPosition](#uiposition) below. |
 | `ui` | `AgentUiConfig` | All chat UI configuration. See [AgentUiConfig](#agentUiconfig) below. |
+| `feedback` | `AgentFeedbackConfig` | Thumbs up / thumbs down / comment feedback on agent responses. See [Response Feedback](#response-feedback-feedback) below. |
 | `form.configureAgent` | `FormConfig` | Custom form fields shown in the agent configuration dialog. |
 
 ### UIPosition
@@ -260,6 +262,66 @@ agents: {
 | `modal.width` | `number` | `980` | Modal dialog width in pixels. |
 | `modal.height` | `number` | `720` | Modal dialog height in pixels. |
 | `modal.position` | `UIPosition` | — | Override the default centered position of the modal. |
+
+---
+
+### Response Feedback (`feedback`)
+
+Adds thumbs up / thumbs down / comment controls under every agent response.
+Feedback is delivered to **your application** as a standardized `'feedback'`
+event — EmbedKit never sends it over the network itself. Your app subscribes
+(see [Events & Callbacks](#10-events--callbacks)) and decides where the data
+goes: your own backend, an analytics pipeline, a Boomi process, anywhere.
+
+The feedback bar appears automatically on agent responses whenever a
+programmatic subscriber is registered (`BoomiPlugin({ onEvent })` or
+`BoomiEvents.on(...)`). No config is required. The optional `feedback` block
+only customizes appearance and visibility:
+
+```js
+agents: {
+  'my-agent-id': {
+    ui: { /* ... */ },
+
+    feedback: {
+      // Each control is optional and individually configurable
+      thumbsUp:   { show: true, icon: '👍', label: 'Good response' },
+      thumbsDown: { show: true, icon: '👎', label: 'Bad response' },
+      comment: {
+        show: true,
+        icon: '💬',
+        placeholder: 'Tell us more about this response…',
+        submitLabel: 'Send Feedback',
+      },
+      thanksText: 'Thanks for your feedback!',
+    },
+  },
+},
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enabled` | `boolean` | auto | Visibility override. Omitted: the bar shows when a programmatic subscriber exists. `true`: always show (required when listening **only** via the `boomi:event` DOM event, which cannot be auto-detected). `false`: never show. |
+| `thumbsUp.show` | `boolean` | `true` | Show or hide the thumbs-up button. |
+| `thumbsUp.icon` | `string` | built-in | Emoji or short text replacing the built-in thumbs-up icon. |
+| `thumbsUp.label` | `string` | `'Good response'` | Tooltip / accessible label. |
+| `thumbsDown.show` | `boolean` | `true` | Show or hide the thumbs-down button. |
+| `thumbsDown.icon` | `string` | built-in | Emoji or short text replacing the built-in thumbs-down icon. |
+| `thumbsDown.label` | `string` | `'Bad response'` | Tooltip / accessible label. |
+| `comment.show` | `boolean` | `true` | Show or hide the comment button. |
+| `comment.icon` | `string` | built-in | Emoji or short text replacing the built-in comment icon. |
+| `comment.label` | `string` | `'Add a comment'` | Tooltip / accessible label. |
+| `comment.placeholder` | `string` | `'Tell us more about this response…'` | Placeholder text inside the comment box. |
+| `comment.submitLabel` | `string` | `'Submit'` | Label on the comment submit button. |
+| `thanksText` | `string` | `'Thanks for your feedback!'` | Confirmation message shown after feedback is submitted. |
+
+Clicking a thumb emits immediately; submitting a comment emits again with the
+comment included alongside the current rating. Clicking an active thumb again
+clears the rating (`rating: null`). See
+[Feedback events](#feedback-events) for the exact event shape.
+
+Styling is controlled by the `--boomi-agent-feedback-*` design tokens — see
+[Response Feedback tokens](#response-feedback) under CSS Design Tokens.
 
 ---
 
@@ -748,6 +810,35 @@ cssVars: {
 | `--boomi-agent-text-copy-fg` | Copy button icon color |
 | `--boomi-agent-card-tint` | Card tint overlay |
 | `--boomi-agent-row-tint` | Row tint overlay |
+
+#### Response Feedback
+
+| Token | Description |
+|-------|-------------|
+| `--boomi-agent-feedback-fg` | Feedback bar text/icon color |
+| `--boomi-agent-feedback-gap` | Gap between feedback controls |
+| `--boomi-agent-feedback-margin-top` | Space between the response and the feedback bar |
+| `--boomi-agent-feedback-icon-size` | Icon size inside the buttons |
+| `--boomi-agent-feedback-btn-size` | Button width/height |
+| `--boomi-agent-feedback-btn-radius` | Button border radius |
+| `--boomi-agent-feedback-btn-bg` | Button background |
+| `--boomi-agent-feedback-btn-fg` | Button icon color |
+| `--boomi-agent-feedback-btn-border` | Button border |
+| `--boomi-agent-feedback-btn-bg-hover` | Button hover background |
+| `--boomi-agent-feedback-btn-bg-active` | Selected button background |
+| `--boomi-agent-feedback-btn-fg-active` | Selected button icon color |
+| `--boomi-agent-feedback-btn-border-active` | Selected button border |
+| `--boomi-agent-feedback-up-fg-active` | Selected thumbs-up icon color |
+| `--boomi-agent-feedback-down-fg-active` | Selected thumbs-down icon color |
+| `--boomi-agent-feedback-comment-bg` | Comment textarea background |
+| `--boomi-agent-feedback-comment-fg` | Comment textarea text |
+| `--boomi-agent-feedback-comment-border` | Comment textarea border |
+| `--boomi-agent-feedback-comment-radius` | Comment textarea border radius |
+| `--boomi-agent-feedback-submit-bg` | Comment submit button background |
+| `--boomi-agent-feedback-submit-fg` | Comment submit button text |
+| `--boomi-agent-feedback-submit-border` | Comment submit button border |
+| `--boomi-agent-feedback-submit-radius` | Comment submit button radius |
+| `--boomi-agent-feedback-thanks-fg` | Thank-you message color |
 
 #### Update Banner
 
@@ -1240,6 +1331,114 @@ cssVars: {
 ```
 
 > Toasts render outside the plugin's Shadow DOM (on `document.body`); EmbedKit resolves the active `--boomi-toast-*` values from the host and applies them automatically, so theme switches and per-key overrides are respected.
+
+---
+
+## 10. Events & Callbacks
+
+EmbedKit emits standardized, typed events for things that happen inside the
+embed (response feedback is the first; more event types will follow the same
+pattern). **EmbedKit never sends event data over the network** — your
+application subscribes and owns what happens next. This removes any security
+concern about where the data goes: there is no endpoint to protect, no key to
+ship to the browser.
+
+### The Event Envelope
+
+Every event follows the same shape:
+
+```ts
+type EmbedKitEvent<T> = {
+  type: 'feedback';        // event type discriminator (union grows over time)
+  timestamp: string;       // ISO-8601, when the event was emitted
+  source: {                // where in the embed it originated
+    agentId?: string;
+    sessionId?: string;
+    messageId?: string;
+  };
+  data: T;                 // event-type-specific payload
+};
+```
+
+### Subscribing
+
+Three equivalent ways; all receive the same envelope. Use whichever fits your
+integration style:
+
+**1. `onEvent` at init** — simplest; receives every event type:
+
+```js
+BoomiPlugin({
+  serverBase: '/api/v1',
+  tenantId: 'my-account',
+  boomiConfig,
+  onEvent: (event) => {
+    if (event.type === 'feedback') {
+      // send to your backend, analytics, a Boomi process — your call
+      myApi.recordFeedback(event);
+    }
+  },
+});
+```
+
+The CDN embed accepts the same callback: `window.BoomiEmbed = { publicToken, agentId, onEvent: (event) => { ... } }`.
+
+**2. `BoomiEvents` subscription API** — programmatic, per-type, unsubscribable:
+
+```js
+import { BoomiEvents } from '@boomi/embedkit';
+
+const off = BoomiEvents.on('feedback', (event) => { /* ... */ });
+// BoomiEvents.on('*', handler) receives every event type
+off(); // unsubscribe
+```
+
+**3. `boomi:event` DOM CustomEvent** — zero-import option for plain-JS/CDN pages:
+
+```js
+window.addEventListener('boomi:event', (e) => {
+  const event = e.detail; // the EmbedKitEvent envelope
+});
+```
+
+> DOM listeners cannot be auto-detected, so UI that only renders when a
+> subscriber exists (like the feedback bar) must be explicitly enabled in
+> config when this is your only subscription method (e.g.
+> `feedback: { enabled: true }`).
+
+Subscriber errors are isolated — a handler that throws never breaks the embed
+UI or other subscribers.
+
+### Feedback Events
+
+`type: 'feedback'` — emitted when a user rates an agent response or submits a
+comment. See [Response Feedback](#response-feedback-feedback) for the UI
+configuration.
+
+```json
+{
+  "type": "feedback",
+  "timestamp": "2026-07-13T17:20:04.512Z",
+  "source": {
+    "agentId": "my-agent-id",
+    "sessionId": "9c1a6c2e-…",
+    "messageId": "a2b4d6f8-…"
+  },
+  "data": {
+    "rating": "up",
+    "comment": "Exactly what I needed.",
+    "prompt": "What is the current status of my running processes?",
+    "response": "All 12 processes completed successfully in the last hour…"
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `data.rating` | `"up"`, `"down"`, or `null` (the user cleared their rating). |
+| `data.comment` | Present only when the user submitted a comment. |
+| `data.prompt` | Text of the user message that produced this response (nearest preceding user message). |
+| `data.response` | The agent response being rated — plain text, rendered HTML, or serialized data, matching what the user saw. |
 
 ---
 

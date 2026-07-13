@@ -26,6 +26,13 @@ export { useEmbedKit } from './hooks/useEmbedKit';
 export { createEmbedKit } from './createEmbedKit';
 export { default as BoomiPlugin } from './main';
 export { RenderComponent, DestroyPlugin } from './main';
+export { BoomiEvents, BOOMI_EVENT_NAME } from './events.service';
+export type {
+  EmbedKitEvent,
+  EmbedKitEventType,
+  EmbedKitEventHandler,
+  FeedbackEventData,
+} from './events.service';
 export { default } from './main';
 export { Components } from './components/registry';
 export type { KnownComponent, ComponentPropsMap } from './components/registry';

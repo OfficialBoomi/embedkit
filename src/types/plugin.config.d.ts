@@ -8,6 +8,7 @@ import type { Theme } from './theme';
 import type { Ai } from './ai';
 import type { Oauth2 } from './ouath2';
 import type { PluginUiConfig } from './plugin-ui.config';
+import type { EmbedKitEvent } from '../events.service';
 
 export type PluginConfig = {
   /** The tenantId for CORS on the server. This is typically your boomi parent account Id */
@@ -24,4 +25,11 @@ export type PluginConfig = {
 
   /** Optional UI/UX configuration for the plugin. */
   boomiConfig?: PluginUiConfig;
+
+  /**
+   * Receives every event EmbedKit emits (feedback, etc.) as a standardized
+   * { type, timestamp, source, data } envelope. Equivalent to subscribing
+   * with BoomiEvents.on('*', handler).
+   */
+  onEvent?: (event: EmbedKitEvent) => void;
 };

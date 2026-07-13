@@ -64,7 +64,19 @@ async function requestNonce() {
 export async function login() {
   try {
     const nonce = await requestNonce();
-    BoomiPlugin({ tenantId, serverBase, nonce, boomiConfig: uiConfig });
+    BoomiPlugin({
+      tenantId,
+      serverBase,
+      nonce,
+      boomiConfig: uiConfig,
+      // EmbedKit event subscription — feedback (and future event types)
+      // arrive here as { type, timestamp, source, data }. Registering this
+      // also makes the feedback bar appear under agent responses.
+      // Alternative (zero-import): window.addEventListener('boomi:event', (e) => e.detail)
+      onEvent: (event) => {
+        console.info(`[Harness] EmbedKit event (${event.type}):`, event);
+      },
+    });
     console.info('[Harness] Plugin initialized.');
   } catch (err) {
     console.error('[Harness] Login/bootstrap failed:', err?.message || err);
