@@ -313,11 +313,15 @@ agents: {
 | `comment.label` | `string` | `'Add a comment'` | Tooltip / accessible label. |
 | `comment.placeholder` | `string` | `'Tell us more about this response…'` | Placeholder text inside the comment box. Style it with the `--boomi-agent-feedback-placeholder-*` tokens. |
 | `comment.submitLabel` | `string` | `'Submit'` | Label on the comment submit button. |
+| `comment.ariaLabel` | `string` | `'Feedback comment'` | Accessible (screen reader) name for the comment textarea. |
 | `thanksText` | `string` | `'Thanks for your feedback!'` | Confirmation message shown after feedback is submitted. |
 
 Clicking a thumb emits immediately; submitting a comment emits again with the
-comment included alongside the current rating. Clicking an active thumb again
-clears the rating (`rating: null`). See
+comment included alongside the current rating. Ratings are correctable:
+clicking the **other** thumb switches the rating, and clicking the active
+thumb again clears it (`rating: null`). Every correction emits a follow-up
+event with the same `source.messageId`, so consumers should treat the
+**latest event per message** as authoritative. See
 [Feedback events](#feedback-events) for the exact event shape.
 
 Styling is controlled by the `--boomi-agent-feedback-*` design tokens — see

@@ -52,6 +52,8 @@ export type AgentFeedbackConfig = {
     placeholder?: string;
     /** Label on the comment submit button */
     submitLabel?: string;
+    /** Accessible (screen reader) name for the comment textarea. Default: 'Feedback comment' */
+    ariaLabel?: string;
   };
 
   /** Message shown after feedback is submitted */

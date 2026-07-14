@@ -46,6 +46,13 @@ export const FeedbackBar: React.FC<FeedbackBarProps> = ({ config, responseText, 
   const showDown = config.thumbsDown?.show !== false;
   const showComment = config.comment?.show !== false;
 
+  // `||` (not ??) so a configured empty string still falls back to an
+  // accessible default — buttons must never end up with an empty name.
+  const upLabel = config.thumbsUp?.label || 'Good response';
+  const downLabel = config.thumbsDown?.label || 'Bad response';
+  const commentLabel = config.comment?.label || 'Add a comment';
+  const commentInputLabel = config.comment?.ariaLabel || 'Feedback comment';
+
   const emit = (nextRating: FeedbackRating | null, nextComment: string) => {
     const data: FeedbackEventData = {
       rating: nextRating,
@@ -82,8 +89,8 @@ export const FeedbackBar: React.FC<FeedbackBarProps> = ({ config, responseText, 
           type="button"
           className={`boomi-agent-feedback__btn is-up ${rating === 'up' ? 'is-active' : ''}`}
           onClick={() => handleRate('up')}
-          title={config.thumbsUp?.label ?? 'Good response'}
-          aria-label={config.thumbsUp?.label ?? 'Good response'}
+          title={upLabel}
+          aria-label={upLabel}
           aria-pressed={rating === 'up'}
         >
           {renderIcon(config.thumbsUp?.icon, <FiThumbsUp />)}
@@ -94,8 +101,8 @@ export const FeedbackBar: React.FC<FeedbackBarProps> = ({ config, responseText, 
           type="button"
           className={`boomi-agent-feedback__btn is-down ${rating === 'down' ? 'is-active' : ''}`}
           onClick={() => handleRate('down')}
-          title={config.thumbsDown?.label ?? 'Bad response'}
-          aria-label={config.thumbsDown?.label ?? 'Bad response'}
+          title={downLabel}
+          aria-label={downLabel}
           aria-pressed={rating === 'down'}
         >
           {renderIcon(config.thumbsDown?.icon, <FiThumbsDown />)}
@@ -106,8 +113,8 @@ export const FeedbackBar: React.FC<FeedbackBarProps> = ({ config, responseText, 
           type="button"
           className={`boomi-agent-feedback__btn is-comment ${commentOpen ? 'is-active' : ''}`}
           onClick={() => setCommentOpen((open) => !open)}
-          title={config.comment?.label ?? 'Add a comment'}
-          aria-label={config.comment?.label ?? 'Add a comment'}
+          title={commentLabel}
+          aria-label={commentLabel}
           aria-expanded={commentOpen}
         >
           {renderIcon(config.comment?.icon, <FiMessageSquare />)}
@@ -123,6 +130,7 @@ export const FeedbackBar: React.FC<FeedbackBarProps> = ({ config, responseText, 
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder={config.comment?.placeholder ?? 'Tell us more about this response…'}
+            aria-label={commentInputLabel}
             rows={3}
           />
           <button

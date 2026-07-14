@@ -102,6 +102,41 @@ describe('FeedbackBar', () => {
     expect(event.data).toMatchObject({ rating: 'down', comment: 'Too vague' });
   });
 
+  it('switches the rating when the other thumb is clicked (fat-finger reversal)', async () => {
+    const handler = vi.fn();
+    subscribe('feedback', handler);
+    const user = userEvent.setup();
+    render(<FeedbackBar config={baseConfig} responseText="An iPaaS." context={context} />);
+
+    await user.click(screen.getByLabelText('Bad response'));
+    await user.click(screen.getByLabelText('Good response'));
+
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect((handler.mock.calls[0][0] as EmbedKitEvent).data).toMatchObject({ rating: 'down' });
+    expect((handler.mock.calls[1][0] as EmbedKitEvent).data).toMatchObject({ rating: 'up' });
+    expect(screen.getByLabelText('Good response')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Bad response')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('gives the comment textarea an accessible name (not just a placeholder)', async () => {
+    const user = userEvent.setup();
+    render(<FeedbackBar config={baseConfig} responseText="An iPaaS." context={context} />);
+    await user.click(screen.getByLabelText('Add a comment'));
+    expect(screen.getByRole('textbox', { name: 'Feedback comment' })).toBeInTheDocument();
+  });
+
+  it('falls back to accessible defaults when configured labels are empty strings', () => {
+    render(
+      <FeedbackBar
+        config={{ thumbsUp: { label: '' }, thumbsDown: { label: '' } }}
+        responseText="An iPaaS."
+        context={context}
+      />
+    );
+    expect(screen.getByLabelText('Good response')).toBeInTheDocument();
+    expect(screen.getByLabelText('Bad response')).toBeInTheDocument();
+  });
+
   it('clears the rating when the active thumb is clicked again', async () => {
     const handler = vi.fn();
     subscribe('feedback', handler);
