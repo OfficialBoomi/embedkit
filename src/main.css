@@ -1958,6 +1958,11 @@
     color: var(--boomi-agent-feedback-comment-fg, var(--boomi-input-fg, inherit));
     border: 1px solid var(--boomi-agent-feedback-comment-border, var(--boomi-input-border, currentColor));
   }
+  .boomi-agent-feedback__textarea::placeholder {
+    color: var(--boomi-agent-feedback-placeholder-fg, var(--boomi-input-placeholder, currentColor));
+    opacity: var(--boomi-agent-feedback-placeholder-opacity, .7);
+    font-style: var(--boomi-agent-feedback-placeholder-style, normal);
+  }
   .boomi-agent-feedback__submit {
     padding: .5rem .9rem;
     font-size: .75rem;

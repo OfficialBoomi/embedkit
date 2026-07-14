@@ -311,7 +311,7 @@ agents: {
 | `comment.show` | `boolean` | `true` | Show or hide the comment button. |
 | `comment.icon` | `string` | built-in | Emoji or short text replacing the built-in comment icon. |
 | `comment.label` | `string` | `'Add a comment'` | Tooltip / accessible label. |
-| `comment.placeholder` | `string` | `'Tell us more about this response…'` | Placeholder text inside the comment box. |
+| `comment.placeholder` | `string` | `'Tell us more about this response…'` | Placeholder text inside the comment box. Style it with the `--boomi-agent-feedback-placeholder-*` tokens. |
 | `comment.submitLabel` | `string` | `'Submit'` | Label on the comment submit button. |
 | `thanksText` | `string` | `'Thanks for your feedback!'` | Confirmation message shown after feedback is submitted. |
 
@@ -834,6 +834,9 @@ cssVars: {
 | `--boomi-agent-feedback-comment-fg` | Comment textarea text |
 | `--boomi-agent-feedback-comment-border` | Comment textarea border |
 | `--boomi-agent-feedback-comment-radius` | Comment textarea border radius |
+| `--boomi-agent-feedback-placeholder-fg` | Comment placeholder text color (defaults to `--boomi-input-placeholder`) |
+| `--boomi-agent-feedback-placeholder-opacity` | Comment placeholder opacity (default `0.7`) |
+| `--boomi-agent-feedback-placeholder-style` | Comment placeholder font style, e.g. `italic` (default `normal`) |
 | `--boomi-agent-feedback-submit-bg` | Comment submit button background |
 | `--boomi-agent-feedback-submit-fg` | Comment submit button text |
 | `--boomi-agent-feedback-submit-border` | Comment submit button border |

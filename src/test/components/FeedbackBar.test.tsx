@@ -73,6 +73,19 @@ describe('FeedbackBar', () => {
     expect(await screen.findByText('Thanks for your feedback!')).toBeInTheDocument();
   });
 
+  it('renders a custom comment placeholder from config', async () => {
+    const user = userEvent.setup();
+    render(
+      <FeedbackBar
+        config={{ comment: { placeholder: 'How did we do?' } }}
+        responseText="An iPaaS."
+        context={context}
+      />
+    );
+    await user.click(screen.getByLabelText('Add a comment'));
+    expect(screen.getByPlaceholderText('How did we do?')).toBeInTheDocument();
+  });
+
   it('emits the comment together with the current rating on submit', async () => {
     const handler = vi.fn();
     subscribe('feedback', handler);

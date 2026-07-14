@@ -84,6 +84,9 @@ export default {
   //       thumbsDown: { show: true, icon: '👎', label: 'Bad response' },
   //       comment: {
   //         show: true,
+  //         // Placeholder text shown in the empty feedback comment box.
+  //         // Style it with the --boomi-agent-feedback-placeholder-* CSS
+  //         // vars in cssVars / cssVarsByTheme below.
   //         placeholder: 'Tell us more about this response…',
   //         submitLabel: 'Send Feedback',
   //       },
@@ -110,6 +113,13 @@ export default {
     // with a divider that extends slightly above the input:
     // '--boomi-agent-composer-backdrop-fade': '0px',
     // '--boomi-agent-composer-backdrop-line-width': '1px',
+
+    // --- Feedback comment placeholder ------------------------------------
+    // Styles the placeholder text inside the feedback comment box
+    // (the text itself is set per agent via agents.<id>.feedback.comment.placeholder).
+    // '--boomi-agent-feedback-placeholder-fg': '#94a3b8',
+    // '--boomi-agent-feedback-placeholder-opacity': '0.7',
+    // '--boomi-agent-feedback-placeholder-style': 'italic',
   },
 
   // Per-theme CSS variable overrides. Theme name is the key.
