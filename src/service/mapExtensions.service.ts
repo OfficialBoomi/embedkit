@@ -13,6 +13,7 @@ import { map } from 'zod';
 export type GetMapExtensionArgs = {
   integrationPackInstanceId: string;
   environmentId: string;
+  isSingleInstall?: boolean;
   signal?: AbortSignal;
 };
 
@@ -25,7 +26,8 @@ export type MapFunctionBrowseArgs = {
   originals: EnvironmentExtensions[],
   updated: EnvExtMinimal[],
   integrationPackInstanceId: string,
-  environmentId: string
+  environmentId: string,
+  isSingleInstall?: boolean
 };
 
 export function useMapExtensionsService() {
@@ -34,13 +36,14 @@ export function useMapExtensionsService() {
   async function getMapExtensions(
     args: GetMapExtensionArgs
   ): Promise<EnvironmentMapExtensionCandidate[]> {
-    const { integrationPackInstanceId, environmentId, signal } = args;
+    const { integrationPackInstanceId, environmentId, isSingleInstall, signal } = args;
     logger.debug('Fetching map extensions via service', args);
     return http.get('/map-extensions', {
       signal,
       params: {
         integrationPackInstanceId,
         environmentId,
+        isSingleInstall,
       },
     });
   }
@@ -68,14 +71,15 @@ export function useMapExtensionsService() {
   async function mapFunctionBrowse(
     args: MapFunctionBrowseArgs
   ): Promise<BrowseCandidateResponse> {
-    const { originals, updated, integrationPackInstanceId, environmentId} = args;
-    
+    const { originals, updated, integrationPackInstanceId, environmentId, isSingleInstall} = args;
+
     logger.debug('Functionally browsing map before edit via service', args);
     return http.post('/map-extensions/browse', {
       originals,
       updated,
       integrationPackInstanceId,
-      environmentId
+      environmentId,
+      isSingleInstall
     });
   }
 

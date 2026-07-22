@@ -110,7 +110,8 @@ const UpdateConnections = forwardRef<UpdateConnectionsRef, UpdateConnectionsProp
       }
 
       setIsLoading?.(true);
-      await updateFromCombined(rawExtensions ?? [], payload ?? [], integration.environmentId, integration.id || '');
+      const isSingle = integration.installationType === 'SINGLE' || false;
+      await updateFromCombined(rawExtensions ?? [], payload ?? [], integration.environmentId, integration.id || '', isSingle);
       setIsLoading?.(false);
       onSubmit?.();
       return true;

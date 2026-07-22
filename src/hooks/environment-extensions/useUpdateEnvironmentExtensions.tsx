@@ -5,12 +5,12 @@
  * @support https://bitbucket.org/officialboomi/embedkit
  */
 import { useState, useCallback, useRef } from 'react';
-import type { 
+import type {
   UpdateResult,
   EnvironmentExtensions,
   EnvExtMinimal
 } from '@boomi/embedkit-sdk';
- import {  
+ import {
   BrowseSessionStore,
   TTL_MS,
  } from '../../utils/browseSessionStore';
@@ -65,7 +65,7 @@ export const useUpdateEnvironmentExtensions = () => {
     async (
       originals: EnvironmentExtensions[],
       combinedEdited: EnvExtMinimal[],
-      environmentId: string, 
+      environmentId: string,
       integrationPackInstanceId: string,
       isSingleInstall?: boolean
     ): Promise<UpdateResult> => {
@@ -76,7 +76,7 @@ export const useUpdateEnvironmentExtensions = () => {
         setUpdateError(msg);
         throw new Error(msg);
       }
-      
+
       lastSubmittedEditsRef.current = combinedEdited;
       setIsUpdating(true);
       setUpdateError(null);
@@ -90,53 +90,50 @@ export const useUpdateEnvironmentExtensions = () => {
         );
         logger.debug('Batch update completed:', result.updatedExtensions);
 
-        if (!isSingleInstall){
-          // now the function browse to refresh candidates for the updated extensions
-          const resp = await mapFunctionBrowse({
-            originals: originals,
-            updated: combinedEdited,
-            integrationPackInstanceId,
-            environmentId,
-          });
-          logger.debug('Map function browse response:', resp);
-          const failedCandidates = resp.failedCandidates || [];
-          const successfulCandidates = resp.successCandidates || [];
+        // now the function browse to refresh candidates for the updated extensions
+        const resp = await mapFunctionBrowse({
+          originals: originals,
+          updated: combinedEdited,
+          integrationPackInstanceId,
+          environmentId,
+          isSingleInstall,
+        });
+        logger.debug('Map function browse response:', resp);
+        const failedCandidates = resp.failedCandidates || [];
+        const successfulCandidates = resp.successCandidates || [];
 
-          // if success we need to store in the browse session store
-          if (successfulCandidates.length > 0) {
-            successfulCandidates.forEach((c) => {
-              logger.debug('Storing successful Dynamic Browsing candidate in BrowseSessionStore:', c);
-              BrowseSessionStore.upsert({
-                containerId: c.containerId,
-                connectionId: c.connectionId,
-                connectionName: c.connectionName,
-                paramName: c.paramName,
-                sessionId: c.sessionId,                             
-                ttlMs: TTL_MS,
-                mapId: c.mapId,
-                processId: c.processId,
-                environmentId: c.environmentId,
-                candidateSource: c.candidateSource,
-              });
+        // if success we need to store in the browse session store
+        if (successfulCandidates.length > 0) {
+          successfulCandidates.forEach((c) => {
+            logger.debug('Storing successful Dynamic Browsing candidate in BrowseSessionStore:', c);
+            BrowseSessionStore.upsert({
+              containerId: c.containerId,
+              connectionId: c.connectionId,
+              connectionName: c.connectionName,
+              paramName: c.paramName,
+              sessionId: c.sessionId,
+              ttlMs: TTL_MS,
+              mapId: c.mapId,
+              processId: c.processId,
+              environmentId: c.environmentId,
+              candidateSource: c.candidateSource,
             });
-          }
-
-          if (failedCandidates && failedCandidates.length > 0) {
-            logger.warn('Some Dynamic Browsing candidates failed to authenticate:', resp.failedCandidates);
-            const baseEdits = lastSubmittedEditsRef.current ?? [];
-            const errorPatchedConnections = await updateEditedWithErrors(resp, baseEdits);
-            setEditedConnections(errorPatchedConnections);
-
-            const message =
-              'You must provide valid connection credentials to proceed.';
-            logger.error('Failed to authenticate Dynamic Browsing endpoints.');
-            setUpdateError(message);
-            throw new Error(message);
-          } 
-          logger.debug('Map function browse completed:', resp);
-        } else {
-          setEditedConnections(combinedEdited);
+          });
         }
+
+        if (failedCandidates && failedCandidates.length > 0) {
+          logger.warn('Some Dynamic Browsing candidates failed to authenticate:', resp.failedCandidates);
+          const baseEdits = lastSubmittedEditsRef.current ?? [];
+          const errorPatchedConnections = await updateEditedWithErrors(resp, baseEdits);
+          setEditedConnections(errorPatchedConnections);
+
+          const message =
+            'You must provide valid connection credentials to proceed.';
+          logger.error('Failed to authenticate Dynamic Browsing endpoints.');
+          setUpdateError(message);
+          throw new Error(message);
+        }
+        logger.debug('Map function browse completed:', resp);
 
         return result;
       } catch (err: any) {

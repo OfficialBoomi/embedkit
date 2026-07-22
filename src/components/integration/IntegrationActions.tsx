@@ -39,7 +39,6 @@ import { Menu } from '@headlessui/react';
  */
 interface IntegrationActionsProps {
   integration: IntegrationPackInstance;
-  isSingle?: boolean;
   simple?: boolean;
   onRunNow: () => void;
   onEditSchedule: () => void;
@@ -51,7 +50,6 @@ interface IntegrationActionsProps {
 
 const IntegrationActions: React.FC<IntegrationActionsProps> = ({
   integration,
-  isSingle,
   simple,
   onRunNow,
   onEditSchedule,
@@ -62,36 +60,34 @@ const IntegrationActions: React.FC<IntegrationActionsProps> = ({
 }) => {
   return (
     <DropdownMenu>
-      {!isSingle && (
-        <>
+      <>
+        <Menu.Item>
+          {({ active }) => (
+            <button
+              onClick={onEditConnections}
+              className="boomi-menu-item"
+              data-headlessui-state={active ? 'active' : undefined}
+            >
+              <AiOutlineLink className="boomi-menu-icon" />
+              Edit Connections
+            </button>
+          )}
+        </Menu.Item>
+        {!simple && (
           <Menu.Item>
             {({ active }) => (
               <button
-                onClick={onEditConnections}
+                onClick={onEditMap}
                 className="boomi-menu-item"
                 data-headlessui-state={active ? 'active' : undefined}
               >
-                <AiOutlineLink className="boomi-menu-icon" />
-                Edit Connections
+                <AiOutlineApartment className="boomi-menu-icon" />
+                Edit Map(s)
               </button>
             )}
           </Menu.Item>
-          {!simple && (
-            <Menu.Item>
-              {({ active }) => (
-                <button
-                  onClick={onEditMap}
-                  className="boomi-menu-item"
-                  data-headlessui-state={active ? 'active' : undefined}
-                >
-                  <AiOutlineApartment className="boomi-menu-icon" />
-                  Edit Map(s)
-                </button>
-              )}
-            </Menu.Item>
-          )}
-        </>
-      )}
+        )}
+      </>
       {!simple && (
         <>
           <Menu.Item>
