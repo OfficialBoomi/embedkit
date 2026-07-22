@@ -58,11 +58,13 @@ export const useFetchMapExtensions = () => {
     integrationPackInstanceId: string,
       /** Environment Id to query against. */
     environmentId: string,
+    /** Whether the pack is a single-install integration pack. */
+    isSingleInstall?: boolean,
   ) => {
     setIsLoading(true);
     setError(null);
 
-    logger.debug('fetchMapExtensions called', { integrationPackInstanceId, environmentId });
+    logger.debug('fetchMapExtensions called', { integrationPackInstanceId, environmentId, isSingleInstall });
 
     // FIX: validate both are present
     if (!integrationPackInstanceId || !environmentId) {
@@ -75,7 +77,7 @@ export const useFetchMapExtensions = () => {
 
     try {
       // fetch all map extensions for the given IPP & environment
-      const allMaps = await getMapExtensions({ integrationPackInstanceId, environmentId });
+      const allMaps = await getMapExtensions({ integrationPackInstanceId, environmentId, isSingleInstall });
 
       // patch & prune without mutating
       const normalized = BrowseSessionStore.attachSessionsAndPrune(allMaps);

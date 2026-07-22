@@ -71,7 +71,6 @@ const Integration: React.FC<IntegrationProps> = ({
   const [showRunNotification, setShowRunNotification] = useState(false);
   const isSingle = !!integration.installationType && integration.installationType === 'SINGLE';
   const title = isSingle ? integration.integrationPackName : integration.integrationPackOverrideName;
-  const showEdit = !isSingle;
   const isAgent = !!integration.isAgent;
   const type = isAgent ? 'Agent' : (isSingle ? 'Single Install Integration' : 'Integration');
 
@@ -144,7 +143,7 @@ const Integration: React.FC<IntegrationProps> = ({
 
           <div className="flex w-full">
             <div className="flex p-2 justify-end items-center gap-x-2 w-full relative overflow-visible">
-              {(boomiConfig?.components?.[componentKey]?.integrations?.integration?.showEdit ?? showEdit ?? true) && (
+              {(boomiConfig?.components?.[componentKey]?.integrations?.integration?.showEdit ?? true) && (
                 <>
                   {isAgent ? (
                     <Button
@@ -175,7 +174,6 @@ const Integration: React.FC<IntegrationProps> = ({
                   ) : (
                     <IntegrationActions
                       integration={integration}
-                      isSingle={isSingle}
                       onRunNow={handleRunNow}
                       simple={simple}
                       onEditSchedule={() => onEditClick('UpdateSchedules', integration)}
@@ -213,7 +211,6 @@ const Integration: React.FC<IntegrationProps> = ({
               ) : (
                 <IntegrationActions
                   integration={integration}
-                  isSingle={isSingle}
                   onRunNow={handleRunNow}
                   simple={simple}
                   onEditSchedule={() => onEditClick('UpdateSchedules', integration)}

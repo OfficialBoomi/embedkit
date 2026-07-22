@@ -315,7 +315,8 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
   const fetchData = async () => {
     try {
       logger.debug("Fetching maps...", [], integration.environmentId, integration.id);
-      await fetchMapExtensions(integration.id || '', integration.environmentId || '');
+      const isSingle = integration.installationType === 'SINGLE' || false;
+      await fetchMapExtensions(integration.id || '', integration.environmentId || '', isSingle);
     } catch (err) {
       setApiError("Failed to fetch maps.");
       logger.error("Failed to fetch maps", err);
