@@ -6,7 +6,7 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.5.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.5.1-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
@@ -14,6 +14,18 @@
 ### All Releases
 
 <details open>
+  <summary><strong>v1.5.1</strong> — Single-install integration pack connections & maps</summary>
+
+  **Highlights**
+  - ✅ **Edit Connections & Edit Map(s) for single-install packs** — The integration actions menu now offers **Edit Connections** and **Edit Map(s)** for single-install integration packs. Previously these actions were only available for multi-install packs.
+  - ✅ **Single-install extension updates fixed** — Saving connection extensions on a single-install pack no longer fails with a platform error (`Failed to extract process version …`). Map extension summaries for single-install packs are now queried by environment — single-install packs have no extension group — and matched to the pack's processes, so the post-save dynamic browse and map editing work for both installation types.
+  - ✅ **Dependency** — Updated `@boomi/embedkit-sdk` to **1.3.1** (single-install support in map extension summary queries).
+
+</details>
+
+---
+
+<details>
   <summary><strong>v1.5.0</strong> — Response feedback & standardized event callbacks</summary>
 
   **Highlights**
