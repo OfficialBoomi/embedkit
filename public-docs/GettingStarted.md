@@ -376,6 +376,18 @@ export default {
     },
   },
 
+  agents: {                                        // Per-agent configuration, keyed by agent ID
+    'my-agent-id': {
+      ui: {
+        mode: 'modal',
+        welcome: { title: 'Hello! 👋', subtitle: 'How can I help?' },
+      },
+      feedback: {                                  // Optional: thumbs up/down + comment on responses
+        thanksText: 'Thanks for your feedback!',   // (see Agents → Response Feedback below)
+      },
+    },
+  },
+
   // Define per-theme CSS variable overrides using design tokens
   cssVarsByTheme: {
     cartoon: {
@@ -490,6 +502,49 @@ EmbedKit supports two agent transport types, configured via the `transport` fiel
 | `boomi-proxy` | Routes agent messages through the EmbedKit proxy layer. Used when direct Boomi Platform access is not available or when additional request handling is required by the EmbedKit Server. This is the default if `transport` is not specified. |
 
 > **Note:** File attachments are currently not supported when using the `boomi-direct` transport.
+
+### Response Feedback
+
+Agents can show thumbs up / thumbs down / comment controls under every response. Feedback is delivered to **your application** as a standardized `'feedback'` event — EmbedKit never sends it over the network itself. Subscribe with the `onEvent` callback at init (or `BoomiEvents.on('feedback', ...)`, or the `boomi:event` DOM event):
+
+```js
+BoomiPlugin({
+  serverBase: res.serverBase,
+  tenantId: res.tenantId,
+  nonce: res.nonce,
+  boomiConfig: uiConfig,
+  onEvent: (event) => {
+    if (event.type === 'feedback') {
+      // event.data = { rating: 'up' | 'down' | null, comment?, prompt, response }
+      myApi.recordFeedback(event);
+    }
+  },
+});
+```
+
+The feedback bar appears automatically whenever a programmatic subscriber is registered — no config required. The optional `feedback` block in `boomi.config.js` customizes visibility and appearance per agent:
+
+```js
+// boomi.config.js (excerpt)
+export default {
+  agents: {
+    'my-agent-id': {
+      ui: { /* ... */ },
+      feedback: {
+        thumbsUp:   { label: 'Good response' },
+        thumbsDown: { label: 'Bad response' },
+        comment: {
+          placeholder: 'Tell us more about this response…',
+          submitLabel: 'Send Feedback',
+        },
+        thanksText: 'Thanks for your feedback!',
+      },
+    },
+  },
+};
+```
+
+See [Response Feedback](./ConfigurationReference.md#response-feedback-feedback) in the Configuration Reference for every option and default, and [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks) for the event envelope and all three subscription methods.
 
 ### How to Create and Deploy an Agent
 

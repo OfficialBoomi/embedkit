@@ -13,6 +13,7 @@ This guide covers everything you need to embed Boomi AI Agents into any existing
 5. [Creating a Project](#5-creating-a-project)
    - [Embed Types](#embed-types)
    - [Agent UI Options](#agent-ui-options)
+   - [Response Feedback](#response-feedback)
    - [Launcher Options](#launcher-options)
    - [Theme & CSS Variables](#theme--css-variables)
    - [Full Configuration Reference](#full-configuration-reference)
@@ -321,6 +322,76 @@ When `ui.mode: 'full'`, a page header can be shown above the chat.
 | `ui.pageTitle` | `string` | Override the title text |
 | `ui.pageShowDescription` | `boolean` | Show a description below the title |
 | `ui.pageDescription` | `string` | Description text |
+
+---
+
+### Response Feedback
+
+Adds thumbs up / thumbs down / comment controls under every agent response. Feedback is delivered to **your page** as a standardized `'feedback'` event — EmbedKit never sends it over the network itself. Your page subscribes and decides where the data goes.
+
+On a CDN page there are two ways to receive feedback events:
+
+**1. `onEvent` on `window.BoomiEmbed`** — the feedback bar appears automatically when this callback is set; no other config needed:
+
+```html
+<script>
+  window.BoomiEmbed = {
+    publicToken: "pk_...",
+    agentId: "project_...",
+    serverBase: "https://api.boomi.space/api/v1",
+    onEvent: (event) => {
+      if (event.type === 'feedback') {
+        // send to your backend, analytics, a Boomi process — your call
+        fetch('/my-feedback-endpoint', { method: 'POST', body: JSON.stringify(event) });
+      }
+    }
+  };
+</script>
+```
+
+**2. The `boomi:event` DOM CustomEvent** — zero-config listening, but DOM listeners cannot be auto-detected, so you must set `feedback: { enabled: true }` in the agent's project configuration for the bar to render:
+
+```js
+window.addEventListener('boomi:event', (e) => {
+  const event = e.detail;
+  if (event.type === 'feedback') { /* ... */ }
+});
+```
+
+The optional `feedback` block in the agent's project configuration (alongside `ui`) customizes visibility and appearance:
+
+```json
+"feedback": {
+  "enabled": true,
+  "thumbsUp":   { "show": true, "label": "Good response" },
+  "thumbsDown": { "show": true, "label": "Bad response" },
+  "comment": {
+    "show": true,
+    "placeholder": "Tell us more about this response…",
+    "submitLabel": "Send Feedback"
+  },
+  "thanksText": "Thanks for your feedback!"
+}
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `feedback.enabled` | `boolean` | auto | Visibility override. Omitted: the bar shows when `onEvent` is set. `true`: always show (required when listening **only** via the `boomi:event` DOM event). `false`: never show. |
+| `feedback.thumbsUp.show` | `boolean` | `true` | Show or hide the thumbs-up button |
+| `feedback.thumbsUp.icon` | `string` | built-in | Emoji or short text replacing the built-in icon |
+| `feedback.thumbsUp.label` | `string` | `'Good response'` | Tooltip / accessible label |
+| `feedback.thumbsDown.show` | `boolean` | `true` | Show or hide the thumbs-down button |
+| `feedback.thumbsDown.icon` | `string` | built-in | Emoji or short text replacing the built-in icon |
+| `feedback.thumbsDown.label` | `string` | `'Bad response'` | Tooltip / accessible label |
+| `feedback.comment.show` | `boolean` | `true` | Show or hide the comment button |
+| `feedback.comment.icon` | `string` | built-in | Emoji or short text replacing the built-in icon |
+| `feedback.comment.label` | `string` | `'Add a comment'` | Tooltip / accessible label |
+| `feedback.comment.placeholder` | `string` | `'Tell us more about this response…'` | Placeholder text inside the comment box |
+| `feedback.comment.submitLabel` | `string` | `'Submit'` | Label on the comment submit button |
+| `feedback.comment.ariaLabel` | `string` | `'Feedback comment'` | Accessible (screen reader) name for the comment textarea |
+| `feedback.thanksText` | `string` | `'Thanks for your feedback!'` | Confirmation message shown after feedback is submitted |
+
+For the event payload shape and full details, see [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks) in the Configuration Reference. Styling is controlled by the `--boomi-agent-feedback-*` CSS variables.
 
 ---
 
@@ -732,6 +803,18 @@ Below is a complete example project configuration in JSON, covering all availabl
         "allowedFileExtensions": [".csv", ".xlsx", ".pdf"],
         "maxFiles": 5,
         "maxTotalBytes": 10485760
+      },
+
+      "feedback": {
+        "enabled": true,
+        "thumbsUp":   { "show": true, "label": "Good response" },
+        "thumbsDown": { "show": true, "label": "Bad response" },
+        "comment": {
+          "show": true,
+          "placeholder": "Tell us more about this response…",
+          "submitLabel": "Send Feedback"
+        },
+        "thanksText": "Thanks for your feedback!"
       }
     }
   },
@@ -899,6 +982,7 @@ Replace `publicToken` and `agentId` with the values from the Admin Console after
 | `userId` | `string` | No | An identifier for the current user (for analytics / session tracking) |
 | `origin` | `string` | No | Override the detected origin. Defaults to `window.location.origin` |
 | `autoInit` | `boolean` | No | Set to `false` to disable automatic initialization. Default: `true` |
+| `onEvent` | `function` | No | Receives every EmbedKit event (e.g. response feedback) as a standardized envelope. See [Response Feedback](#response-feedback) |
 
 ---
 

@@ -35,7 +35,7 @@ EmbedKit uses a nonce → JWT exchange pattern. Your server authenticates the us
 | Guide | Description |
 |-------|-------------|
 | [Getting Started](./public-docs/GettingStarted.md) | Installation, server-side setup, client initialization, component rendering, theming |
-| [Configuration Reference](./public-docs/ConfigurationReference.md) | Complete reference for all configuration options — initialization, agents, components, theming, CSS design tokens |
+| [Configuration Reference](./public-docs/ConfigurationReference.md) | Complete reference for all configuration options — initialization, agents, response feedback, events & callbacks, components, theming, CSS design tokens |
 | [Transformation Editor](./public-docs/TransformationEditor.md) | Authoring Map Extension transformations, the script editor, local testing, and AI-assisted generation with guardrails |
 | [CDN Configuration](./public-docs/CDNConfiguration.md) | Full CDN (public embed) setup — Admin Console walkthrough, embed types, configuration reference, troubleshooting |
 | [Release Notes](./public-docs/ReleaseNotes.md) | Version history and upgrade notes |
@@ -123,6 +123,7 @@ For embedding Boomi AI Agents on any existing website — no npm, no build pipel
 | `mountId` | No | ID of the `<div>` to mount into. Defaults to `"boomi-agent"` |
 | `userId` | No | Your user's identifier for session tracking / analytics |
 | `autoInit` | No | Set to `false` to defer initialization until you call it manually |
+| `onEvent` | No | Callback receiving every EmbedKit event (e.g. response feedback). See [Events & Callbacks](./public-docs/ConfigurationReference.md#10-events--callbacks) |
 
 ### CDN Embed Types
 

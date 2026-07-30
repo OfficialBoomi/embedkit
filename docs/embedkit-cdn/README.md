@@ -97,6 +97,7 @@ See the [CDNConfiguration.md](../../public-docs/CDNConfiguration.md) for the ful
 | `userId` | No | Identifier for the current user (analytics / session history) |
 | `origin` | No | Override the detected origin. Defaults to `window.location.origin` |
 | `autoInit` | No | Set to `false` to disable automatic initialization. Default: `true` |
+| `onEvent` | No | Callback receiving every EmbedKit event (e.g. response feedback) as a standardized envelope. Pages can also listen for the `boomi:event` DOM CustomEvent on `window` |
 
 ### Manual Initialization
 
