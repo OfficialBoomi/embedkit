@@ -1,0 +1,39 @@
+vitest.config.js
+  s_c019640fe76a71::t_9a15d339a8e921 20-28
+package.json
+  s_c019640fe76a71::t_9a15d339a8e921 73
+.github/workflows/ci-anywhere.yml
+  s_c019640fe76a71::t_85c48b13825cbf 5
+  s_c019640fe76a71::t_1055ac50767437 37
+  s_c019640fe76a71::t_e6cab8293ddf46 2,15,20,39-51
+  s_c019640fe76a71::t_10f8e24560c0c0 150-158
+  s_c019640fe76a71::t_61475a25a27f1b 56
+  s_c019640fe76a71::t_ddcf1e18ac8dd2 1
+  s_c019640fe76a71::t_6768eb3d67d28a 3-4
+  s_c019640fe76a71::t_f982937c8c4613 6-8,12-14
+  s_c019640fe76a71::t_0160101ba54f1d 16-19
+  s_c019640fe76a71::t_0ea5c4a5f81d15 21-23,34-36
+  s_c019640fe76a71::t_81d8b615770f02 38
+  s_c019640fe76a71::t_b499887d679d79 52-55
+  s_c019640fe76a71::t_d805b50c75e7c9 57-59,147-149
+  s_c019640fe76a71::t_377b5e71842950 159-161
+  s_c019640fe76a71::t_6eb8ac57cbffff 9-11,24-33,60-146,162-180
+package-lock.json
+  s_c019640fe76a71::t_578370ef002e75 43,91-104,436-445,2660-2669,2832-2842,3600-3659,4311-4344,4591-4619,6378-6384,6567-6620,7164-7204,9537-9685
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "bd96161f913bde97ca641657e8d582ac56759490",
+  "prompts": {},
+  "sessions": {
+    "s_c019640fe76a71": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1b786f21-7385-49ac-a80d-738cc6be83cb",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Thomas Achhireddy <thomas.achhireddy@boomi.com>"
+    }
+  }
+}
