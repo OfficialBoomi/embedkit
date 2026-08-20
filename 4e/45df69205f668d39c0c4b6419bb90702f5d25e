@@ -1,0 +1,19 @@
+.github/workflows/ci-anywhere.yml
+  s_c019640fe76a71::t_e5f2a137c8c23c 150-156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "4e45df69205f668d39c0c4b6419bb90702f5d25e",
+  "prompts": {},
+  "sessions": {
+    "s_c019640fe76a71": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1b786f21-7385-49ac-a80d-738cc6be83cb",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Thomas Achhireddy <thomas.achhireddy@boomi.com>"
+    }
+  }
+}
