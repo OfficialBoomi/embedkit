@@ -1,0 +1,220 @@
+# Boomi standard build + security gate for embedkit.
+#
+# Downloads the shared Boomi build tool and runs it twice: once to build, once to run the
+# security scans. The scans are the gate — if any of them fails, the job fails.
+#
+# On a merge to main it also bumps the patch version and publishes the package.
+#
+# Requires these repository/organization secrets:
+#   JFROG_TOKEN      read-only, to download the build tool
+#   SONAR_HOST_URL   Sonar server + token
+#   SONAR_TOKEN
+#   SNYK_TOKEN       Snyk token + the organization the findings belong to
+#   SNYK_ORG_ID
+#   NPM_TOKEN        npm automation token, publish only
+#
+# Three details that look redundant but are not — do not remove them:
+#   1. every build-tool invocation passes --no-project
+#   2. the scan step SOURCES the install step's build-outputs.env before running
+#   3. the scan step sets REPO_URL and BRANCH_NAME as environment variables, in addition
+#      to the matching command-line flags
+
+name: CI Anywhere
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_utils_version:
+        description: "released X.Y.Z, snapshot base X.Y.Z.devN (latest), or exact X.Y.Z.devN+sha"
+        required: true
+        default: "1.3.2"
+
+# One run at a time per ref, so two analyses of the same project never overlap.
+# A push and a pull request produce different refs, so both of those still run.
+concurrency:
+  group: ci-anywhere-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  # write is needed only for the release commit + tag pushed back to main on a merge.
+  # Everything before that needs read alone.
+  contents: write
+
+env:
+  BUILD_UTILS_VERSION: ${{ github.event.inputs.build_utils_version || '1.3.2' }}
+  BUILD_TYPE: node
+  SERVICE_NAME: embedkit
+  JFROG_ART: https://boomi.jfrog.io/artifactory
+  BU_REPO: boomi-python-repo
+
+jobs:
+  install-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history is required by the secret scan and Sonar blame)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up uv (provides the Python the build tool needs)
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install scanner CLIs
+        env:
+          SONAR_SCANNER_VERSION: "6.2.1.4610"
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
+            | sh -s -- -b "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # The -linux-x64 bundle ships its own JRE, so no separate Java install is needed.
+          curl -fsSL -o /tmp/sonar-scanner.zip \
+            "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux-x64.zip"
+          unzip -q /tmp/sonar-scanner.zip -d "$HOME/.sonar"
+          echo "$HOME/.sonar/sonar-scanner-${SONAR_SCANNER_VERSION}-linux-x64/bin" >> "$GITHUB_PATH"
+          # The dependency scan is SKIPPED SILENTLY when the snyk binary is missing, so
+          # this install is what makes that part of the gate actually run.
+          npm i -g snyk
+
+      - name: Download the build tool
+        env:
+          JFROG_TOKEN: ${{ secrets.JFROG_TOKEN }}
+        run: |
+          set -euo pipefail
+          case "$BUILD_UTILS_VERSION" in
+            *+*)
+              BU_URL="${JFROG_ART}/${BU_REPO}/boomi-ci-build-utils/${BUILD_UTILS_VERSION%%+*}/build-utils-${BUILD_UTILS_VERSION}.pyz" ;;
+            *.dev*)
+              meta=$(curl -fsSL -H "Authorization: Bearer ${JFROG_TOKEN}" \
+                "${JFROG_ART}/api/storage/boomi-python-snapshot-local/boomi-ci-build-utils/${BUILD_UTILS_VERSION}?lastModified")
+              file=$(printf '%s' "$meta" | grep -oE 'build-utils-[^"/]+\.pyz' | head -1)
+              if [ -z "$file" ]; then echo "No snapshot published under ${BUILD_UTILS_VERSION}." >&2; exit 1; fi
+              BU_URL="${JFROG_ART}/${BU_REPO}/boomi-ci-build-utils/${BUILD_UTILS_VERSION}/${file}" ;;
+            *)
+              BU_URL="${JFROG_ART}/${BU_REPO}/boomi-ci-build-utils/${BUILD_UTILS_VERSION}/build-utils-${BUILD_UTILS_VERSION}.pyz" ;;
+          esac
+          echo "Fetching: $BU_URL"
+          curl -fSL -H "Authorization: Bearer ${JFROG_TOKEN}" -o build-utils.pyz "$BU_URL"
+          mkdir -p "$RUNNER_TEMP/bu-out"
+
+      - name: Build (npm ci + npm run build)
+        run: |
+          uv run --no-project --python 3.12 python build-utils.pyz \
+            --goal install \
+            --workspace . \
+            --outputs-dir "$RUNNER_TEMP/bu-out" \
+            --build-type "$BUILD_TYPE" \
+            --service-name "$SERVICE_NAME" \
+            --repo-url "${{ github.server_url }}/${{ github.repository }}" \
+            --commit-sha "${{ github.sha }}" \
+            --branch-name "${{ github.head_ref || github.ref_name }}" \
+            --tag null
+
+      - name: Tests + coverage (produces coverage/lcov.info for Sonar)
+        # The shared build tool does not run tests for this project type yet, so the
+        # workflow runs them. `--mode test` mirrors this repo's own `npm test` script,
+        # which vitest.config.js relies on for loadEnv(mode).
+        #
+        # continue-on-error is deliberate for now: coverage is a quality signal, while the
+        # security gate below must never be skipped, so a flaky suite cannot block it.
+        # Make this gating once the suite is known reliable on CI.
+        continue-on-error: true
+        run: npx vitest run --mode test --coverage
+
+      - name: Security gate (secret scan + Sonar + dependency scan)
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
+          # REQUIRED. The scanners read these two from the ENVIRONMENT; the matching
+          # --repo-url / --branch-name flags below do not reach them. Both failures are
+          # silent — the scan passes and reports against the wrong project or the wrong
+          # branch — so removing these looks harmless and is not.
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          # Compare new code against trunk.
+          SONAR_REFERENCE_BRANCH: main
+          # Points Sonar at the lcov report produced by the test step above.
+          COVERAGE_REPORTS: coverage/lcov.info
+        run: |
+          set -euo pipefail
+          # REQUIRED: load the values the build step wrote (Sonar project key, source
+          # paths, and so on). Each step runs in a fresh shell, so nothing carries over
+          # unless it is read back from disk here.
+          [ -f "$RUNNER_TEMP/bu-out/build-outputs.env" ] && . "$RUNNER_TEMP/bu-out/build-outputs.env"
+          uv run --no-project --python 3.12 python build-utils.pyz \
+            --goal scan \
+            --scanner trufflehog-git --scanner sonar --scanner snyk-test \
+            --workspace . \
+            --outputs-dir "$RUNNER_TEMP/bu-out" \
+            --build-type "$BUILD_TYPE" \
+            --service-name "$SERVICE_NAME" \
+            --repo-url "${{ github.server_url }}/${{ github.repository }}" \
+            --commit-sha "${{ github.sha }}" \
+            --branch-name "${{ github.head_ref || github.ref_name }}" \
+            --tag null
+
+      # ---- Release. Merge to main only, and only once the gate above is green. ----
+      # `success()` means the build and all three scanners passed, so an unscanned or
+      # unclean build can never be published. Branch and pull request runs still build
+      # and scan; they simply stop before this point.
+
+      - name: Retain build output
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: embedkit-dist-${{ github.sha }}
+          path: dist/
+          # A build that silently stops emitting dist/ should fail loudly rather than
+          # leave an empty artifact that looks fine in the run summary.
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Configure npm auth
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          scope: "@boomi"
+
+      - name: Bump patch version
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          git config user.name  "boomi-ci"
+          git config user.email "cloudops@boomi.com"
+          # Creates the version commit and the vX.Y.Z tag locally. Nothing is pushed yet —
+          # see the ordering note on the last step.
+          npm version patch -m "chore(release): %s [skip ci]"
+
+      - name: Build type declarations
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # package.json declares "types": "./dist/index.d.ts", but `npm run build` does not
+        # emit it — that is this separate script. Without it the published package would
+        # ship a broken types entry for every TypeScript consumer.
+        run: npm run build:types
+
+      - name: Publish to npm
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # --access public because npm defaults scoped packages to restricted, and
+        # @boomi/embedkit is published publicly.
+        run: npm publish --access public
+
+      - name: Push the release commit and tag
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # Deliberately AFTER publish. If publish fails nothing has been pushed, and the
+        # next merge retries the same version. The reverse order would leave main claiming
+        # a version that never reached npm.
+        run: git push --follow-tags origin HEAD:main
