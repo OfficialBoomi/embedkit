@@ -3,7 +3,8 @@
 # Downloads the shared Boomi build tool and runs it twice: once to build, once to run the
 # security scans. The scans are the gate — if any of them fails, the job fails.
 #
-# On a merge to main it also bumps the patch version and publishes the package.
+# On a merge to main it also keeps the built package as a downloadable run artifact.
+# Publishing to npm is prepared but disabled — see the commented block at the bottom.
 #
 # Requires these repository/organization secrets:
 #   JFROG_TOKEN      read-only, to download the build tool
@@ -11,7 +12,6 @@
 #   SONAR_TOKEN
 #   SNYK_TOKEN       Snyk token + the organization the findings belong to
 #   SNYK_ORG_ID
-#   NPM_TOKEN        npm automation token, publish only
 #
 # Three details that look redundant but are not — do not remove them:
 #   1. every build-tool invocation passes --no-project
@@ -30,7 +30,7 @@ on:
       build_utils_version:
         description: "released X.Y.Z, snapshot base X.Y.Z.devN (latest), or exact X.Y.Z.devN+sha"
         required: true
-        default: "1.3.2"
+        default: "1.4.0"
 
 # One run at a time per ref, so two analyses of the same project never overlap.
 # A push and a pull request produce different refs, so both of those still run.
@@ -39,12 +39,12 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  # write is needed only for the release commit + tag pushed back to main on a merge.
-  # Everything before that needs read alone.
-  contents: write
+  # Build and scan need read only. The disabled npm release block at the bottom of this
+  # file is the only thing that would need write (it pushes a version commit and tag).
+  contents: read
 
 env:
-  BUILD_UTILS_VERSION: ${{ github.event.inputs.build_utils_version || '1.3.2' }}
+  BUILD_UTILS_VERSION: ${{ github.event.inputs.build_utils_version || '1.4.0' }}
   BUILD_TYPE: node
   SERVICE_NAME: embedkit
   JFROG_ART: https://boomi.jfrog.io/artifactory
@@ -179,42 +179,46 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      - name: Configure npm auth
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          registry-url: "https://registry.npmjs.org"
-          scope: "@boomi"
-
-      - name: Bump patch version
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          set -euo pipefail
-          git config user.name  "boomi-ci"
-          git config user.email "cloudops@boomi.com"
-          # Creates the version commit and the vX.Y.Z tag locally. Nothing is pushed yet —
-          # see the ordering note on the last step.
-          npm version patch -m "chore(release): %s [skip ci]"
-
-      - name: Build type declarations
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        # package.json declares "types": "./dist/index.d.ts", but `npm run build` does not
-        # emit it — that is this separate script. Without it the published package would
-        # ship a broken types entry for every TypeScript consumer.
-        run: npm run build:types
-
-      - name: Publish to npm
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        # --access public because npm defaults scoped packages to restricted, and
-        # @boomi/embedkit is published publicly.
-        run: npm publish --access public
-
-      - name: Push the release commit and tag
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        # Deliberately AFTER publish. If publish fails nothing has been pushed, and the
-        # next merge retries the same version. The reverse order would leave main claiming
-        # a version that never reached npm.
-        run: git push --follow-tags origin HEAD:main
+      # ---- npm release: DISABLED, tracked separately ----------------------------------
+      # Left in place, commented, so the sequence and its ordering are not re-derived from
+      # scratch later. Enabling it requires an NPM_TOKEN secret (npm automation token) and
+      # changing `permissions: contents:` above from read to write, since the last step
+      # pushes the release commit and tag back to main.
+      #
+      # Ordering is deliberate: publish BEFORE pushing the version commit. If publish
+      # fails nothing has been pushed and the next merge retries the same version. The
+      # reverse order would leave main claiming a version that never reached npm.
+      #
+      # - name: Configure npm auth
+      #   if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: "20"
+      #     registry-url: "https://registry.npmjs.org"
+      #     scope: "@boomi"
+      #
+      # - name: Bump patch version
+      #   if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      #   run: |
+      #     set -euo pipefail
+      #     git config user.name  "boomi-ci"
+      #     git config user.email "cloudops@boomi.com"
+      #     npm version patch -m "chore(release): %s [skip ci]"
+      #
+      # - name: Build type declarations
+      #   if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      #   # package.json declares "types": "./dist/index.d.ts", but `npm run build` does
+      #   # not emit it — that is this separate script. Without it the published package
+      #   # would ship a broken types entry for every TypeScript consumer.
+      #   run: npm run build:types
+      #
+      # - name: Publish to npm
+      #   if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      #   # --access public because npm defaults scoped packages to restricted.
+      #   run: npm publish --access public
+      #
+      # - name: Push the release commit and tag
+      #   if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      #   run: git push --follow-tags origin HEAD:main
