@@ -55,7 +55,18 @@ const LOGIN_BODY = {
   //     // browser — so only this block can grant an agent Bash/Write.
   //     byAgent: {
   //       'db8135be-182f-4971-8c60-9658fb565ee3': {
-  //         tools: 'full',                 // let it run the boomi-* scripts
+  //         // 'full' adds Bash/Write/Edit/Task so the Companion skills can run
+  //         // their boomi-* scripts and push components. Every call is gated by
+  //         // a deny-by-default policy on the server: one command per Bash call
+  //         // (no chaining, substitution or redirection), only the skill scripts
+  //         // plus read-only utilities, writes confined to the session
+  //         // workspace, and the generated .env unreadable.
+  //         //
+  //         // That gate is policy, not a kernel boundary — an allowed script
+  //         // runs with the server's privileges. Confine the process at the OS
+  //         // level too (read-only rootfs, tmpfs workspace, egress limited to
+  //         // the Boomi API, non-root) before exposing this beyond dev.
+  //         tools: 'full',
   //         model: 'claude-opus-5',
   //         // Restrict which skills it may invoke (omit for all discovered):
   //         // skills: ['bc-integration:boomi-integration'],
@@ -64,6 +75,15 @@ const LOGIN_BODY = {
   //         // testAtomId: '',
   //         // targetFolder: '',
   //         systemPromptAppend: 'Prefer reusing existing connections.',
+  //
+  //         // Sandbox relaxations. Every field WIDENS what the agent may do,
+  //         // so leave unset unless a workflow specifically needs it.
+  //         // sandbox: {
+  //         //   extraAllowedCommands: ['mvn'],   // extra executables
+  //         //   extraReadableRoots: ['/srv/shared-schemas'],
+  //         //   allowNetworkCommands: false,     // true permits curl/wget directly
+  //         //   allowEnvRead: false,             // true exposes the credential file
+  //         // },
   //       },
   //     },
   //   },

@@ -772,6 +772,44 @@ cssVarsByTheme: {
 
 ---
 
+### Companion Agent Sandbox
+
+Server-side, under `ai.companion` on the login POST (never in `boomi.config.js` —
+granting an agent shell access has to be a server decision, not something the
+browser can ask for).
+
+`tools: 'full'` gives the Companion Bash/Write/Edit/Task so its skills can run
+the `boomi-*` scripts and push components. Every tool call is then gated by a
+deny-by-default policy:
+
+- **one command per Bash call** — `;`, `&&`, `||`, pipes, backticks, `$(…)`,
+  `${…}`, redirection, heredocs and trailing `&` are all refused, because
+  allowlisting the first token is meaningless if the rest of the line can start
+  a second command
+- **command allowlist** — the skill's own `boomi-*.sh` / `boomi-*.py`, plus
+  read-only shell utilities and workspace file operations. Interpreters
+  (`bash`, `python3`) may only run skill scripts, never inline code
+- **path confinement** — writes only inside the session workspace; reads only
+  the workspace and the loaded skill directories
+- **the credential file is unreadable** — the generated `.env` holds the
+  tenant's platform credentials, and the skill scripts read it themselves
+
+A refusal is returned to the model with its reason, so the agent reroutes rather
+than retrying, and surfaces to the user as a progress note.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `sandbox.extraAllowedCommands` | `string[]` | `[]` | Extra executables, matched on the command's first token. |
+| `sandbox.extraReadableRoots` | `string[]` | `[]` | Extra absolute path prefixes the agent may read. |
+| `sandbox.allowNetworkCommands` | `boolean` | `false` | Permit `curl` / `wget` directly. The skill scripts make their own API calls, so a direct client is mostly useful for exfiltration. |
+| `sandbox.allowEnvRead` | `boolean` | `false` | Expose the workspace `.env`. Rarely a good idea. |
+
+> **This is policy, not isolation.** The gate decides whether a tool call runs;
+> once an allowed script runs it is a normal child process with the server's
+> privileges. Confine the process at the OS level as well before exposing the
+> full surface beyond development: read-only rootfs, tmpfs workspace, egress
+> restricted to the Boomi API, non-root, no container socket.
+
 ### Agent Response Prose (Markdown)
 
 Agent answers are Markdown: headings, lists, tables, fenced code, and long
