@@ -12,6 +12,7 @@ import { MessageBlock } from './MessageBlock';
 import { getMsgText } from './utils/message';
 import StatusRowChip from './StatusRowChip';
 import { ErrorBlock } from './ErrorBlock';
+import { isDirectTransport } from '../../utils/agent-transport';
 
 type MainChatProps = {
   integration: IntegrationPackInstance;
@@ -77,7 +78,7 @@ export default function MainChat({
 
   const packId = integration.integrationPackId;
   const uiCfg = packId ? (boomiConfig?.agents?.[packId]?.ui as any) ?? undefined : undefined;
-  const isBoomiDirect = packId ? boomiConfig?.agents?.[packId]?.transport === 'boomi-direct' : false;
+  const isBoomiDirect = packId ? isDirectTransport(boomiConfig?.agents?.[packId]?.transport) : false;
   const feedbackCfg = packId ? (boomiConfig?.agents?.[packId] as any)?.feedback ?? undefined : undefined;
 
   const allowFreeTextPrompt: boolean = uiCfg?.allowFreeTextPrompt !== false;

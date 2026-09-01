@@ -23,6 +23,7 @@ import ToastNotification from '../ui/ToastNotification';
 import SwalNotification from '../ui/SwalNotification';
 import { usePlugin } from '../../context/pluginContext';
 import { FiSettings as Settings } from 'react-icons/fi';
+import { isDirectTransport } from '../../utils/agent-transport';
 
 export interface AgentChatGPTLayoutProps {
   integration: IntegrationPackInstance;
@@ -43,7 +44,9 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
   const [showUpdateToast, setShowUpdateToast] = useState(false);
 
   const agentCfg = boomiConfig?.agents?.[integration.integrationPackId ?? ''];
-  const isBoomiDirect = agentCfg?.transport === 'boomi-direct';
+  // Hosted transports (Agent Studio, Companion) skip pack install/configuration,
+  // so the configure step and settings affordances are hidden for both.
+  const isBoomiDirect = isDirectTransport(agentCfg?.transport);
   const sessionScope = agentCfg?.ui?.sessionScope ?? 'multi';
   const useMountSession = sessionScope === 'mount';
   const mountStorageKey = `boomi:mount-sid:${integration.integrationPackId ?? 'default'}`;

@@ -64,6 +64,43 @@ export default {
   },
 
   // Per-agent configuration, keyed by integration pack id (or public agent id).
+  //
+  // ---- Boomi Companion agent -------------------------------------------
+  // `transport: 'companion-sdk'` routes this agent's turns to the Boomi
+  // Companion in embedkit-server: a Claude Agent SDK loop that runs the Boomi
+  // Companion plugin skills (bc-integration, bc-marketplace, ...). Replies come
+  // back on the same SSE conversation channel as every other transport, so the
+  // chat UI is unchanged, and like `boomi-direct` it needs no integration pack
+  // install or per-agent configuration step.
+  //
+  // The agent's model, tool surface, and skill allowlist are NOT set here —
+  // they live in the `ai.companion` block on the login POST (see
+  // index.example.js), because granting an agent Bash/Write has to be a
+  // server-side decision, not something the browser can ask for.
+  //
+  // agents: {
+  //   'your-agent-id': {
+  //     type: 'chat',
+  //     transport: 'companion-sdk',
+  //     // Optional: the id the server keys its per-agent Companion config off.
+  //     // Defaults to boomiAgentId, then to this agent's own id.
+  //     companionAgentId: 'your-agent-id',
+  //     label: 'Ask the Boomi Companion',
+  //     icon: '🧭',
+  //     // File attachments are not supported on this transport yet.
+  //     sendMultipartData: false,
+  //     ui: {
+  //       mode: 'modal',
+  //       welcome: {
+  //         title: 'Boomi Companion',
+  //         subtitle: 'Ask me to build, inspect, or explain a Boomi integration.',
+  //       },
+  //       allowFreeTextPrompt: true,
+  //       fileAttachmentSupported: false,
+  //     },
+  //   },
+  // },
+  //
   // agents: {
   //   'your-agent-id': {
   //     ui: { mode: 'modal', welcome: { title: "Let's Talk", subtitle: 'Ask me anything.' } },

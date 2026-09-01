@@ -19,6 +19,7 @@ import type { ChatMessage } from '../../types/agent-chat';
 import { useSseConversation } from './useSseConversation';
 import logger from '../../logger.service';
 import { extractErrorMessage } from '../../utils/ui-utils';
+import { isCompanionTransport, isDirectTransport } from '../../utils/agent-transport';
 
 /** Helpers */
 const toIso = (v?: unknown): string | undefined => {
@@ -201,7 +202,13 @@ export function useAgentApi(args: {
     '';
   const forceMultipart =
     !!(agentCfg?.sendMultipartData || (agentCfg as any)?.sendMultiPartOnly);
-  const useBoomiDirect = agentCfg?.transport === 'boomi-direct';
+  const useCompanion = isCompanionTransport(agentCfg?.transport);
+  // Both hosted transports post `{ sessionId, agent_id, message }` to their own
+  // endpoint instead of going through the integration-pack forward.
+  const useDirectEndpoint = isDirectTransport(agentCfg?.transport);
+  const directAgentId = useCompanion
+    ? (agentCfg as any)?.companionAgentId || boomiAgentId
+    : boomiAgentId;
   // ---- stable service refs
   const svc = useAgentService();
   const listRef   = useRef(svc.listSessions);
@@ -213,9 +220,15 @@ export function useAgentApi(args: {
     listRef.current   = svc.listSessions;
     convoRef.current  = svc.getConversation;
     createRef.current = svc.createSession;
-    sendRef.current   = (useBoomiDirect ? svc.sendBoomiAgentSession : svc.sendMessage) as any;
-    delRef.current    = svc.deleteSession;
-  }, [svc, useBoomiDirect]);
+    sendRef.current   = (useCompanion
+      ? svc.sendCompanionSession
+      : useDirectEndpoint
+        ? svc.sendBoomiAgentSession
+        : svc.sendMessage) as any;
+    // A Companion session owns a server-side workspace holding generated
+    // credentials, so its delete has to go through the Companion route.
+    delRef.current    = useCompanion ? svc.deleteCompanionSession : svc.deleteSession;
+  }, [svc, useCompanion, useDirectEndpoint]);
 
   // ---- sessions & selection
   // Initialize from localStorage cache so sessions appear instantly on re-mount.
@@ -520,13 +533,13 @@ export function useAgentApi(args: {
       const hasFiles = (payload.files?.length ?? 0) > 0;
 
       if (hasFiles || forceMultipart) {
-        if (useBoomiDirect) {
-          logger.warn('Boomi direct transport does not support file attachments yet; sending text only.');
-        }
-        if (useBoomiDirect) {
+        if (useDirectEndpoint) {
+          logger.warn(
+            `${useCompanion ? 'Companion' : 'Boomi direct'} transport does not support file attachments yet; sending text only.`
+          );
           await sendRef.current({
             sessionId: sid,
-            agent_id: boomiAgentId,
+            agent_id: directAgentId,
             message: userText,
             preview_mode: false,
           });
@@ -557,10 +570,10 @@ export function useAgentApi(args: {
         }
 
         await svc.sendMultipart({ formData: fd });
-      } else if (useBoomiDirect) {
+      } else if (useDirectEndpoint) {
         await sendRef.current({
           sessionId: sid,
-          agent_id: boomiAgentId,
+          agent_id: directAgentId,
           message: userText,
           preview_mode: false,
         });
@@ -594,7 +607,7 @@ export function useAgentApi(args: {
     } finally {
       setSending(false);
     }
-  }, [activeSessionId, integration.integrationPackId, createSession, svc, sendRef, dispatch, forceMultipart, useBoomiDirect]);
+  }, [activeSessionId, integration.integrationPackId, createSession, svc, sendRef, dispatch, forceMultipart, useDirectEndpoint, useCompanion, directAgentId]);
 
   const sendMessage = useCallback(async (data: string) => {
     if (forceMultipart) {
@@ -623,10 +636,10 @@ export function useAgentApi(args: {
     setSending(true);
     try {
       const resp = await sendRef.current(
-        useBoomiDirect
+        useDirectEndpoint
           ? {
               sessionId: sid,
-              agent_id: boomiAgentId,
+              agent_id: directAgentId,
               message: userText,
               preview_mode: false,
             }
@@ -665,7 +678,7 @@ export function useAgentApi(args: {
     } finally {
       setSending(false);
     }
-  }, [activeSessionId, integration.integrationPackId, createSession, sendMessageRich, forceMultipart, useBoomiDirect]);
+  }, [activeSessionId, integration.integrationPackId, createSession, sendMessageRich, forceMultipart, useDirectEndpoint, directAgentId]);
 
   // ===== Effects =====
 

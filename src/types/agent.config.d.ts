@@ -149,6 +149,13 @@ export type AgentConfig = {
   /** Optional Boomi Agent ID for boomi-direct transport */
   boomiAgentId?: string;
 
+  /**
+   * Optional Boomi Companion agent id for the `companion-sdk` transport. Falls
+   * back to `boomiAgentId`, then to the integration pack id. The server keys its
+   * per-agent Companion configuration (tool surface, model, skills) off this id.
+   */
+  companionAgentId?: string;
+
   /** is this a modal driven agent? */
   type?: AgentType;
 
@@ -179,8 +186,16 @@ export type AgentConfig = {
   /** Default to multi-part request only. This will send the api requests as multi-part only. */
   sendMultipartData?: boolean;
 
-  /** Route agent messages via Boomi direct session endpoint. */
-  transport?: 'boomi-proxy' | 'boomi-direct';
+  /**
+   * How agent messages reach their runtime.
+   *
+   * - `boomi-proxy` (default): forwarded to the agent's installed integration pack.
+   * - `boomi-direct`: posted to the Boomi Agent Studio session endpoint.
+   * - `companion-sdk`: posted to the Boomi Companion agent in embedkit-server —
+   *   a Claude Agent SDK loop running the Boomi Companion plugin skills. Replies
+   *   arrive on the same SSE conversation channel as every other transport.
+   */
+  transport?: 'boomi-proxy' | 'boomi-direct' | 'companion-sdk';
 
   /** ChatGPT-style layout configuration */
   ui: AgentUiConfig;

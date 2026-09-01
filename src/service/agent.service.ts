@@ -79,6 +79,13 @@ export type SendBoomiAgentSessionArgs = {
   signal?: AbortSignal;
 };
 
+/**
+ * Args for the Boomi Companion agent. Intentionally the same shape as
+ * SendBoomiAgentSessionArgs so the two hosted transports are interchangeable at
+ * the call site.
+ */
+export type SendCompanionSessionArgs = SendBoomiAgentSessionArgs;
+
 /* -------------------- Endpoints (single source of truth) -------------------- */
 
 const endpoints = {
@@ -87,6 +94,9 @@ const endpoints = {
   sendMessage: '/agents/chat/send',
   sendMessageMulti: '/agents/chat/sendMultiPart',
   boomiAgentSession: '/boomi-agent/session',
+  companionSession: '/companion/session',
+  companionDeleteSession: (sessionId: string) =>
+    `/companion/sessions/${encodeURIComponent(sessionId)}`,
   appendAgent: (sessionId: string) => `/agents/chat/sessions/${encodeURIComponent(sessionId)}/agent-reply`,
   createSession: '/agents/chat/sessions',
   deleteSession: (sessionId: string) => `/agents/chat/sessions/${encodeURIComponent(sessionId)}`,
@@ -159,6 +169,29 @@ export function useAgentService() {
     return http.post(endpoints.boomiAgentSession, body, { signal });
   }
 
+  /**
+   * Send a message to the Boomi Companion agent (Claude Agent SDK loop in
+   * embedkit-server). Returns as soon as the turn is queued; the reply streams
+   * in over the session's SSE channel.
+   */
+  async function sendCompanionSession(args: SendCompanionSessionArgs): Promise<SendMessageResponse> {
+    const { signal, ...body } = args;
+    logger.debug('Sending Companion agent message', { sessionId: body.sessionId, agent_id: body.agent_id });
+    return http.post(endpoints.companionSession, body, { signal });
+  }
+
+  /**
+   * Delete a Companion chat session. Routed separately from deleteSession so the
+   * server can also discard the session's agent workspace, which holds a
+   * generated credential file.
+   */
+  async function deleteCompanionSession(args: DeleteSessionArgs): Promise<{ ok: true }> {
+    const { sessionId, signal } = args;
+    logger.debug('Deleting Companion chat session', { sessionId });
+    await http.del(endpoints.companionDeleteSession(sessionId), { signal });
+    return { ok: true };
+  }
+
   return {
     createSession,
     listSessions,
@@ -167,5 +200,7 @@ export function useAgentService() {
     deleteSession,
     sendMultipart,
     sendBoomiAgentSession,
+    sendCompanionSession,
+    deleteCompanionSession,
   };
 }

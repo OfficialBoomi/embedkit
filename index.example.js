@@ -30,6 +30,45 @@ const LOGIN_BODY = {
     apiKey: env.VITE_OPENAI_API_KEY || '',
   },
 
+  // ---------------------------------------------------------------------
+  // Boomi Companion agent (Claude Agent SDK loop in embedkit-server).
+  // Swap the `ai` block above for this one to route an agent to the
+  // Companion instead of OpenAI or Agent Studio, and give that agent
+  // `transport: 'companion-sdk'` in boomi.config.js.
+  //
+  // The Anthropic token travels on this login POST exactly like every
+  // other credential and is encrypted at rest with them. The Boomi
+  // platform credentials above are reused for the Companion skills'
+  // own .env — nothing extra to configure.
+  // ---------------------------------------------------------------------
+  // ai: {
+  //   enabled: true,
+  //   model: 'boomi-companion',            // or a concrete id: 'claude-opus-5'
+  //   anthropicApiToken: env.VITE_ANTHROPIC_API_KEY || '',
+  //   companion: {
+  //     // Tenant-wide defaults.
+  //     tools: 'readonly',                 // 'readonly' | 'full'  (default 'readonly')
+  //     maxTurns: 60,
+  //
+  //     // Per-agent overrides, keyed by the agent id the client sends.
+  //     // The tool surface is resolved here, server-side — never from the
+  //     // browser — so only this block can grant an agent Bash/Write.
+  //     byAgent: {
+  //       'db8135be-182f-4971-8c60-9658fb565ee3': {
+  //         tools: 'full',                 // let it run the boomi-* scripts
+  //         model: 'claude-opus-5',
+  //         // Restrict which skills it may invoke (omit for all discovered):
+  //         // skills: ['bc-integration:boomi-integration'],
+  //         // Written into the workspace .env for the skill scripts:
+  //         environmentId: env.VITE_API_ENVIRONMENT_ID || '',
+  //         // testAtomId: '',
+  //         // targetFolder: '',
+  //         systemPromptAppend: 'Prefer reusing existing connections.',
+  //       },
+  //     },
+  //   },
+  // },
+
   // Optional per-connection OAuth2 client credentials
   oauth2: { connections: {} },
 };

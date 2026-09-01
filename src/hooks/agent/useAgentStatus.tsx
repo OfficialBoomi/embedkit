@@ -11,6 +11,7 @@ import type { IntegrationPackInstance } from '@boomi/embedkit-sdk';
 import type { AgentConfig } from '../../types/agent.config';
 import { useIntegrationPacksService } from '../../service/integrationPacks.service';
 import logger from '../../logger.service';
+import { isDirectTransport } from '../../utils/agent-transport';
 
 export function useAgentStatus(
   integrationPackId: string,
@@ -26,7 +27,9 @@ export function useAgentStatus(
   const { getIntegrationPack, createIntegrationPack } = useIntegrationPacksService();
 
   const fetchStatus = useCallback(async () => {
-    if (transport === 'boomi-direct') {
+    // Hosted transports (Agent Studio, Companion) have no integration pack to
+    // look up or install — report them ready with a synthetic instance.
+    if (isDirectTransport(transport)) {
       setInstalled(true);
       setInstance({
         integrationPackId,
