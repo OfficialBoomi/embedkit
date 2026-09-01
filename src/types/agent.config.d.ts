@@ -31,6 +31,24 @@ export type AgentFeedbackControlConfig = {
  * or the 'boomi:event' DOM CustomEvent. EmbedKit never sends feedback over
  * the network itself; the host application owns the data.
  */
+/**
+ * Copy affordances on agent responses.
+ *
+ * The response-level control copies the original Markdown (not the rendered
+ * text), so a pasted answer keeps its headings, tables and code fences.
+ * Presentation is themable through the --boomi-agent-prose-copy-* CSS vars.
+ */
+export type AgentCopyConfig = {
+  /** Copy button on the whole response. Defaults to true. */
+  showMessageCopy?: boolean;
+  /** Copy button on each fenced code block. Defaults to true. */
+  showCodeCopy?: boolean;
+  /** Button label. Defaults to 'Copy'. */
+  label?: string;
+  /** Label shown briefly after a successful copy. Defaults to 'Copied'. */
+  copiedLabel?: string;
+};
+
 export type AgentFeedbackConfig = {
   /**
    * Controls visibility. The feedback bar renders when a programmatic
@@ -102,6 +120,13 @@ export type AgentUiConfig = {
     /** Override default centering and place the modal at a custom position */
     position?: UIPosition;
   };
+
+  /**
+   * Copy affordances on agent responses (response-level and per code block).
+   * Both default to on; set `showMessageCopy: false` / `showCodeCopy: false`
+   * to hide them.
+   */
+  copy?: AgentCopyConfig;
 
   /** Allow user to enter free-text prompts */
   allowFreeTextPrompt?: boolean;

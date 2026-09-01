@@ -2348,6 +2348,280 @@
       animation: none !important;
     }
   }
+
+  /* ===== Agent response prose (Markdown) =====
+     Rendered by AgentProse.tsx. Agent responses carry tables, fenced code and
+     long unbreakable tokens (component ids, XML attributes, file paths), so the
+     job here is containment first and typography second: nothing may push the
+     message wider than the chat pane.
+
+     Every value is a --boomi-agent-prose-* custom property with a fallback, so
+     a host can restyle the whole surface from cssVars / cssVarsByTheme without
+     forking the component. */
+
+  .agent-prose-wrap {
+    position: relative;
+    /* A grid child will not shrink below its content unless told to; without
+       this the whole message can widen the chat column. */
+    min-width: 0;
+  }
+
+  /* ---- Message-level copy ---- */
+  .agent-prose-copy {
+    position: absolute;
+    top: var(--boomi-agent-prose-copy-top, -0.25rem);
+    right: var(--boomi-agent-prose-copy-right, 0);
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: var(--boomi-agent-prose-copy-padding, 0.25rem 0.5rem);
+    font-size: var(--boomi-agent-prose-copy-font-size, 0.75rem);
+    line-height: 1;
+    border-radius: var(--boomi-agent-prose-copy-radius, 0.5rem);
+    border: 1px solid var(--boomi-agent-prose-copy-border,
+      color-mix(in srgb, currentColor 18%, transparent));
+    background: var(--boomi-agent-prose-copy-bg,
+      color-mix(in srgb, var(--boomi-agent-pane-bg, var(--boomi-page-bg-color)) 92%, transparent));
+    color: var(--boomi-agent-prose-copy-fg, var(--boomi-muted, currentColor));
+    cursor: pointer;
+    /* Stay out of the way until the message is hovered or keyboard-focused. */
+    opacity: var(--boomi-agent-prose-copy-idle-opacity, 0);
+    transition: opacity .15s ease, background-color .15s ease, color .15s ease;
+  }
+  .agent-prose-wrap:hover .agent-prose-copy,
+  .agent-prose-wrap:focus-within .agent-prose-copy,
+  .agent-prose-copy:focus-visible {
+    opacity: 1;
+  }
+  .agent-prose-copy:hover {
+    background: var(--boomi-agent-prose-copy-bg-hover,
+      color-mix(in srgb, var(--boomi-accent) 12%, transparent));
+    color: var(--boomi-agent-prose-copy-fg-hover, var(--boomi-accent));
+  }
+  .agent-prose-copy.is-copied {
+    color: var(--boomi-agent-prose-copy-fg-copied, var(--boomi-toast-success-bg, #0EC38B));
+    border-color: var(--boomi-agent-prose-copy-border-copied,
+      color-mix(in srgb, var(--boomi-toast-success-bg, #0EC38B) 40%, transparent));
+    opacity: 1;
+  }
+  .agent-prose-copy__label {
+    display: var(--boomi-agent-prose-copy-label-display, inline);
+  }
+  /* Pointer-coarse devices have no hover, so the control must stay visible. */
+  @media (hover: none) {
+    .agent-prose-copy { opacity: 1; }
+  }
+
+  /* ---- Base prose ---- */
+  .agent-prose {
+    min-width: 0;
+    max-width: 100%;
+    /* Break long prose words rather than letting them overflow. */
+    overflow-wrap: break-word;
+    font-size: var(--boomi-agent-prose-font-size, 0.9375rem);
+    line-height: var(--boomi-agent-prose-line-height, 1.65);
+    color: var(--boomi-agent-prose-fg, var(--boomi-agent-pane-fg, var(--boomi-page-fg-color)));
+  }
+  .agent-prose > :first-child { margin-top: 0; }
+  .agent-prose > :last-child { margin-bottom: 0; }
+
+  .agent-prose p {
+    margin: var(--boomi-agent-prose-p-margin, 0.6em 0);
+  }
+
+  /* ---- Headings ---- */
+  .agent-prose h1,
+  .agent-prose h2,
+  .agent-prose h3,
+  .agent-prose h4,
+  .agent-prose h5,
+  .agent-prose h6 {
+    margin: var(--boomi-agent-prose-heading-margin, 1.4em 0 0.5em);
+    line-height: 1.3;
+    font-weight: var(--boomi-agent-prose-heading-weight, 600);
+    color: var(--boomi-agent-prose-heading-fg, inherit);
+  }
+  .agent-prose h1 { font-size: var(--boomi-agent-prose-h1-size, 1.4em); }
+  .agent-prose h2 { font-size: var(--boomi-agent-prose-h2-size, 1.25em); }
+  .agent-prose h3 { font-size: var(--boomi-agent-prose-h3-size, 1.1em); }
+  .agent-prose h4,
+  .agent-prose h5,
+  .agent-prose h6 { font-size: var(--boomi-agent-prose-h4-size, 1em); }
+
+  /* ---- Lists ---- */
+  .agent-prose ul,
+  .agent-prose ol {
+    margin: var(--boomi-agent-prose-list-margin, 0.6em 0);
+    padding-inline-start: var(--boomi-agent-prose-list-indent, 1.4em);
+  }
+  .agent-prose ul { list-style: var(--boomi-agent-prose-ul-style, disc) outside; }
+  .agent-prose ol { list-style: var(--boomi-agent-prose-ol-style, decimal) outside; }
+  .agent-prose li { margin: var(--boomi-agent-prose-li-margin, 0.25em 0); }
+  .agent-prose li > p { margin: 0.2em 0; }
+  .agent-prose li::marker { color: var(--boomi-agent-prose-marker-fg, var(--boomi-muted, currentColor)); }
+
+  /* ---- Inline emphasis ---- */
+  .agent-prose strong { font-weight: var(--boomi-agent-prose-strong-weight, 600); }
+  .agent-prose a {
+    color: var(--boomi-agent-prose-link-fg, var(--boomi-accent));
+    text-decoration: var(--boomi-agent-prose-link-decoration, underline);
+    text-underline-offset: 2px;
+    /* URLs are the most common source of horizontal overflow. */
+    overflow-wrap: anywhere;
+  }
+  .agent-prose a:hover { color: var(--boomi-agent-prose-link-fg-hover, var(--boomi-accent)); }
+
+  .agent-prose hr {
+    margin: var(--boomi-agent-prose-hr-margin, 1.25em 0);
+    border: 0;
+    border-top: 1px solid var(--boomi-agent-prose-hr-color,
+      color-mix(in srgb, currentColor 14%, transparent));
+  }
+
+  .agent-prose blockquote {
+    margin: var(--boomi-agent-prose-quote-margin, 0.8em 0);
+    padding: var(--boomi-agent-prose-quote-padding, 0.25em 0 0.25em 0.9em);
+    border-inline-start: var(--boomi-agent-prose-quote-border-width, 3px) solid
+      var(--boomi-agent-prose-quote-border, color-mix(in srgb, var(--boomi-accent) 40%, transparent));
+    color: var(--boomi-agent-prose-quote-fg, var(--boomi-muted, currentColor));
+  }
+
+  .agent-prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--boomi-agent-prose-img-radius, 0.5rem);
+  }
+
+  /* ---- Inline code ----
+     `overflow-wrap: anywhere` is what actually stops a long identifier such as
+     connectorType="officialboomi-X3979C-rest-prod" from forcing the message
+     wider than the pane. */
+  .agent-prose :not(pre) > code {
+    font-family: var(--boomi-agent-prose-code-font,
+      ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace);
+    font-size: var(--boomi-agent-prose-code-font-size, 0.875em);
+    padding: var(--boomi-agent-prose-code-padding, 0.12em 0.35em);
+    border-radius: var(--boomi-agent-prose-code-radius, 0.3rem);
+    background: var(--boomi-agent-prose-code-bg,
+      color-mix(in srgb, currentColor 8%, transparent));
+    border: 1px solid var(--boomi-agent-prose-code-border, transparent);
+    color: var(--boomi-agent-prose-code-fg, inherit);
+    overflow-wrap: anywhere;
+  }
+
+  /* ---- Fenced code blocks ---- */
+  .agent-prose__code {
+    margin: var(--boomi-agent-prose-pre-margin, 0.8em 0);
+    border-radius: var(--boomi-agent-prose-pre-radius, 0.625rem);
+    border: 1px solid var(--boomi-agent-prose-pre-border,
+      color-mix(in srgb, currentColor 14%, transparent));
+    background: var(--boomi-agent-prose-pre-bg,
+      color-mix(in srgb, currentColor 5%, transparent));
+    overflow: hidden;
+  }
+  .agent-prose__code-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: var(--boomi-agent-prose-pre-head-padding, 0.3rem 0.5rem 0.3rem 0.75rem);
+    background: var(--boomi-agent-prose-pre-head-bg,
+      color-mix(in srgb, currentColor 5%, transparent));
+    border-bottom: 1px solid var(--boomi-agent-prose-pre-border,
+      color-mix(in srgb, currentColor 14%, transparent));
+  }
+  .agent-prose__code-lang {
+    font-size: var(--boomi-agent-prose-pre-lang-font-size, 0.6875rem);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--boomi-agent-prose-pre-lang-fg, var(--boomi-muted, currentColor));
+  }
+  .agent-prose__code-copy {
+    padding: var(--boomi-agent-prose-pre-copy-padding, 0.15rem 0.45rem);
+    font-size: var(--boomi-agent-prose-pre-copy-font-size, 0.6875rem);
+    border-radius: var(--boomi-agent-prose-pre-copy-radius, 0.375rem);
+    border: 1px solid var(--boomi-agent-prose-pre-copy-border, transparent);
+    background: var(--boomi-agent-prose-pre-copy-bg, transparent);
+    color: var(--boomi-agent-prose-pre-copy-fg, var(--boomi-muted, currentColor));
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .agent-prose__code-copy:hover {
+    background: var(--boomi-agent-prose-pre-copy-bg-hover,
+      color-mix(in srgb, var(--boomi-accent) 14%, transparent));
+    color: var(--boomi-agent-prose-pre-copy-fg-hover, var(--boomi-accent));
+  }
+  .agent-prose__code-copy.is-copied {
+    color: var(--boomi-agent-prose-pre-copy-fg-copied, var(--boomi-toast-success-bg, #0EC38B));
+  }
+  .agent-prose__code pre {
+    margin: 0;
+    padding: var(--boomi-agent-prose-pre-padding, 0.75rem);
+    /* Code must not wrap (it changes meaning), so scroll it instead. */
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  .agent-prose__code pre code {
+    font-family: var(--boomi-agent-prose-code-font,
+      ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace);
+    font-size: var(--boomi-agent-prose-pre-font-size, 0.8125rem);
+    line-height: var(--boomi-agent-prose-pre-line-height, 1.55);
+    white-space: pre;
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+
+  /* ---- Tables ----
+     A table will not shrink to its container, so AgentProse wraps each one in
+     .agent-prose__scroll. Cells wrap normally so most tables need no scrolling
+     at all; the container catches the ones that genuinely cannot fit. */
+  .agent-prose__scroll {
+    margin: var(--boomi-agent-prose-table-margin, 0.8em 0);
+    max-width: 100%;
+    overflow-x: auto;
+    border-radius: var(--boomi-agent-prose-table-radius, 0.625rem);
+    border: 1px solid var(--boomi-agent-prose-table-border,
+      color-mix(in srgb, currentColor 14%, transparent));
+  }
+  .agent-prose__scroll:focus-visible {
+    outline: 2px solid var(--boomi-accent);
+    outline-offset: 2px;
+  }
+  .agent-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--boomi-agent-prose-table-font-size, 0.875rem);
+  }
+  .agent-prose thead th {
+    text-align: start;
+    font-weight: var(--boomi-agent-prose-th-weight, 600);
+    background: var(--boomi-agent-prose-th-bg,
+      color-mix(in srgb, currentColor 6%, transparent));
+    color: var(--boomi-agent-prose-th-fg, inherit);
+  }
+  .agent-prose th,
+  .agent-prose td {
+    padding: var(--boomi-agent-prose-cell-padding, 0.45rem 0.65rem);
+    border-bottom: 1px solid var(--boomi-agent-prose-cell-border,
+      color-mix(in srgb, currentColor 10%, transparent));
+    vertical-align: top;
+  }
+  .agent-prose tbody tr:last-child td { border-bottom: 0; }
+  .agent-prose tbody tr:nth-child(even) td {
+    background: var(--boomi-agent-prose-row-even-bg, transparent);
+  }
+  /* Long identifiers are the norm in these tables, so let them break. */
+  .agent-prose td code,
+  .agent-prose th code { overflow-wrap: anywhere; }
+  /* But a squeezed column breaks a path every few characters, which is far
+     harder to read than scrolling. Give code-bearing cells a floor and let the
+     scroll container take over in narrow panes. Set to 0 to always wrap. */
+  .agent-prose td:has(code),
+  .agent-prose th:has(code) {
+    min-width: var(--boomi-agent-prose-cell-code-min-width, 11rem);
+  }
 }
 
 @layer base {

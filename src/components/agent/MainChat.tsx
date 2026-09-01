@@ -80,6 +80,7 @@ export default function MainChat({
   const uiCfg = packId ? (boomiConfig?.agents?.[packId]?.ui as any) ?? undefined : undefined;
   const isBoomiDirect = packId ? isDirectTransport(boomiConfig?.agents?.[packId]?.transport) : false;
   const feedbackCfg = packId ? (boomiConfig?.agents?.[packId] as any)?.feedback ?? undefined : undefined;
+  const copyCfg = (uiCfg?.copy as any) ?? undefined;
 
   const allowFreeTextPrompt: boolean = uiCfg?.allowFreeTextPrompt !== false;
   const promptDefs: Array<{ title: string; prompt: string }> = Array.isArray(uiCfg?.prompts) ? uiCfg.prompts : [];
@@ -178,12 +179,13 @@ export default function MainChat({
           }
         }
         blocks.push(
-          <div key={key} className="w-full">
-            <div className="w-full max-w-[1024px] px-4 md:px-6">
+          <div key={key} className="w-full min-w-0">
+            <div className="w-full min-w-0 max-w-[1024px] px-4 md:px-6">
               <MessageBlock
                 m={m}
                 getMsgText={getMsgText}
                 isBoomiDirect={isBoomiDirect}
+                copy={copyCfg}
                 feedback={isAgentMsg ? feedbackCfg ?? {} : undefined}
                 feedbackContext={
                   isAgentMsg
@@ -205,7 +207,7 @@ export default function MainChat({
       });
       return blocks;
     },
-    [messages, isBoomiDirect, feedbackCfg, packId, sessionId]
+    [messages, isBoomiDirect, feedbackCfg, copyCfg, packId, sessionId]
   );
 
   // ---- file helpers ----

@@ -198,6 +198,7 @@ Passed as `agents[id].ui`.
 | `welcome.title` | `string` | — | **Required.** Heading shown on the empty/welcome state screen. |
 | `welcome.subtitle` | `string` | — | **Required.** Subheading shown on the empty/welcome state screen. |
 | `allowFreeTextPrompt` | `boolean` | `true` | When `false`, only preset prompts are shown — the free-text input is hidden. |
+| `copy` | `AgentCopyConfig` | — | Copy affordances on agent responses. See [Response Copy](#response-copy). |
 | `fileAttachmentSupported` | `boolean` | `false` | Enables the file attachment button in the compose bar. |
 | `fileAttachmentRequired` | `boolean` | `false` | When `true`, the user must attach at least one file before sending. |
 | `allowedFileExtensions` | `string \| string[]` | — | Restricts accepted file types, e.g. `['.csv', '.json']` or `'.pdf'`. |
@@ -206,6 +207,35 @@ Passed as `agents[id].ui`.
 | `prompts` | `Array<{ title: string; prompt: string }>` | — | Preset prompt cards shown on the welcome screen. Users click them to send the associated prompt. |
 | `promptsAlign` | `'left' \| 'center' \| 'right'` | `'center'` | Horizontal alignment of the prompt card row. |
 | `promptsLocation` | `'input' \| 'welcome'` | `'input'` | Where the prompt cards are rendered. `'input'` places them below the compose bar; `'welcome'` places them below the welcome title and subtitle. |
+
+#### Response Copy
+
+Passed as `agents[id].ui.copy`. Agent answers are Markdown, so the response-level
+button copies the **original Markdown source** rather than the rendered text — a
+pasted answer keeps its headings, tables and code fences.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `showMessageCopy` | `boolean` | `true` | Copy button on the whole response. Fades in on hover; always visible on touch devices. |
+| `showCodeCopy` | `boolean` | `true` | Copy button in the header strip of each fenced code block. Copies only that block's code. |
+| `label` | `string` | `'Copy'` | Button label and accessible name. |
+| `copiedLabel` | `string` | `'Copied'` | Label shown for ~1.4s after a successful copy. |
+
+```js
+agents: {
+  'your-agent-id': {
+    ui: {
+      mode: 'modal',
+      welcome: { title: 'Support', subtitle: 'Ask us anything.' },
+      copy: { showMessageCopy: true, showCodeCopy: true, label: 'Copy', copiedLabel: 'Copied' },
+    },
+  },
+}
+```
+
+Styling is themable through the `--boomi-agent-prose-copy-*` and
+`--boomi-agent-prose-pre-copy-*` tokens — see
+[Agent Response Prose](#agent-response-prose-markdown).
 
 #### Suggested Prompts Example
 
@@ -694,6 +724,140 @@ cssVarsByTheme: {
 | `--boomi-modal-top-offset` | Top position offset |
 
 ---
+
+### Agent Response Prose (Markdown)
+
+Agent answers are Markdown: headings, lists, tables, fenced code, and long
+identifiers such as `connectorType="officialboomi-X3979C-rest-prod"`. These
+tokens style that output.
+
+**Containment is load-bearing.** A `<table>` does not shrink to its container and
+`word-break: normal` cannot break a long identifier, so without containment an
+answer pushes the whole message wider than the chat pane. Two rules do that work,
+and overriding them re-introduces horizontal overflow:
+
+- every table is wrapped in its own `overflow-x: auto` scroll container
+- inline code uses `overflow-wrap: anywhere`
+
+Fenced code blocks scroll internally instead of wrapping, because wrapping code
+changes its meaning.
+
+#### Base Typography
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-agent-prose-font-size` | `0.9375rem` | Response body size |
+| `--boomi-agent-prose-line-height` | `1.65` | Response line height |
+| `--boomi-agent-prose-fg` | `--boomi-agent-pane-fg` | Response text color |
+| `--boomi-agent-prose-p-margin` | `0.6em 0` | Paragraph spacing |
+| `--boomi-agent-prose-strong-weight` | `600` | `**bold**` weight |
+
+#### Headings
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-agent-prose-h1-size` | `1.4em` | `#` size |
+| `--boomi-agent-prose-h2-size` | `1.25em` | `##` size |
+| `--boomi-agent-prose-h3-size` | `1.1em` | `###` size |
+| `--boomi-agent-prose-h4-size` | `1em` | `####` and deeper |
+| `--boomi-agent-prose-heading-margin` | `1.4em 0 0.5em` | Shared heading margin |
+| `--boomi-agent-prose-heading-weight` | `600` | Shared heading weight |
+| `--boomi-agent-prose-heading-fg` | `inherit` | Heading color |
+
+#### Lists
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-agent-prose-ul-style` | `disc` | Bullet marker style |
+| `--boomi-agent-prose-ol-style` | `decimal` | Numbered marker style |
+| `--boomi-agent-prose-list-indent` | `1.4em` | Inline start padding |
+| `--boomi-agent-prose-list-margin` | `0.6em 0` | Margin around a list |
+| `--boomi-agent-prose-li-margin` | `0.25em 0` | Margin per item |
+| `--boomi-agent-prose-marker-fg` | `--boomi-muted` | Bullet/number color |
+
+#### Links, Rules, Quotes & Images
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-agent-prose-link-fg` | `--boomi-accent` | Link color |
+| `--boomi-agent-prose-link-fg-hover` | `--boomi-accent` | Link hover color |
+| `--boomi-agent-prose-link-decoration` | `underline` | Link decoration |
+| `--boomi-agent-prose-hr-color` | 14% currentColor | `---` rule color |
+| `--boomi-agent-prose-hr-margin` | `1.25em 0` | Rule spacing |
+| `--boomi-agent-prose-quote-border` | 40% accent | Blockquote edge color |
+| `--boomi-agent-prose-quote-border-width` | `3px` | Blockquote edge width |
+| `--boomi-agent-prose-quote-fg` | `--boomi-muted` | Blockquote text |
+| `--boomi-agent-prose-quote-margin` | `0.8em 0` | Blockquote margin |
+| `--boomi-agent-prose-quote-padding` | `0.25em 0 0.25em 0.9em` | Blockquote padding |
+| `--boomi-agent-prose-img-radius` | `0.5rem` | Image corner radius |
+
+#### Inline Code
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-agent-prose-code-bg` | 8% currentColor | Inline code chip background |
+| `--boomi-agent-prose-code-fg` | `inherit` | Inline code color |
+| `--boomi-agent-prose-code-border` | `transparent` | Inline code border |
+| `--boomi-agent-prose-code-padding` | `0.12em 0.35em` | Inline code padding |
+| `--boomi-agent-prose-code-radius` | `0.3rem` | Inline code corner radius |
+| `--boomi-agent-prose-code-font` | system mono stack | Monospace family (also used by code blocks) |
+| `--boomi-agent-prose-code-font-size` | `0.875em` | Inline code size |
+
+#### Fenced Code Blocks
+
+Each block renders as a framed figure with a header strip carrying the language
+and (when enabled) a copy button.
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-agent-prose-pre-bg` | 5% currentColor | Block background |
+| `--boomi-agent-prose-pre-border` | 14% currentColor | Block and header border |
+| `--boomi-agent-prose-pre-radius` | `0.625rem` | Block corner radius |
+| `--boomi-agent-prose-pre-margin` | `0.8em 0` | Block margin |
+| `--boomi-agent-prose-pre-padding` | `0.75rem` | Padding around the code |
+| `--boomi-agent-prose-pre-font-size` | `0.8125rem` | Code size |
+| `--boomi-agent-prose-pre-line-height` | `1.55` | Code line height |
+| `--boomi-agent-prose-pre-head-bg` | 5% currentColor | Header strip background |
+| `--boomi-agent-prose-pre-head-padding` | `0.3rem 0.5rem 0.3rem 0.75rem` | Header strip padding |
+| `--boomi-agent-prose-pre-lang-fg` | `--boomi-muted` | Language label color |
+| `--boomi-agent-prose-pre-lang-font-size` | `0.6875rem` | Language label size |
+| `--boomi-agent-prose-pre-copy-bg` / `-bg-hover` | `transparent` / 14% accent | Code copy button background |
+| `--boomi-agent-prose-pre-copy-fg` / `-fg-hover` / `-fg-copied` | muted / accent / success | Code copy button text |
+| `--boomi-agent-prose-pre-copy-border` | `transparent` | Code copy button border |
+| `--boomi-agent-prose-pre-copy-padding` / `-radius` / `-font-size` | `0.15rem 0.45rem` / `0.375rem` / `0.6875rem` | Code copy button metrics |
+
+#### Tables
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-agent-prose-table-border` | 14% currentColor | Outer table frame |
+| `--boomi-agent-prose-table-radius` | `0.625rem` | Frame corner radius |
+| `--boomi-agent-prose-table-margin` | `0.8em 0` | Table margin |
+| `--boomi-agent-prose-table-font-size` | `0.875rem` | Table text size |
+| `--boomi-agent-prose-th-bg` | 6% currentColor | Header row background |
+| `--boomi-agent-prose-th-fg` | `inherit` | Header row text |
+| `--boomi-agent-prose-th-weight` | `600` | Header row weight |
+| `--boomi-agent-prose-cell-padding` | `0.45rem 0.65rem` | Cell padding |
+| `--boomi-agent-prose-cell-border` | 10% currentColor | Row divider |
+| `--boomi-agent-prose-row-even-bg` | `transparent` | Set for zebra striping |
+| `--boomi-agent-prose-cell-code-min-width` | `11rem` | Minimum width for cells containing inline code. Stops a squeezed column breaking a long path every few characters; the table's scroll container takes over instead. Set `0` to always wrap. |
+
+#### Response Copy Button
+
+Configured on/off per agent via [`ui.copy`](#response-copy); these tokens style it.
+It fades in on hover by default — set `--boomi-agent-prose-copy-idle-opacity: 1`
+to pin it visible, or `--boomi-agent-prose-copy-label-display: none` for an
+icon-only button. On touch devices it is always visible regardless.
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-agent-prose-copy-idle-opacity` | `0` | Opacity when not hovered |
+| `--boomi-agent-prose-copy-label-display` | `inline` | `none` for icon-only |
+| `--boomi-agent-prose-copy-top` / `-right` | `-0.25rem` / `0` | Position within the message |
+| `--boomi-agent-prose-copy-bg` / `-bg-hover` | pane tint / 12% accent | Button background |
+| `--boomi-agent-prose-copy-fg` / `-fg-hover` / `-fg-copied` | muted / accent / success | Button text |
+| `--boomi-agent-prose-copy-border` / `-border-copied` | 18% currentColor / 40% success | Button border |
+| `--boomi-agent-prose-copy-padding` / `-radius` / `-font-size` | `0.25rem 0.5rem` / `0.5rem` / `0.75rem` | Button metrics |
 
 ### Agent Chat UI
 

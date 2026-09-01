@@ -9,14 +9,13 @@
  * The client interprets only content.data based on type.
  */
 import React, { useSyncExternalStore } from 'react';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import { CodeBlock } from './CodeBlock';
 import { ErrorBlock } from './ErrorBlock';
 import { HtmlBlock } from './HtmlBlock';
 import { FeedbackBar, type FeedbackContext } from './FeedbackBar';
 import { BoomiEvents } from '../../events.service';
-import type { AgentFeedbackConfig } from '../../types/agent.config';
+import { AgentProse } from './AgentProse';
+import type { AgentCopyConfig, AgentFeedbackConfig } from '../../types/agent.config';
 import logger from '../../logger.service';
 
 type MessageBlockProps = {
@@ -26,17 +25,8 @@ type MessageBlockProps = {
   /** When set, renders thumbs up/down + comment controls under the response */
   feedback?: AgentFeedbackConfig;
   feedbackContext?: FeedbackContext;
-};
-
-// Configure marked: keep line breaks inside paragraphs, don't mangle links.
-marked.setOptions({ breaks: true, gfm: true });
-
-// Parse markdown → sanitized HTML. Passes through plain text and raw HTML safely.
-// ADD_ATTR: ['target', 'rel'] — DOMPurify strips target by default (phishing mitigation),
-// but agent responses may legitimately include target="_blank" links.
-const markdownToHtml = (text: string): string => {
-  const raw = marked.parse(text) as string;
-  return DOMPurify.sanitize(raw, { USE_PROFILES: { html: true }, ADD_ATTR: ['target', 'rel'] });
+  /** Copy affordances on the response and its code blocks (`ui.copy`). */
+  copy?: AgentCopyConfig;
 };
 
 export const MessageBlock: React.FC<MessageBlockProps> = ({
@@ -45,6 +35,7 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({
   isBoomiDirect = false,
   feedback,
   feedbackContext,
+  copy,
 }) => {
   // Feedback renders when the host app can actually receive the event: a
   // programmatic subscriber exists (onEvent / BoomiEvents), or the agent
@@ -222,9 +213,9 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({
 
     const text = typeof data === 'string' ? data : data != null ? String(data) : '';
     return (
-      <div className="w-full">
-        <div className="w-full max-w-[1024px] px-4 md:px-6 leading-7 text-[var(--boomi-page-fg-color)]">
-          <HtmlBlock value={markdownToHtml(text)} treatStringAsHTML />
+      <div className="w-full min-w-0">
+        <div className="w-full min-w-0 max-w-[1024px] px-4 md:px-6 text-[var(--boomi-page-fg-color)]">
+          <AgentProse markdown={text} copy={copy} />
           {feedbackBar}
         </div>
       </div>
