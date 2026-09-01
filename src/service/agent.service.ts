@@ -97,6 +97,8 @@ const endpoints = {
   companionSession: '/companion/session',
   companionDeleteSession: (sessionId: string) =>
     `/companion/sessions/${encodeURIComponent(sessionId)}`,
+  companionStop: (sessionId: string) =>
+    `/companion/sessions/${encodeURIComponent(sessionId)}/stop`,
   appendAgent: (sessionId: string) => `/agents/chat/sessions/${encodeURIComponent(sessionId)}/agent-reply`,
   createSession: '/agents/chat/sessions',
   deleteSession: (sessionId: string) => `/agents/chat/sessions/${encodeURIComponent(sessionId)}`,
@@ -181,6 +183,20 @@ export function useAgentService() {
   }
 
   /**
+   * Halt the Companion turn currently running for a session.
+   *
+   * `stopped: false` means nothing was running — the turn had already finished
+   * by the time the request landed, which is a normal race, not an error.
+   */
+  async function stopCompanionSession(
+    args: DeleteSessionArgs
+  ): Promise<{ stopped: boolean; wasRunning: boolean }> {
+    const { sessionId, signal } = args;
+    logger.debug('Stopping Companion turn', { sessionId });
+    return http.post(endpoints.companionStop(sessionId), undefined, { signal });
+  }
+
+  /**
    * Delete a Companion chat session. Routed separately from deleteSession so the
    * server can also discard the session's agent workspace, which holds a
    * generated credential file.
@@ -202,5 +218,6 @@ export function useAgentService() {
     sendBoomiAgentSession,
     sendCompanionSession,
     deleteCompanionSession,
+    stopCompanionSession,
   };
 }

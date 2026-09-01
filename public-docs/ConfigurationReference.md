@@ -199,6 +199,7 @@ Passed as `agents[id].ui`.
 | `welcome.subtitle` | `string` | — | **Required.** Subheading shown on the empty/welcome state screen. |
 | `allowFreeTextPrompt` | `boolean` | `true` | When `false`, only preset prompts are shown — the free-text input is hidden. |
 | `copy` | `AgentCopyConfig` | — | Copy affordances on agent responses. See [Response Copy](#response-copy). |
+| `stop` | `AgentStopConfig` | — | Stop / interrupt controls shown while a turn runs. See [Stop & Interrupt](#stop--interrupt). |
 | `fileAttachmentSupported` | `boolean` | `false` | Enables the file attachment button in the compose bar. |
 | `fileAttachmentRequired` | `boolean` | `false` | When `true`, the user must attach at least one file before sending. |
 | `allowedFileExtensions` | `string \| string[]` | — | Restricts accepted file types, e.g. `['.csv', '.json']` or `'.pdf'`. |
@@ -236,6 +237,52 @@ agents: {
 Styling is themable through the `--boomi-agent-prose-copy-*` and
 `--boomi-agent-prose-pre-copy-*` tokens — see
 [Agent Response Prose](#agent-response-prose-markdown).
+
+#### Stop & Interrupt
+
+Passed as `agents[id].ui.stop`. While a turn is running the composer's primary
+action becomes **Stop**. If the user has also typed something, an interrupt row
+appears beneath the input — halting the turn and sending that message instead.
+That row is the only way to reach the agent mid-turn, since sending is otherwise
+blocked while it works.
+
+These controls only render for transports that can actually halt a turn — today
+`companion-sdk`, whose turn runs in embedkit-server under an abort handle the
+stop route can reach. Transports that hand the turn to a remote runtime with no
+cancel channel hide the controls rather than offer a button that does nothing.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `show` | `boolean` | `true` | Show the stop and interrupt controls. |
+| `label` | `string` | `'Stop'` | Stop button label. |
+| `interruptLabel` | `string` | `'Stop and send this instead'` | Interrupt button label. |
+| `interruptHint` | `string` | `'The agent is working — sending will interrupt it.'` | Text beside the interrupt button, also its tooltip. |
+
+```js
+agents: {
+  'your-agent-id': {
+    transport: 'companion-sdk',
+    ui: {
+      mode: 'modal',
+      welcome: { title: 'Companion', subtitle: 'Ask me anything.' },
+      stop: { show: true, label: 'Stop', interruptLabel: 'Send this instead' },
+    },
+  },
+}
+```
+
+Styling uses the `--boomi-agent-stop-*` and `--boomi-agent-interrupt-*` tokens:
+
+| Token | Description |
+|-------|-------------|
+| `--boomi-agent-stop-bg` / `-bg-hover` | Stop button background |
+| `--boomi-agent-stop-fg` / `-border` | Stop button text and border |
+| `--boomi-agent-stop-radius` / `-weight` | Stop button metrics |
+| `--boomi-agent-interrupt-bg` / `-bg-hover` | Interrupt button background |
+| `--boomi-agent-interrupt-fg` / `-border` | Interrupt button text and border |
+| `--boomi-agent-interrupt-padding` / `-radius` / `-font-size` / `-weight` | Interrupt button metrics |
+| `--boomi-agent-interrupt-row-gap` / `-row-pad-top` | Interrupt row layout |
+| `--boomi-agent-interrupt-hint-fg` / `-hint-font-size` / `-hint-opacity` | Hint text |
 
 #### Suggested Prompts Example
 

@@ -38,6 +38,29 @@ export type AgentFeedbackControlConfig = {
  * text), so a pasted answer keeps its headings, tables and code fences.
  * Presentation is themable through the --boomi-agent-prose-copy-* CSS vars.
  */
+/**
+ * Stop / interrupt controls.
+ *
+ * While a turn is running the composer's primary action becomes Stop. If the
+ * user has also typed something, an interrupt row appears beneath the input to
+ * halt the turn and send that message instead — the only way to reach the agent
+ * mid-turn, since sending is otherwise blocked.
+ *
+ * Only shown for transports that can actually halt a turn (`companion-sdk`);
+ * transports that hand the turn to a remote runtime with no cancel channel
+ * hide these controls rather than offering a button that does nothing.
+ */
+export type AgentStopConfig = {
+  /** Show the stop and interrupt controls. Defaults to true. */
+  show?: boolean;
+  /** Label on the stop button. Defaults to 'Stop'. */
+  label?: string;
+  /** Label on the interrupt button. Defaults to 'Stop and send this instead'. */
+  interruptLabel?: string;
+  /** Explanatory text beside the interrupt button. */
+  interruptHint?: string;
+};
+
 export type AgentCopyConfig = {
   /** Copy button on the whole response. Defaults to true. */
   showMessageCopy?: boolean;
@@ -127,6 +150,12 @@ export type AgentUiConfig = {
    * to hide them.
    */
   copy?: AgentCopyConfig;
+
+  /**
+   * Stop / interrupt controls shown while a turn is running. Only rendered for
+   * transports that can halt a turn.
+   */
+  stop?: AgentStopConfig;
 
   /** Allow user to enter free-text prompts */
   allowFreeTextPrompt?: boolean;

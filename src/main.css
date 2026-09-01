@@ -2622,6 +2622,61 @@
   .agent-prose th:has(code) {
     min-width: var(--boomi-agent-prose-cell-code-min-width, 11rem);
   }
+
+  /* ===== Stop / interrupt controls =====
+     While a turn is running the composer's primary action becomes Stop, and if
+     the user has typed something an interrupt row appears beneath the input to
+     halt the turn and send that message instead. */
+
+  .boomi-agent-stop-btn {
+    background: var(--boomi-agent-stop-bg,
+      color-mix(in srgb, var(--boomi-toast-error-bg, #FF7C66) 16%, var(--boomi-card-bg)));
+    color: var(--boomi-agent-stop-fg, var(--boomi-toast-error-bg, #d64550));
+    border: 1px solid var(--boomi-agent-stop-border,
+      color-mix(in srgb, var(--boomi-toast-error-bg, #FF7C66) 45%, transparent));
+    border-radius: var(--boomi-agent-stop-radius, 0.5rem);
+    font-weight: var(--boomi-agent-stop-weight, 600);
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .boomi-agent-stop-btn:hover:not(:disabled) {
+    background: var(--boomi-agent-stop-bg-hover,
+      color-mix(in srgb, var(--boomi-toast-error-bg, #FF7C66) 28%, var(--boomi-card-bg)));
+  }
+
+  .boomi-agent-interrupt-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--boomi-agent-interrupt-row-gap, 0.5rem);
+    padding-top: var(--boomi-agent-interrupt-row-pad-top, 0.375rem);
+  }
+  .boomi-agent-interrupt-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: var(--boomi-agent-interrupt-padding, 0.2rem 0.55rem);
+    font-size: var(--boomi-agent-interrupt-font-size, 0.75rem);
+    font-weight: var(--boomi-agent-interrupt-weight, 600);
+    line-height: 1.4;
+    border-radius: var(--boomi-agent-interrupt-radius, 999px);
+    border: 1px solid var(--boomi-agent-interrupt-border,
+      color-mix(in srgb, var(--boomi-accent) 35%, transparent));
+    background: var(--boomi-agent-interrupt-bg,
+      color-mix(in srgb, var(--boomi-accent) 10%, transparent));
+    color: var(--boomi-agent-interrupt-fg, var(--boomi-accent));
+    cursor: pointer;
+    transition: background-color .15s ease;
+  }
+  .boomi-agent-interrupt-btn:hover:not(:disabled) {
+    background: var(--boomi-agent-interrupt-bg-hover,
+      color-mix(in srgb, var(--boomi-accent) 20%, transparent));
+  }
+  .boomi-agent-interrupt-btn:disabled { opacity: .6; cursor: default; }
+  .boomi-agent-interrupt-hint {
+    font-size: var(--boomi-agent-interrupt-hint-font-size, 0.6875rem);
+    color: var(--boomi-agent-interrupt-hint-fg, var(--boomi-muted, currentColor));
+    opacity: var(--boomi-agent-interrupt-hint-opacity, 0.75);
+  }
 }
 
 @layer base {
@@ -3092,6 +3147,7 @@
     --boomi-scrollbar-thumb-hover:  color-mix(in srgb, var(--boomi-accent, #6366f1) 28%, transparent);
     --boomi-scrollbar-thumb-active: color-mix(in srgb, var(--boomi-accent, #6366f1) 40%, transparent);
     --boomi-scrollbar-corner:       transparent; /* avoids hard square in corners */
+
 
   }
 

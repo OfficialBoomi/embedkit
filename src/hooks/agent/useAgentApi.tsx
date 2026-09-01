@@ -609,6 +609,28 @@ export function useAgentApi(args: {
     }
   }, [activeSessionId, integration.integrationPackId, createSession, svc, sendRef, dispatch, forceMultipart, useDirectEndpoint, useCompanion, directAgentId]);
 
+  /**
+   * Halt the turn the agent is currently running.
+   *
+   * Only the Companion transport can do this: its turn runs in embedkit-server
+   * under an AbortController the stop route can reach. The other transports
+   * hand the turn to a remote runtime with no cancel channel, so `stopAgent` is
+   * undefined for them and the UI hides the control rather than offering a
+   * button that does nothing.
+   */
+  const stopAgent = useCallback(async () => {
+    const sid = activeSessionId;
+    if (!sid || !useCompanion) return;
+    try {
+      const res = await svc.stopCompanionSession({ sessionId: sid });
+      logger.debug('stopAgent result', res);
+      // The status frame that ends the turn arrives over SSE, so there is no
+      // local state to flip here — the server owns "am I still working".
+    } catch (e) {
+      logger.error({ e }, 'stopAgent failed');
+    }
+  }, [activeSessionId, useCompanion, svc]);
+
   const sendMessage = useCallback(async (data: string) => {
     if (forceMultipart) {
       await sendMessageRich({ data, files: [] });
@@ -681,6 +703,19 @@ export function useAgentApi(args: {
   }, [activeSessionId, integration.integrationPackId, createSession, sendMessageRich, forceMultipart, useDirectEndpoint, directAgentId]);
 
   // ===== Effects =====
+
+  // E0: clear agent status when the active session changes.
+  //
+  // agentStatus is hook-level, not per-session, so switching threads used to
+  // inherit the previous thread's state — a session opened while another was
+  // mid-turn showed that turn's "working" status, which disabled its composer
+  // and (once stop shipped) offered a Stop button for a turn belonging to a
+  // different conversation. The new session's own status arrives over SSE right
+  // after, including a replayed backlog frame, so clearing here is safe.
+  useEffect(() => {
+    setAgentStatus('idle');
+    setAgentNote(undefined);
+  }, [activeSessionId]);
 
   // E1: initial sessions load
   useEffect(() => { void reloadSessions(true); }, [reloadSessions]);
@@ -819,6 +854,9 @@ export function useAgentApi(args: {
     sendMessage,
     sendMessageRich,
     chatError,
+
+    // interruption — undefined when the transport cannot halt a turn
+    stopAgent: useCompanion ? stopAgent : undefined,
 
     // utils
     reloadSessions,

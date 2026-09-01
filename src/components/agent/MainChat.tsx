@@ -4,7 +4,7 @@
  * @license BSD-2-Clause
  */
 
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { usePlugin } from '../../context/pluginContext';
 import type { IntegrationPackInstance } from '@boomi/embedkit-sdk';
 import AjaxLoader from '../ui/AjaxLoader';
@@ -22,6 +22,12 @@ type MainChatProps = {
   status?: { state: 'idle'|'working'|'progress'|'error'; note?: string };
   onSend: (text: string) => void | Promise<void>;
   onSendRich?: (args: { text: string; files?: File[] }) => void | Promise<void>;
+  /**
+   * Halt the turn the agent is running. Undefined when the transport has no
+   * cancel channel — the stop and interrupt controls are hidden in that case
+   * rather than offered as no-ops.
+   */
+  onStop?: () => void | Promise<void>;
   emptyState: boolean;
   loading?: boolean;
   error?: unknown;
@@ -41,6 +47,11 @@ const PaperclipIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <path d="M21.44 11.05 12 20.5a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.88 17.96a2 2 0 1 1-2.83-2.83l8.13-8.13"/>
   </svg>
 );
+const StopIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" {...props}>
+    <rect x="6" y="6" width="12" height="12" rx="2" />
+  </svg>
+);
 const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
     <path d="M18 6 6 18M6 6l12 12" />
@@ -55,6 +66,7 @@ export default function MainChat({
   status,
   onSend,
   onSendRich,
+  onStop,
   emptyState,
   loading = false,
   error,
@@ -75,9 +87,33 @@ export default function MainChat({
 
   const isThinking = status?.state === 'working' || status?.state === 'progress';
   const canSend = !busy && !isThinking;
-
   const packId = integration.integrationPackId;
   const uiCfg = packId ? (boomiConfig?.agents?.[packId]?.ui as any) ?? undefined : undefined;
+
+  // A turn can only be halted while one is running and the transport supports it.
+  const canStop = isThinking && typeof onStop === 'function';
+  const hasDraft = draft.trim().length > 0 || attachments.length > 0;
+  const [stopping, setStopping] = useState(false);
+
+  const stopCfg = (uiCfg?.stop as any) ?? undefined;
+  const showStop = stopCfg?.show !== false;
+  const stopLabel = stopCfg?.label ?? 'Stop';
+  const interruptLabel = stopCfg?.interruptLabel ?? 'Stop and send this instead';
+  const interruptHint =
+    stopCfg?.interruptHint ?? 'The agent is working — sending will interrupt it.';
+
+  const handleStop = useCallback(async () => {
+    if (!onStop) return;
+    setStopping(true);
+    try {
+      await onStop();
+    } finally {
+      // The turn's closing status frame arrives over SSE; release the local
+      // pending state regardless so the button never sticks.
+      setTimeout(() => setStopping(false), 600);
+    }
+  }, [onStop]);
+
   const isBoomiDirect = packId ? isDirectTransport(boomiConfig?.agents?.[packId]?.transport) : false;
   const feedbackCfg = packId ? (boomiConfig?.agents?.[packId] as any)?.feedback ?? undefined : undefined;
   const copyCfg = (uiCfg?.copy as any) ?? undefined;
@@ -303,6 +339,35 @@ export default function MainChat({
     if (attachments.length) setAttachments([]);
   };
 
+  /**
+   * Interject: halt the running turn, then deliver the drafted prompt.
+   *
+   * Sending is otherwise blocked mid-turn (`canSend` is false), so this is the
+   * only path that reaches the agent while it is working. The server also
+   * replaces any in-flight turn when a new one arrives, so the stop here is
+   * belt-and-braces — it makes the halt immediate rather than waiting on the
+   * new turn's own abort.
+   */
+  const handleInterrupt = async () => {
+    const text = draft.trim();
+    if (!text && attachments.length === 0) return;
+    if (onStop) await handleStop();
+    forceScrollRef.current = true;
+    scrollToBottom('smooth');
+
+    if (attachments.length && typeof onSendRich === 'function') {
+      await onSendRich({ text, files: attachments });
+      setDraft('');
+      setAttachments([]);
+      return;
+    }
+    if (text) {
+      await onSend(text);
+      setDraft('');
+    }
+    if (attachments.length) setAttachments([]);
+  };
+
   const handlePromptClick = async (p: string) => {
     if (!canSend) return;
     forceScrollRef.current = true;
@@ -490,15 +555,48 @@ export default function MainChat({
               </div>
             )}
 
-            {/* Send */}
-            <button
-              type="submit"
-              disabled={!canSend || needsAttachment || (!draft.trim() && attachments.length === 0)}
-              className="inline-flex items-center gap-2 rounded-lg px-3 py-2 bg-[var(--boomi-btn-primary-bg)] text-[var(--boomi-btn-primary-fg)] disabled:opacity-50 cursor-pointer"
-            >
-              Send
-            </button>
+            {/* Send — becomes Stop while the agent is working, so the primary
+                action is always the one the user needs next. */}
+            {canStop && showStop ? (
+              <button
+                type="button"
+                onClick={() => void handleStop()}
+                disabled={stopping}
+                className="boomi-agent-stop-btn inline-flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer disabled:opacity-60"
+                title={stopLabel}
+                aria-label={stopLabel}
+              >
+                <StopIcon aria-hidden />
+                {stopping ? 'Stopping…' : stopLabel}
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!canSend || needsAttachment || (!draft.trim() && attachments.length === 0)}
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 bg-[var(--boomi-btn-primary-bg)] text-[var(--boomi-btn-primary-fg)] disabled:opacity-50 cursor-pointer"
+              >
+                Send
+              </button>
+            )}
           </div>
+
+          {/* Interrupt row — only while a turn is running and the user has
+              actually typed something to interject with. */}
+          {canStop && showStop && hasDraft && (
+            <div className="boomi-agent-interrupt-row">
+              <button
+                type="button"
+                onClick={() => void handleInterrupt()}
+                disabled={stopping}
+                className="boomi-agent-interrupt-btn"
+                title={interruptHint}
+              >
+                <StopIcon aria-hidden width={12} height={12} />
+                {interruptLabel}
+              </button>
+              <span className="boomi-agent-interrupt-hint">{interruptHint}</span>
+            </div>
+          )}
 
           {/* Prompts row */}
           {Array.isArray(promptDefs) && promptDefs.length > 0 && promptsLocation === 'input' && (

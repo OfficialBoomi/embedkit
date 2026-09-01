@@ -98,6 +98,7 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
     chatError,
     activeSessionId,
     selectSession,
+    stopAgent,
   } = useAgentApi({
     integration,
     sessionId: useMountSession ? mountSessionId : undefined,
@@ -268,6 +269,7 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
               : 'idle',
             note: agentNote
           }}
+          onStop={stopAgent}
           emptyState={!activeSessionId || !messages.length}
           loading={loading}
           error={chatError}
