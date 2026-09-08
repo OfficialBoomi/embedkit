@@ -32,6 +32,7 @@ import Dialog from '../ui/Dialog';
 import Page from '../core/Page';
 import ScheduleForm, { ScheduleFormRef } from './ScheduleForm';
 import logger from '../../logger.service';
+import { emitEmbedKitEvent } from '../../events.service';
 
 /**
  * @typedef UpdateScheduleRef
@@ -120,6 +121,20 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
 
       setIsLoading?.(true);
       await updateProcessSchedules(payload.Schedule, integration.environmentId, integration.id || '');
+      emitEmbedKitEvent(
+        'schedules.updated',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        {
+          integrationPackInstanceId: integration.id || '',
+          environmentId: integration.environmentId,
+          scheduleCount: Array.isArray(payload.Schedule) ? payload.Schedule.length : 1,
+        }
+      );
       setIsLoading?.(false);
       onSubmit?.();
       return true;

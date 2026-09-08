@@ -45,6 +45,7 @@ import Modal from '../ui/Modal';
 import Page from '../core/Page';
 import ToastNotification from '../ui/ToastNotification';
 import logger from '../../logger.service';
+import { emitEmbedKitEvent } from '../../events.service';
 
 /**
  * @interface UpdateMapsProps
@@ -152,6 +153,21 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         );
         return false;
       }
+      emitEmbedKitEvent(
+        'map.browse.executed',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        {
+          integrationPackInstanceId: integration.id || '',
+          mapId: currentMapId,
+          succeededCount: result.candidates.length - (Array.isArray(failed) ? failed.length : 0),
+          failedCount: Array.isArray(failed) ? failed.length : 0,
+        }
+      );
       setIsCandidateModalOpen(false);
       setPageIsLoading?.(true);
       await fetchData();
@@ -196,6 +212,22 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         },
       };
       await updateMapExtensions(updatedExtension);
+      emitEmbedKitEvent(
+        'map.extensions.updated',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        {
+          integrationPackInstanceId: integration.id || '',
+          environmentId: integration.environmentId,
+          mapId: currentMapId,
+          action: 'mapping',
+          updatedCount: newMappings.length,
+        }
+      );
       setMappingsByMapId((prev) => ({ ...prev, [currentMapId]: newMappings }));
       const updatedMaps = maps.map((m) =>
         m.mapId === updatedExtension.mapId ? updatedExtension : m
@@ -206,7 +238,13 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
 
   const handleCanvasFunctionChange = async (
     updatedFunctions: PositionedFunction[],
-    opts?: { mappingsOverride?: any[] }
+    opts?: {
+      mappingsOverride?: any[];
+      /** Distinguishes the three distinct user actions that all funnel through this one update call */
+      action?: 'function-change' | 'function-delete' | 'function-edit';
+      functionId?: string;
+      functionName?: string;
+    }
   ) => {
     await runWithLoading(async () => {
       const defaultBrowseSettings: MapExtensionBrowseSettings = {
@@ -256,6 +294,24 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
       };
 
       await updateMapExtensions(updatedExtension);
+      emitEmbedKitEvent(
+        'map.extensions.updated',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        {
+          integrationPackInstanceId: integration.id || '',
+          environmentId: integration.environmentId,
+          mapId: currentMapId,
+          action: opts?.action ?? 'function-change',
+          functionId: opts?.functionId,
+          functionName: opts?.functionName,
+          updatedCount: newFunctions.length,
+        }
+      );
       setFunctionsByMapId((prev) => ({
         ...prev,
         [currentMapId]: fromMapExtensionsFunctions(newFunctions),
@@ -276,7 +332,12 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
       const updatedMappings = currentMappings.filter(
         (m: any) => m.fromFunction !== fn.id && m.toFunction !== fn.id
       );
-      await handleCanvasFunctionChange(updatedFunctions, { mappingsOverride: updatedMappings });
+      await handleCanvasFunctionChange(updatedFunctions, {
+        mappingsOverride: updatedMappings,
+        action: 'function-delete',
+        functionId: fn.id,
+        functionName: fn.name,
+      });
     }).catch((err: any) => setApiError(err?.message || 'Failed to delete functions'));
   };
 
@@ -301,7 +362,11 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
       : [...(functionsByMapId[currentMapId] || []), fn];
 
     try {
-      await handleCanvasFunctionChange(updated);
+      await handleCanvasFunctionChange(updated, {
+        action: 'function-edit',
+        functionId: fn.newId ?? fn.id,
+        functionName: fn.name,
+      });
       setEditFunction(null);
       setIsEditing(false);
     } catch (err: any) {

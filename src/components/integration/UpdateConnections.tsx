@@ -31,6 +31,8 @@ import ConnectorForm, { ConnectorFormRef } from './ConnectorForm';
 import Dialog from '../ui/Dialog';
 import Page from '../core/Page';
 import logger from '../../logger.service';
+import { emitEmbedKitEvent } from '../../events.service';
+import { extractUpdatedFieldKeys } from '../../service/eventPayloadHelpers';
 
 /**
  * @typedef UpdateConnectionsRef
@@ -112,6 +114,21 @@ const UpdateConnections = forwardRef<UpdateConnectionsRef, UpdateConnectionsProp
       setIsLoading?.(true);
       const isSingle = integration.installationType === 'SINGLE' || false;
       await updateFromCombined(rawExtensions ?? [], payload ?? [], integration.environmentId, integration.id || '', isSingle);
+      emitEmbedKitEvent(
+        'connection.extensions.updated',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        {
+          integrationPackInstanceId: integration.id || '',
+          environmentId: integration.environmentId,
+          installationType: integration.installationType,
+          updatedFieldKeys: extractUpdatedFieldKeys(payload),
+        }
+      );
       setIsLoading?.(false);
       onSubmit?.();
       return true;
@@ -244,6 +261,22 @@ const UpdateConnections = forwardRef<UpdateConnectionsRef, UpdateConnectionsProp
         integration.environmentId!,
         connectionId,
         fieldId
+      );
+
+      emitEmbedKitEvent(
+        'connection.oauth.initiated',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        {
+          integrationPackInstanceId: integration.id || '',
+          environmentId: integration.environmentId,
+          connectionId,
+          fieldId,
+        }
       );
 
       if (popupRef.current) popupRef.current.location.href = authUrl;

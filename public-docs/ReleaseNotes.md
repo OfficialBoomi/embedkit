@@ -11,28 +11,41 @@
 
 ---
 
-### All Releases
+### Unreleased
 
 <details open>
-  <summary><strong>v1.5.1</strong> — Single-install integration pack connections & maps</summary>
+  <summary><strong>Event Hooks for JS Hosts</strong> — Integration, connection, map, schedule, AI, and agent audit events (SLTN-156)</summary>
 
   **Highlights**
-  - ✅ **Edit Connections & Edit Map(s) for single-install packs** — The integration actions menu now offers **Edit Connections** and **Edit Map(s)** for single-install integration packs. Previously these actions were only available for multi-install packs.
-  - ✅ **Single-install extension updates fixed** — Saving connection extensions on a single-install pack no longer fails with a platform error (`Failed to extract process version …`). Map extension summaries for single-install packs are now queried by environment — single-install packs have no extension group — and matched to the pack's processes, so the post-save dynamic browse and map editing work for both installation types.
-  - ✅ **Dependency** — Updated `@boomi/embedkit-sdk` to **1.3.1** (single-install support in map extension summary queries).
+  - ✅ **Every embed action is now an event** — Installing or deleting an integration pack, running processes, saving connections, resolving OAuth, editing maps, saving schedules, generating an AI transformation, and agent session/message activity all emit a typed event on the existing event bus (`onEvent` / `BoomiEvents.on` / `boomi:event`). This lets a **non-React, vanilla-JS host** (an Angular wrapper calling `BoomiPlugin` / `RenderComponent` / `DestroyPlugin` directly, for example) build an audit trail without any EmbedKit hooks.
+  - ✅ **Credential-safe payloads** — Connection/environment-extension events report which field *keys* changed, never the values — those fields commonly carry connector credentials. Map events report counts and names, not full mapping data.
+  - ✅ **`outcome` on the envelope** — Every event now carries `outcome: 'success' | 'error'` (currently always `'success'`; reserved for a future failure-emission pass).
+  - ✅ **Documentation** — [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks) now documents every event type, when it fires, and its payload shape; [Getting Started](./GettingStarted.md#audit-logging-from-vanilla-js) adds a vanilla-JS audit-logging walkthrough.
+  - ℹ️ Integration-management events (`integration.*`, `connection.*`, `map.*`, `schedules.*`, `ai.*`) require the **Integration method** (npm) — the CDN embed only mounts Agent components, so only `feedback` and `agent.*` events fire there.
 
 </details>
 
 ---
 
-<details>
-  <summary><strong>v1.5.0</strong> — Response feedback & standardized event callbacks</summary>
+### All Releases
+
+<details open>
+  <summary><strong>v1.5.1</strong> — Single-install integration pack connections & maps, response feedback & standardized event callbacks</summary>
 
   **Highlights**
+  - ✅ **Edit Connections & Edit Map(s) for single-install packs** — The integration actions menu now offers **Edit Connections** and **Edit Map(s)** for single-install integration packs. Previously these actions were only available for multi-install packs.
+  - ✅ **Single-install extension updates fixed** — Saving connection extensions on a single-install pack no longer fails with a platform error (`Failed to extract process version …`). Map extension summaries for single-install packs are now queried by environment — single-install packs have no extension group — and matched to the pack's processes, so the post-save dynamic browse and map editing work for both installation types.
   - ✅ **Response feedback (thumbs up / down / comment)** — Agent responses now show configurable feedback controls. Ratings and comments are delivered to **your application** together with the user's prompt and the agent's response — EmbedKit never sends feedback over the network itself, so there is no endpoint to secure. Icons, labels, comment box text, and visibility are configurable per agent (`agents.<id>.feedback`), and styling is fully themeable via new `--boomi-agent-feedback-*` design tokens.
-  - ✅ **Standardized event system** — New app-level callback pattern for all EmbedKit events (feedback is the first; future event types follow the same envelope). Every event is `{ type, timestamp, source, data }`. Subscribe with `BoomiPlugin({ onEvent })` (also `window.BoomiEmbed.onEvent` for CDN embeds), `BoomiEvents.on('feedback' | '*', handler)` from the package root, or the `boomi:event` DOM CustomEvent on `window` for plain-JS pages. Subscriber errors are isolated and never break the embed UI.
+  - ✅ **Standardized event system** — New app-level callback pattern for all EmbedKit events (feedback was the first; see "Unreleased" above for the full event set added since). Every event is `{ type, timestamp, source, data }`. Subscribe with `BoomiPlugin({ onEvent })` (also `window.BoomiEmbed.onEvent` for CDN embeds), `BoomiEvents.on('feedback' | '*', handler)` from the package root, or the `boomi:event` DOM CustomEvent on `window` for plain-JS pages. Subscriber errors are isolated and never break the embed UI.
   - ✅ **Zero-config enablement** — The feedback bar appears automatically when a programmatic subscriber is registered; `feedback.enabled` force-shows (for DOM-only listeners) or force-hides it.
+  - ✅ **Dependency** — Updated `@boomi/embedkit-sdk` to **1.3.1** (single-install support in map extension summary queries).
   - ✅ **Documentation** — New [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks) section in the Configuration Reference covers the envelope, all three subscription methods, and the feedback event shape; the Agent Configuration section documents the `feedback` config block and CSS tokens.
+
+  > **Note (2026-08-19):** the response-feedback and event-system work above was
+  > originally published under a planned `v1.5.0` that was never tagged or
+  > released to npm — it shipped as part of this v1.5.1. If you're looking for
+  > `v1.5.0` in git history or on npm, it doesn't exist; everything described
+  > above is live starting at v1.5.1.
 
 </details>
 

@@ -23,6 +23,7 @@ import { useFetchAiTransformations } from '../../hooks/ai/useFetchAiTransformati
 import Button from '../ui/Button';
 import Dialog from '../ui/Dialog';
 import logger from '../../logger.service';
+import { emitEmbedKitEvent } from '../../events.service';
 
 /**
  * Valid data types for transformation inputs.
@@ -273,6 +274,11 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
               onClick={async () => {
                 const result = await fetchTransformation(aiPrompt, id);
                 if (result) {
+                  emitEmbedKitEvent(
+                    'ai.transformation.generated',
+                    { componentKey },
+                    { functionId: id, prompt: aiPrompt }
+                  );
                   setScript(result.Configuration.Scripting.Script);
                   setInputs(result.Configuration.Scripting.Inputs.Input.map(inp => ({
                     name: inp.name,

@@ -136,7 +136,7 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
     if (sessions.length > 0 || activeSessionId) return;
     if (autoCreateDoneRef.current) return;
     autoCreateDoneRef.current = true;
-    void createSession(multiDefaultSidRef.current ?? undefined);
+    void createSession(multiDefaultSidRef.current ?? undefined, 'system');
   }, [useMountSession, sessionsLoading, sessions, activeSessionId, createSession]);
 
   const sidebarItems = useMemo(

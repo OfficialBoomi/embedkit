@@ -19,6 +19,7 @@ import type { ChatMessage } from '../../types/agent-chat';
 import { useSseConversation } from './useSseConversation';
 import logger from '../../logger.service';
 import { extractErrorMessage } from '../../utils/ui-utils';
+import { emitEmbedKitEvent } from '../../events.service';
 
 /** Helpers */
 const toIso = (v?: unknown): string | undefined => {
@@ -386,7 +387,11 @@ export function useAgentApi(args: {
   }, []);
 
   // ===== CRUD =====
-  const createSession = useCallback(async (overrideSessionId?: string): Promise<string | null> => {
+  const createSession = useCallback(async (
+    overrideSessionId?: string,
+    /** 'system' = auto-provisioned (first-open, ensureSession) with no user action involved */
+    trigger: 'user' | 'system' = 'user'
+  ): Promise<string | null> => {
     if (createInflightRef.current) return null;
     createInflightRef.current = true;
     try {
@@ -423,6 +428,11 @@ export function useAgentApi(args: {
         skipAutoSelectRef.current = false;
         void reloadSessions(true);
       }
+      emitEmbedKitEvent(
+        'agent.session.created',
+        { agentId: integration.integrationPackId, sessionId: sid },
+        { trigger, integrationPackId: integration.integrationPackId }
+      );
       return sid;
     } catch (e) {
       logger.warn({ e }, 'createSession failed');
@@ -475,6 +485,14 @@ export function useAgentApi(args: {
       setAgentNote(undefined);
     }
 
+    // Emitted here, not after the server call: deletion is optimistic (see
+    // above) — the UI already treats the session as gone at this point.
+    emitEmbedKitEvent(
+      'agent.session.deleted',
+      { agentId: integration.integrationPackId, sessionId: sid },
+      { trigger: 'user', integrationPackId: integration.integrationPackId }
+    );
+
     try {
       await delRef.current({ sessionId: sid });
     } finally {
@@ -482,7 +500,7 @@ export function useAgentApi(args: {
       // This just keeps the list in sync with the server.
       void reloadSessions(true);
     }
-  }, [isControlled, shouldPersist, storageKey, reloadSessions, activeSessionId, dispatch, setAgentStatus, setAgentNote]);
+  }, [isControlled, shouldPersist, storageKey, reloadSessions, activeSessionId, dispatch, setAgentStatus, setAgentNote, integration.integrationPackId]);
 
   const selectSession = useCallback((sid: string) => {
     if (isControlled) return; // parent owns selection
@@ -514,6 +532,16 @@ export function useAgentApi(args: {
       } as ChatMessage;
       dispatch({ type: 'appendOptimistic', msg: optimistic });
     }
+
+    emitEmbedKitEvent(
+      'agent.message.sent',
+      { agentId: integration.integrationPackId, sessionId: sid },
+      {
+        text: userText,
+        hasAttachments: (payload.files?.length ?? 0) > 0,
+        integrationPackId: integration.integrationPackId,
+      }
+    );
 
     setSending(true);
     try {
@@ -620,6 +648,11 @@ export function useAgentApi(args: {
     } as ChatMessage;
 
     dispatch({ type: 'appendOptimistic', msg: optimistic });
+    emitEmbedKitEvent(
+      'agent.message.sent',
+      { agentId: integration.integrationPackId, sessionId: sid },
+      { text: userText, hasAttachments: false, integrationPackId: integration.integrationPackId }
+    );
     setSending(true);
     try {
       const resp = await sendRef.current(
@@ -714,7 +747,7 @@ export function useAgentApi(args: {
         ensuredSessionsRef.current.add(activeSessionId);
         void (async () => {
           try {
-            await createSessionRef.current(activeSessionId);
+            await createSessionRef.current(activeSessionId, 'system');
           } catch (e) {
             ensuredSessionsRef.current.delete(activeSessionId);
             logger.warn({ e }, 'ensureSession failed');
@@ -745,6 +778,13 @@ export function useAgentApi(args: {
       dispatch({ type: 'reconcileUserEcho', server: m });
     } else {
       dispatch({ type: 'mergeFromServer', list: [m] });
+      // Only agent-authored messages — the user's own echoed message above
+      // isn't a "received" event from the host's point of view.
+      emitEmbedKitEvent(
+        'agent.message.received',
+        { agentId: integration.integrationPackId, sessionId: m.sessionId, messageId: m.id },
+        { messageType: m.type, role: m.role }
+      );
     }
 
     const now = Date.now();
@@ -752,7 +792,7 @@ export function useAgentApi(args: {
       lastSidebarRefreshRef.current = now;
       void reloadSessions();
     }
-  }, [dispatch, reloadSessions]);
+  }, [dispatch, reloadSessions, integration.integrationPackId]);
 
   const handleSseStatus = useCallback((s: any) => {
     const note = s.note;

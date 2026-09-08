@@ -50,6 +50,7 @@ import SearchBar from '../ui/SearchBar';
 import ToastNotification from '../ui/ToastNotification';
 import ViewExecutionDetails from './ViewExecutionDetails';
 import logger from '../../logger.service';
+import { emitEmbedKitEvent } from '../../events.service';
 
 /**
  * @interface IntegrationsProps
@@ -160,6 +161,23 @@ const Integrations: React.FC<IntegrationsProps> = ({
         result.integrationName
       );
       if (instance) {
+        emitEmbedKitEvent(
+          'integration.instance.created',
+          {
+            integrationPackInstanceId: instance.id,
+            integrationPackId: instance.integrationPackId,
+            environmentId: instance.environmentId,
+            componentKey,
+          },
+          {
+            integrationPackInstanceId: instance.id || '',
+            integrationPackId: instance.integrationPackId,
+            integrationPackName: instance.integrationPackName,
+            environmentId: instance.environmentId,
+            installationType: instance.installationType,
+            isAgent: instance.isAgent,
+          }
+        );
         if (instance.isAgent) {
           handleRenderEditComponent('RunAgent', instance);
         } else if (instance.installationType === 'SINGLE') {
@@ -214,6 +232,25 @@ const Integrations: React.FC<IntegrationsProps> = ({
   const handleDelete = async (integration: IntegrationPackInstance) => {
     const success = await deleteIntegrationPackInstance(integration.id || '');
     if (success) {
+      // Deletion returns no server body — the identifying data only exists
+      // in the component's already-fetched `integration` object.
+      emitEmbedKitEvent(
+        'integration.instance.deleted',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        {
+          integrationPackInstanceId: integration.id || '',
+          integrationPackId: integration.integrationPackId,
+          integrationPackName: integration.integrationPackName,
+          environmentId: integration.environmentId,
+          installationType: integration.installationType,
+          isAgent: integration.isAgent,
+        }
+      );
       setRemovedIds((prev) => new Set(prev).add(integration.id || ''));
       showToast('delete');
       await refetch();
@@ -223,6 +260,20 @@ const Integrations: React.FC<IntegrationsProps> = ({
   const handleRunIntegration = async (integration: IntegrationPackInstance) => {
     const recordUrls = await runAllProcesses(integration.environmentId || '', integration.id || '');
     if (recordUrls && !executionError) {
+      emitEmbedKitEvent(
+        'integration.processes.run',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        {
+          integrationPackInstanceId: integration.id || '',
+          environmentId: integration.environmentId,
+          recordUrls,
+        }
+      );
       setPageIsLoading(false);
       showToast('startSuccess');
     } else if (executionError){

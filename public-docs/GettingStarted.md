@@ -546,6 +546,60 @@ export default {
 
 See [Response Feedback](./ConfigurationReference.md#response-feedback-feedback) in the Configuration Reference for every option and default, and [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks) for the event envelope and all three subscription methods.
 
+### Audit Logging from Vanilla JS
+
+Feedback isn't the only thing on the event bus — installing, deleting, and
+running integration packs, editing connections and maps, saving schedules,
+and agent chat activity all emit events too (full list:
+[Events & Callbacks](./ConfigurationReference.md#10-events--callbacks)). This
+is what lets a **non-React host** — a plain JS page, or a wrapper like Angular
+that only calls `BoomiPlugin()` / `RenderComponent()` / `DestroyPlugin()` as
+imperative functions — build an audit trail of what happened inside the
+embed, without ever touching a React hook:
+
+```js
+// No React, no hooks — just BoomiPlugin, RenderComponent, and the event bus.
+BoomiPlugin({
+  serverBase: '/api/v1',
+  tenantId: 'my-account',
+  boomiConfig,
+  onEvent: (event) => {
+    // Every event shares one envelope: { type, timestamp, outcome, source, data }
+    myAuditLog.record({
+      action: event.type,
+      at: event.timestamp,
+      integrationPackInstanceId: event.source.integrationPackInstanceId,
+      details: event.data,
+    });
+  },
+});
+
+RenderComponent({
+  hostId: 'boomi-root',
+  component: 'Integrations',
+  props: { componentKey: 'integrationsMain' },
+});
+```
+
+Two things worth designing your audit log around from day one:
+
+- **`agent.session.created` fires on auto-provisioned sessions too.** EmbedKit
+  opens a session automatically so chat is always ready to use — that shows
+  up with `data.trigger === 'system'`, not a real user action. Filter on
+  `data.trigger === 'user'` if "user started a new chat" is what you're
+  counting.
+- **These are UI-triggered events only.** A process that runs on a Boomi
+  schedule, outside the embed, never reaches this bus — it isn't something
+  EmbedKit can see. Don't treat this event stream as a complete activity log
+  for the underlying Boomi account, only for what happened *through the
+  embed*.
+
+If you're using the CDN embed instead of the npm package, the same callback
+works via `window.BoomiEmbed = { publicToken, agentId, onEvent }` — but note
+the CDN build only ever mounts the Agent components, so only `feedback` and
+`agent.*` events are reachable there; the integration-management events
+require the Integration (npm) method.
+
 ### How to Create and Deploy an Agent
 
 To deploy an Agent through EmbedKit, two process components are required within Boomi:

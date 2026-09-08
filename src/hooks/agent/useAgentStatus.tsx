@@ -58,6 +58,11 @@ export function useAgentStatus(
         setInstalled(true);
       } else {
         setInstance(null);
+        // Deliberately NOT an 'integration.instance.created' event: this is
+        // silent background auto-provisioning with no user action involved
+        // (unlike Integrations.tsx's handleSubmit, which is a real install
+        // click). Emitting here would misreport a system action as a user
+        // install to every host audit log subscriber.
         const created = await createIntegrationPack({
           integrationPackId,
           isSingleInstall: false,

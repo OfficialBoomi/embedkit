@@ -1343,12 +1343,30 @@ cssVars: {
 
 ## 10. Events & Callbacks
 
-EmbedKit emits standardized, typed events for things that happen inside the
-embed (response feedback is the first; more event types will follow the same
-pattern). **EmbedKit never sends event data over the network** — your
+EmbedKit emits standardized, typed events for actions that happen inside the
+embed — response feedback, integration-pack lifecycle, connection and map
+edits, schedule changes, AI transformation generation, and agent
+sessions/messages. **EmbedKit never sends event data over the network** — your
 application subscribes and owns what happens next. This removes any security
 concern about where the data goes: there is no endpoint to protect, no key to
 ship to the browser.
+
+This is the mechanism to build a JS-side audit log of what happened in the
+embed — including from a vanilla-JS host with no React (e.g. an Angular
+wrapper calling `BoomiPlugin` / `RenderComponent` / `DestroyPlugin` directly).
+
+> **UI-triggered only.** These events fire from user-driven actions in the
+> embed's own UI. EmbedKit has no visibility into automatic or cloud-scheduled
+> activity (a process run by a Boomi schedule, for instance) — an audit trail
+> built on these events reflects what happened *through the embed*, not a
+> complete record of all platform activity.
+>
+> **Build coverage differs by event.** The integration-management events
+> (`integration.*`, `connection.*`, `map.*`, `schedules.*`, `ai.*`) are only
+> reachable from the **Integration method** (npm `@boomi/embedkit`) — the CDN
+> build only ever mounts `Agent` / `AgentTiles` / `AgentListLauncher`, so it
+> never fires them. The `agent.*` and `feedback` events fire in **both**
+> the Integration method and the CDN embed.
 
 ### The Event Envelope
 
@@ -1356,16 +1374,58 @@ Every event follows the same shape:
 
 ```ts
 type EmbedKitEvent<T> = {
-  type: 'feedback';        // event type discriminator (union grows over time)
-  timestamp: string;       // ISO-8601, when the event was emitted
-  source: {                // where in the embed it originated
+  type: string;             // event type discriminator — see the table below
+  timestamp: string;        // ISO-8601, when the event was emitted
+  outcome: 'success' | 'error'; // currently always 'success' — see note below
+  source: {                 // where in the embed it originated
     agentId?: string;
     sessionId?: string;
     messageId?: string;
+    integrationPackInstanceId?: string;
+    integrationPackId?: string;
+    environmentId?: string;
+    componentKey?: string;
   };
-  data: T;                 // event-type-specific payload
+  data: T;                  // event-type-specific payload — see the table below
 };
 ```
+
+> `outcome` is reserved for a future pass that also emits on failed actions;
+> today every event emitted is a completed, successful action. Build your
+> subscriber to check it once error-emission lands rather than assuming
+> `'success'` forever.
+
+### All Event Types
+
+| `type` | Fires when | `data` payload |
+|---|---|---|
+| `feedback` | A user rates an agent response or submits a comment | `{ rating, comment?, prompt, response }` |
+| `integration.instance.created` | A user installs an integration pack | `{ integrationPackInstanceId, integrationPackId?, integrationPackName?, environmentId?, installationType?, isAgent? }` |
+| `integration.instance.deleted` | A user deletes an integration-pack instance | same shape as `.created` |
+| `integration.processes.run` | A user runs all processes for an instance ("Run Now") | `{ integrationPackInstanceId, environmentId?, recordUrls: string[] }` |
+| `connection.extensions.updated` | A user saves connection/environment-extension changes | `{ integrationPackInstanceId, environmentId?, installationType?, updatedFieldKeys: string[] }` |
+| `connection.oauth.initiated` | A user starts an OAuth2 connector authorization flow | `{ integrationPackInstanceId, environmentId?, connectionId, fieldId }` |
+| `map.extensions.updated` | A user changes a field mapping or a transformation function | `{ integrationPackInstanceId, environmentId?, mapId, action: 'mapping' \| 'function-change' \| 'function-delete' \| 'function-edit', functionId?, functionName?, updatedCount? }` |
+| `map.browse.executed` | A user resolves dynamic-browse candidates (re-authenticating a connector mid-mapping) | `{ integrationPackInstanceId, mapId, succeededCount, failedCount }` |
+| `schedules.updated` | A user saves process schedule changes | `{ integrationPackInstanceId, environmentId?, scheduleCount }` |
+| `ai.transformation.generated` | A user generates a transformation script via AI | `{ integrationPackInstanceId?, functionId, prompt }` |
+| `agent.session.created` | A chat session is created — check `data.trigger` | `{ trigger: 'user' \| 'system', integrationPackId? }` |
+| `agent.session.deleted` | A user deletes a chat session | `{ trigger: 'user', integrationPackId? }` |
+| `agent.message.sent` | A user sends a chat message | `{ text, hasAttachments, integrationPackId? }` |
+| `agent.message.received` | An agent response is received over the chat stream | `{ messageType, role }` |
+
+> **`agent.session.created`'s `trigger` field matters.** EmbedKit
+> auto-provisions a session on first open so a chat is always ready — that is
+> `trigger: 'system'`, not a user action. Only `trigger: 'user'` represents
+> someone clicking "new chat". Treating every `agent.session.created` event as
+> a user action will over-count in an audit log.
+
+> **Credential-safe by design.** `connection.extensions.updated` reports which
+> field *keys* changed (e.g. `"myConnection:username"`), never the values —
+> environment/connection extensions commonly carry connector credentials
+> (API keys, passwords, OAuth tokens), and those never leave the SDK layer
+> into an event payload. Likewise `map.extensions.updated` reports counts and
+> names, not the full mapping/function data.
 
 ### Subscribing
 
@@ -1380,9 +1440,18 @@ BoomiPlugin({
   tenantId: 'my-account',
   boomiConfig,
   onEvent: (event) => {
-    if (event.type === 'feedback') {
-      // send to your backend, analytics, a Boomi process — your call
-      myApi.recordFeedback(event);
+    switch (event.type) {
+      case 'feedback':
+        myApi.recordFeedback(event);
+        break;
+      case 'integration.instance.deleted':
+      case 'integration.processes.run':
+      case 'connection.extensions.updated':
+        // send to your own audit trail, analytics, a Boomi process — your call
+        myApi.recordAuditEvent(event);
+        break;
+      default:
+        break;
     }
   },
 });
@@ -1426,6 +1495,7 @@ configuration.
 {
   "type": "feedback",
   "timestamp": "2026-07-13T17:20:04.512Z",
+  "outcome": "success",
   "source": {
     "agentId": "my-agent-id",
     "sessionId": "9c1a6c2e-…",

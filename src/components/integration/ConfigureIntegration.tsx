@@ -26,6 +26,7 @@ import UpdateMaps from './UpdateMaps';
 import UpdateConnections, { UpdateConnectionsRef } from './UpdateConnections';
 import UpdateSchedules, { UpdateScheduleRef } from './UpdateSchedules';
 import Wizard from '../ui/Wizard';
+import { emitEmbedKitEvent } from '../../events.service';
 
 /**
  * @interface ConfigureIntegrationProps
@@ -153,6 +154,20 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
   const handleRunNow = async () => {
     const recordUrls = await runAllProcesses(integration.environmentId || '', integration.id || '');
     if (recordUrls && !executionError) {
+      emitEmbedKitEvent(
+        'integration.processes.run',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        {
+          integrationPackInstanceId: integration.id || '',
+          environmentId: integration.environmentId,
+          recordUrls,
+        }
+      );
       setShowUpdateToast(true)
       setUpdateMessage('Integration process(s) started successfully!');
     } else if (executionError){

@@ -28,6 +28,8 @@ import ConnectorForm, { ConnectorFormRef } from '../integration/ConnectorForm';
 import Dialog from '../ui/Dialog';
 import logger from '../../logger.service';
 import Spinner from '../ui/Spinner';
+import { emitEmbedKitEvent } from '../../events.service';
+import { extractUpdatedFieldKeys } from '../../service/eventPayloadHelpers';
 
 /**
  * @typedef ConfigureAgentRef
@@ -105,6 +107,21 @@ const ConfigureAgent = forwardRef<ConfigureAgentRef, ConfigureAgentProps>(({
       }
       const isSingle = integration.installationType === 'SINGLE' || false;
       await updateFromCombined(rawExtensions ?? [], payload ?? [], integration.environmentId, integration.id || '', isSingle);
+      emitEmbedKitEvent(
+        'connection.extensions.updated',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        {
+          integrationPackInstanceId: integration.id || '',
+          environmentId: integration.environmentId,
+          installationType: integration.installationType,
+          updatedFieldKeys: extractUpdatedFieldKeys(payload),
+        }
+      );
       onSubmit?.();
       return true;
     } catch (error: any) {
@@ -230,6 +247,22 @@ const ConfigureAgent = forwardRef<ConfigureAgentRef, ConfigureAgentProps>(({
         integration.environmentId!,
         connectionId,
         fieldId
+      );
+
+      emitEmbedKitEvent(
+        'connection.oauth.initiated',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        {
+          integrationPackInstanceId: integration.id || '',
+          environmentId: integration.environmentId,
+          connectionId,
+          fieldId,
+        }
       );
 
       if (popupRef.current) popupRef.current.location.href = authUrl;
