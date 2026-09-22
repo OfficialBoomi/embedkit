@@ -154,12 +154,30 @@ export function renderIntegrations() {
   });
 }
 
+/**
+ * Renders the Boomi Companion agent (transport: 'companion-sdk') inside
+ * #boomi-companion-host. Turns go to POST /v1/companion/session and replies
+ * stream back on the usual SSE conversation channel. Requires
+ * VITE_ANTHROPIC_API_KEY in .env and the 'boomi-companion' agent in boomi.config.js.
+ */
+export function renderCompanion() {
+  RenderComponent({
+    hostId: 'boomi-companion-host',
+    component: 'Agent',
+    props: {
+      componentKey: 'boomi-companion',
+      integrationPackId: 'boomi-companion',
+    },
+  });
+}
+
 export function logout()  { DestroyPlugin({ clearAuth: true }); clearCtx(); }
 export function destroy() { DestroyPlugin({ removeHost: true, clearTheme: true, clearAuth: true }); clearCtx(); }
 
 // ---- side nav wiring ----
 document.getElementById('login-link')?.addEventListener('click',   (e) => { e.preventDefault(); login(); });
 document.getElementById('render-link')?.addEventListener('click',  (e) => { e.preventDefault(); renderIntegrations(); });
+document.getElementById('companion-link')?.addEventListener('click', (e) => { e.preventDefault(); renderCompanion(); });
 document.getElementById('logout-link')?.addEventListener('click',  (e) => { e.preventDefault(); logout(); });
 document.getElementById('destroy-link')?.addEventListener('click', (e) => { e.preventDefault(); destroy(); });
 

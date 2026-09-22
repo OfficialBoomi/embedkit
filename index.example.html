@@ -22,6 +22,9 @@
       <a href="#" id="render-link">Render Plugin</a>
       <span class="hint">Renders the Integrations page into the content pane.</span>
 
+      <a href="#" id="companion-link">Render Companion</a>
+      <span class="hint">Renders the Boomi Companion agent (Claude Agent SDK loop in embedkit-server).</span>
+
       <a href="#" id="logout-link">Uninit Plugin</a>
       <span class="hint">Tears down auth and clears the theme.</span>
 
@@ -55,7 +58,7 @@
     <main class="content boomi-scroll">
       <div class="bCard">
         <div class="workbench">
-          <div id="boomi-test" class="plugin-host boomi-scroll" role="region" aria-label="Boomi Plugin Host"></div>
+          <div id="boomi-test" class="plugin-host boomi-scroll" role="region" aria-label="Boomi Plugin Host"><div id="boomi-companion-host"></div></div>
           <div class="workbench-resizer" role="separator" aria-label="Resize console" aria-orientation="horizontal" tabindex="0"></div>
           <div class="console-wrap">
             <div class="console-header">
