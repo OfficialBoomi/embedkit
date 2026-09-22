@@ -1428,25 +1428,38 @@
   /* Toast notifications — themeable via --boomi-toast-* custom properties.
      Swal renders toasts on document.body, so these rules + the resolved vars
      are extracted into document scope at runtime (see ToastNotification.tsx). */
-  /* Cosmetic only — do NOT override padding/font-size/width here: those feed
-     SweetAlert2's em-based icon geometry and grid, and shrinking them clips the
-     icon under the toast's overflow:hidden. Width is themed via the Swal `width`
-     option instead (see ToastNotification.tsx). */
+  /* Typography/padding/icon-size ARE themeable (SLTN-245) — every default
+     below matches SweetAlert2's own toast metrics exactly (verified against
+     node_modules/sweetalert2/dist/sweetalert2.css), so a partner who sets
+     nothing sees zero change. --boomi-toast-icon-size intentionally drives
+     width/height/min-width together (not independent overrides) so resizing
+     it can't clip the icon under the toast's overflow:hidden the way an
+     uncoordinated override could. Width stays on Swal's own `width` option
+     (see ToastNotification.tsx), not a CSS override. */
   .swal2-container .boomi-toast-popup {
     border-radius: var(--boomi-toast-radius, 0.5rem) !important;
     box-shadow: var(--boomi-toast-shadow, 0 6px 16px rgba(0,0,0,0.18)) !important;
     border: var(--boomi-toast-border, none) !important;
+    padding: var(--boomi-toast-padding, 1em) !important;
+    min-height: var(--boomi-toast-min-height, auto) !important;
   }
   .swal2-container .boomi-toast-title {
     color: var(--boomi-toast-title-fg, inherit) !important;
+    font-family: var(--boomi-toast-font, var(--boomi-dialog-font, var(--boomi-font))) !important;
+    font-size: var(--boomi-toast-font-size, 1em) !important;
+    font-weight: var(--boomi-toast-font-weight, 600) !important;
+    line-height: var(--boomi-toast-line-height, normal) !important;
+  }
+  .swal2-container .boomi-toast-popup .swal2-icon {
+    width: var(--boomi-toast-icon-size, 2em) !important;
+    height: var(--boomi-toast-icon-size, 2em) !important;
+    min-width: var(--boomi-toast-icon-size, 2em) !important;
   }
   .swal2-container .boomi-toast-progress {
     background: var(--boomi-toast-progress-bar, rgba(255,255,255,0.7)) !important;
+    display: var(--boomi-toast-progress-display, block) !important;
   }
 
-  .swal2-container.boomi-swal{
-    --boomi-swal-bg: rgba(0, 0, 0, 0.9);
-  }
   .swal2-container {
     z-index: 2147483600 !important;
   }
@@ -1462,9 +1475,9 @@
   }
 
  .boomi-swal {
-    background-color: var(--boomi-spinner-overlay-bg, rgba(0,0,0,0.5)) !important;
+    background-color: var(--boomi-swal-overlay-bg, var(--boomi-spinner-overlay-bg, rgba(0,0,0,0.5))) !important;
     backdrop-filter: blur(var(--boomi-spinner-overlay-blur, 4px)) !important;
-  } 
+  }
 
   .swal2-container .boomi-swal-popup {
     background-color: var(--boomi-swal-bg) !important;
@@ -1472,26 +1485,36 @@
     color: var(--boomi-swal-fg) !important;
     border: var(--boomi-swal-border) !important;
     box-shadow: var(--boomi-swal-shadow) !important;
-    border-radius: 1rem !important;
-    padding: 1.25rem !important;
+    /* No !important here (unlike the properties above): SweetAlert2's own
+       base rule for these is a low-specificity :where() selector and
+       doesn't inline them, so our class selector already wins on
+       specificity — dropping !important lets a partner override via a
+       raw CSS rule too, not just these tokens. */
+    border-radius: var(--boomi-swal-border-radius, 1rem);
+    padding: var(--boomi-swal-padding, 1.25rem);
+  }
+  .swal2-container .boomi-swal-popup,
+  .boomi-swal .swal2-title,
+  .boomi-swal .swal2-html-container,
+  .boomi-swal .swal2-styled {
+    font-family: var(--boomi-dialog-font, var(--boomi-font)) !important;
   }
 
-
   .boomi-swal .swal2-title {
-    color: var(--boomi-update-title-fg, var(--boomi-modal-fg));
-    font-weight: 700;
-    font-size: 1.125rem; 
+    color: var(--boomi-swal-title-fg, var(--boomi-update-title-fg, var(--boomi-modal-fg)));
+    font-weight: var(--boomi-swal-title-font-weight, 700);
+    font-size: var(--boomi-swal-title-font-size, 1.125rem);
     margin-bottom: .25rem;
   }
 
   .boomi-swal .swal2-html-container {
-    color: var(--boomi-update-desc-fg, inherit);
-    font-size: 0.95rem;
+    color: var(--boomi-swal-desc-fg, var(--boomi-update-desc-fg, inherit));
+    font-size: var(--boomi-swal-desc-font-size, 0.95rem);
   }
 
   .boomi-swal .swal2-actions {
     display: flex;
-    gap: .5rem; 
+    gap: var(--boomi-swal-actions-gap, .5rem);
     margin-top: 1rem;
   }
 
@@ -1514,6 +1537,21 @@
     background-color: var(--boomi-btn-primary-bg-active, var(--boomi-btn-primary-bg));
   }
 
+  /* destructiveVariant (boomiConfig.dialogs) — confirm button swaps to the
+     danger token family instead of primary. See SwalNotification.tsx. */
+  .boomi-swal .swal2-confirm--danger {
+    background-color: var(--boomi-btn-danger-bg);
+    color: var(--boomi-btn-danger-fg);
+    border-color: var(--boomi-btn-danger-border);
+    box-shadow: var(--boomi-btn-danger-shadow);
+  }
+  .boomi-swal .swal2-confirm--danger:hover {
+    background-color: var(--boomi-btn-danger-bg-hover, var(--boomi-btn-danger-bg));
+  }
+  .boomi-swal .swal2-confirm--danger:active {
+    background-color: var(--boomi-btn-danger-bg-active, var(--boomi-btn-danger-bg));
+  }
+
   .boomi-swal .swal2-cancel {
     background-color: var(--boomi-btn-secondary-bg);
     color: var(--boomi-btn-secondary-fg);
@@ -1530,15 +1568,15 @@
   /* Icon colors align to your notice palette, with sensible fallbacks */
   .boomi-swal .swal2-icon { border-color: currentColor; }
   .boomi-swal .swal2-icon.swal2-success {
-    color: var(--boomi-notice-success-fg, #16a34a);
+    color: var(--boomi-swal-icon-success, var(--boomi-notice-success-fg, #16a34a));
     border-color: currentColor;
   }
   .boomi-swal .swal2-icon.swal2-warning {
-    color: var(--boomi-notice-warning-fg, #f59e0b);
+    color: var(--boomi-swal-icon-warning, var(--boomi-notice-warning-fg, #f59e0b));
     border-color: currentColor;
   }
   .boomi-swal .swal2-icon.swal2-error {
-    color: var(--boomi-notice-error-fg, #ef4444);
+    color: var(--boomi-swal-icon-error, var(--boomi-notice-error-fg, #ef4444));
     border-color: currentColor;
   }
 
@@ -2362,6 +2400,11 @@
                   "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji",
                   "Segoe UI Symbol", "Noto Color Emoji";
     --default-font-family: var(--boomi-font);
+    /* Callback dialogs/toasts render outside the Shadow DOM (see the
+       SwalNotification/ToastNotification style bridge) and SweetAlert2's own
+       CSS is font-family: inherit, so without this bridged token they picked
+       up the HOST PAGE's font instead of --boomi-font. SLTN-245. */
+    --boomi-dialog-font: var(--boomi-font);
 
     /* Core danger tokens */
     --boomi-danger: theme('colors.rose.600');
@@ -2381,6 +2424,16 @@
       0 2px 4px -2px color-mix(in srgb, theme('colors.indigo.700') 10%, transparent);
     --boomi-btn-primary-bg-hover: theme('colors.indigo.700');
     --boomi-btn-primary-bg-active: theme('colors.indigo.800');
+
+    /* Danger Button (SLTN-245 — boomiConfig.dialogs.destructiveVariant) */
+    --boomi-btn-danger-bg: var(--boomi-danger);
+    --boomi-btn-danger-fg: var(--boomi-danger-contrast, theme('colors.white'));
+    --boomi-btn-danger-border: var(--boomi-danger-border, var(--boomi-danger));
+    --boomi-btn-danger-shadow:
+      0 4px 6px -1px color-mix(in srgb, var(--boomi-danger) 10%, transparent),
+      0 2px 4px -2px color-mix(in srgb, var(--boomi-danger) 10%, transparent);
+    --boomi-btn-danger-bg-hover: color-mix(in srgb, var(--boomi-danger) 85%, black);
+    --boomi-btn-danger-bg-active: color-mix(in srgb, var(--boomi-danger) 70%, black);
 
     /* Secondary Button */
     --boomi-btn-secondary-bg: theme('colors.gray.200');
@@ -2689,10 +2742,10 @@
     );
     --boomi-swal-title-fg: var(--boomi-update-title-fg, theme('colors.gray.800'));
     --boomi-swal-desc-fg:  var(--boomi-update-desc-fg,  theme('colors.gray.600'));
-    --boomi-swal-icon-success: theme('colors.green.600');
-    --boomi-swal-icon-warning: theme('colors.amber.500');
-    --boomi-swal-icon-error: var(--boomi-danger);
-    --boomi-swal-overlay-bg:   var(--boomi-modal-overlay-bg, rgba(0,0,0,.5));
+    --boomi-swal-icon-success: var(--boomi-notice-success-fg, theme('colors.green.600'));
+    --boomi-swal-icon-warning: var(--boomi-notice-warning-fg, theme('colors.amber.500'));
+    --boomi-swal-icon-error: var(--boomi-notice-error-fg, var(--boomi-danger));
+    --boomi-swal-overlay-bg:   var(--boomi-spinner-overlay-bg, rgba(0,0,0,.5));
 
     /* Toast notifications (base — applies to every theme unless overridden) */
     --boomi-toast-success-bg:  theme('colors.green.500');
@@ -3142,10 +3195,10 @@
     );
     --boomi-swal-title-fg: var(--boomi-update-title-fg, theme('colors.gray.100'));
     --boomi-swal-desc-fg:  var(--boomi-update-desc-fg,  theme('colors.gray.300'));
-    --boomi-swal-icon-success: theme('colors.green.400');
-    --boomi-swal-icon-warning: theme('colors.amber.400');
-    --boomi-swal-icon-error: var(--boomi-danger);
-    --boomi-swal-overlay-bg:   var(--boomi-modal-overlay-bg, rgba(0,0,0,.55));
+    --boomi-swal-icon-success: var(--boomi-notice-success-fg, theme('colors.green.400'));
+    --boomi-swal-icon-warning: var(--boomi-notice-warning-fg, theme('colors.amber.400'));
+    --boomi-swal-icon-error: var(--boomi-notice-error-fg, var(--boomi-danger));
+    --boomi-swal-overlay-bg:   var(--boomi-spinner-overlay-bg, rgba(0,0,0,.55));
 
     /* Toast notifications (dark) */
     --boomi-toast-success-bg:  theme('colors.green.600');
@@ -3524,10 +3577,10 @@
     );
     --boomi-swal-title-fg: var(--boomi-update-title-fg, theme('colors.gray.800'));
     --boomi-swal-desc-fg:  var(--boomi-update-desc-fg,  theme('colors.gray.600'));
-    --boomi-swal-icon-success: theme('colors.teal.600');
-    --boomi-swal-icon-warning: theme('colors.amber.500');
-    --boomi-swal-icon-error: var(--boomi-danger);
-    --boomi-swal-overlay-bg:   var(--boomi-modal-overlay-bg, color-mix(in srgb, theme('colors.sky.900') 45%, transparent));
+    --boomi-swal-icon-success: var(--boomi-notice-success-fg, theme('colors.teal.600'));
+    --boomi-swal-icon-warning: var(--boomi-notice-warning-fg, theme('colors.amber.500'));
+    --boomi-swal-icon-error: var(--boomi-notice-error-fg, var(--boomi-danger));
+    --boomi-swal-overlay-bg:   var(--boomi-spinner-overlay-bg, color-mix(in srgb, theme('colors.sky.900') 45%, transparent));
 
     /* Toast notifications (boomi) */
     --boomi-toast-success-bg:  theme('colors.teal.600');

@@ -56,6 +56,7 @@ export default {
   agents:         { ... },
   components:     { ... },
   form:           { ... },
+  dialogs:        { ... },
   cssVars:        { ... },
   cssVarsByTheme: { ... },
   cssVarsByKey:   { ... },
@@ -70,6 +71,7 @@ export default {
 | `agents` | `Record<agentId, AgentConfig>` | Per-agent configuration keyed by agent ID. See [Section 4](#4-agent-configuration). |
 | `components` | `Record<componentKey, ComponentConfig>` | Per-component configuration keyed by `componentKey`. See [Section 5](#5-component-configuration). |
 | `form` | `Record<string, FormConfig>` | Form field overrides for configurable dialogs. See [Section 6](#6-form-configuration). |
+| `dialogs` | `DialogsConfig` | Structural options for callback (confirm/alert) dialogs — button order, icon visibility, destructive styling. See [Dialog Structural Options](#dialog-structural-options). |
 | `cssVars` | `Record<string, string>` | Global CSS variable overrides applied across all themes. |
 | `cssVarsByTheme` | `Record<themeName, Record<string, string>>` | CSS variable overrides scoped to a specific theme. |
 | `cssVarsByKey` | `Record<componentKey, Record<string, string>>` | CSS variable overrides scoped to a specific component instance key. |
@@ -1270,18 +1272,53 @@ Each falls back to its built-in color when unset.
 
 ### SweetAlert Dialogs
 
-| Token | Description |
-|-------|-------------|
-| `--boomi-swal-bg` | Dialog background |
-| `--boomi-swal-fg` | Dialog text |
-| `--boomi-swal-border` | Dialog border |
-| `--boomi-swal-shadow` | Dialog shadow |
-| `--boomi-swal-title-fg` | Dialog title color |
-| `--boomi-swal-desc-fg` | Dialog description color |
-| `--boomi-swal-overlay-bg` | Overlay/backdrop color |
-| `--boomi-swal-icon-success` | Success icon color |
-| `--boomi-swal-icon-warning` | Warning icon color |
-| `--boomi-swal-icon-error` | Error icon color |
+Confirm/alert dialogs (`SwalNotification`) render on `document.body`, outside the plugin's Shadow DOM, so EmbedKit resolves the active `--boomi-swal-*` values from the host and re-declares them in document scope automatically — same mechanism as Toast Notifications below. Override these like any other token: globally in `cssVars`, per-theme in `cssVarsByTheme`, or per-component-key in `cssVarsByKey`.
+
+| Token | Description | Default |
+|-------|-------------|---------|
+| `--boomi-swal-bg` | Dialog background | theme modal background |
+| `--boomi-swal-fg` | Dialog text | theme modal text |
+| `--boomi-swal-border` | Dialog border | theme modal border |
+| `--boomi-swal-shadow` | Dialog shadow | theme modal shadow |
+| `--boomi-swal-title-fg` | Dialog title color | theme heading color |
+| `--boomi-swal-desc-fg` | Dialog description color | theme body text color |
+| `--boomi-swal-overlay-bg` | Overlay/backdrop color behind the dialog | theme overlay color |
+| `--boomi-swal-icon-success` | Success-type icon color | theme success color |
+| `--boomi-swal-icon-warning` | Warning-type icon color | theme warning color |
+| `--boomi-swal-icon-error` | Error-type icon color | theme danger color |
+| `--boomi-dialog-font` | Font family for dialog title, body, and buttons (shared with Toast Notifications) | `--boomi-font` (the embed's overall font) |
+| `--boomi-swal-title-font-size` | Title font size | `1.125rem` |
+| `--boomi-swal-title-font-weight` | Title font weight | `700` |
+| `--boomi-swal-desc-font-size` | Description font size | `0.95rem` |
+| `--boomi-swal-border-radius` | Dialog corner radius | `1rem` |
+| `--boomi-swal-padding` | Dialog inner padding | `1.25rem` |
+| `--boomi-swal-actions-gap` | Gap between confirm/cancel buttons | `0.5rem` |
+
+Confirm/cancel buttons use the same `--boomi-btn-primary-*` / `--boomi-btn-secondary-*` tokens as the rest of the embed (see [Buttons](#buttons)); the destructive confirm-button variant (see **Dialog Structural Options** below) uses a parallel `--boomi-btn-danger-*` family, defaulted to the shared `--boomi-danger` token. Success/warning/error icon colors fall back to the shared `--boomi-notice-*-fg` tokens (see [Notices / Alerts](#notices--alerts)) if set and `--boomi-swal-icon-*` is not.
+
+> **Fixed in this release (SLTN-245):** `--boomi-swal-title-fg`, `--boomi-swal-desc-fg`, `--boomi-swal-overlay-bg`, `--boomi-swal-icon-success`, `--boomi-swal-icon-warning`, and `--boomi-swal-icon-error` were documented here previously but had no effect — the dialog CSS read different legacy variable names instead. They are now wired correctly (falling back to those legacy names if you were already relying on them, so existing configs are unaffected). A separate hardcoded `rgba(0,0,0,0.9)` override on `--boomi-swal-bg` that could silently beat your theme's value has also been removed. See [Release Notes](./ReleaseNotes.md).
+
+#### Dialog Structural Options
+
+Some Planful-requested customizations aren't expressible in CSS (they change which DOM elements render, not just their style). Configure these via `boomiConfig.dialogs`:
+
+```js
+export default {
+  dialogs: {
+    buttonOrder: 'confirm-first',   // 'cancel-first' (default) | 'confirm-first'
+    showIcon: false,                 // default true
+    destructiveVariant: true,        // default false
+  },
+};
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `buttonOrder` | Confirm/cancel button order. Default (`'cancel-first'`) is today's behavior: confirm button leftmost, cancel rightmost. `'confirm-first'` swaps to cancel leftmost, confirm rightmost — matches Planful's own Material dialogs (dismiss on the left, the emphasized/destructive action on the right). | `'cancel-first'` |
+| `showIcon` | Whether the type icon (success/warning/error) is shown. | `true` |
+| `destructiveVariant` | For `warning`-type dialogs only, renders the confirm button with the `--boomi-btn-danger-*` token family instead of `--boomi-btn-primary-*`, for a destructive-action look (e.g. delete confirmations). | `false` |
+
+These options are structural, not visual-only — they don't change any dialog's functional behavior (button actions, callback payloads, dismiss/confirm logic), and a partner who sets nothing sees no change.
 
 ---
 
@@ -1321,6 +1358,14 @@ Transient toast messages (`ToastNotification`) are fully themeable. Each toast `
 | `--boomi-toast-border` | Border | `none` |
 | `--boomi-toast-title-fg` | Title color (defaults to the per-type `fg`) | `inherit` |
 | `--boomi-toast-progress-bar` | Timer progress-bar color | `rgba(255,255,255,0.7)` |
+| `--boomi-toast-progress-display` | Set to `none` to hide the timer progress bar entirely | `block` |
+| `--boomi-toast-font` | Toast text font family (falls back to `--boomi-dialog-font`, then `--boomi-font`) | `--boomi-font` |
+| `--boomi-toast-font-size` | Toast text font size | `1em` |
+| `--boomi-toast-font-weight` | Toast text font weight | `600` |
+| `--boomi-toast-line-height` | Toast text line height | `normal` |
+| `--boomi-toast-padding` | Toast inner padding | `1em` |
+| `--boomi-toast-min-height` | Toast minimum height | `auto` |
+| `--boomi-toast-icon-size` | Icon width/height (kept square and tied to a single token so overriding it can't clip the icon under the toast's `overflow: hidden` the way independently resizing width/height/padding could) | `2em` |
 
 #### Example
 

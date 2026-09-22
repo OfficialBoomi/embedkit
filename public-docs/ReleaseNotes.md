@@ -25,6 +25,23 @@
 
 </details>
 
+<details open>
+  <summary><strong>Callback Dialog & Toast Theming</strong> — CSS fixes, new typography/font tokens, structural options (SLTN-245)</summary>
+
+  **Bug fixes**
+  - 🐛 **Six documented `--boomi-swal-*` tokens now actually work** — `--boomi-swal-title-fg`, `-desc-fg`, `-overlay-bg`, `-icon-success`, `-icon-warning`, and `-icon-error` were documented and offered in the Admin Console theme builder, but the dialog CSS read different (undocumented) legacy variable names instead, so setting them had no effect. They're now wired directly, falling back to those legacy names so existing configs that were already using them are unaffected.
+  - 🐛 **Removed a hardcoded dialog background override** — `--boomi-swal-bg` had a hardcoded `rgba(0,0,0,0.9)` override that could silently beat your theme's configured value depending on style load order. This is now driven entirely by the theme, like every other dialog token. **This may be visibly different** if you were relying on the previous accidental value — see [SweetAlert Dialogs](./ConfigurationReference.md#sweetalert-dialogs).
+  - 🐛 **Redis Admin dialogs are now themed** — the admin console's key-management confirm dialogs (delete key, revoke sessions, clear tenant/sub-account) previously bypassed the theming system entirely and always rendered unthemed. They now use the same themed dialog styling as the rest of the embed.
+  - 🐛 **Multiple embeds on one page no longer fight over dialog/toast styling** — two EmbedKit mounts on the same page with different themes could have one mount's dialog or toast styling overwrite or strip the other's. Styling is now scoped per mount.
+
+  **New**
+  - ✅ **Dialog and toast font is themeable** — `--boomi-dialog-font` (falls back to the embed's overall `--boomi-font`) now applies to callback dialog titles, descriptions, and buttons, and to toast text. Previously dialogs/toasts silently inherited the *host page's* font instead of the embed's theme, since SweetAlert2's own CSS is `font-family: inherit` and nothing bridged the token across.
+  - ✅ **New dialog typography/box-model tokens** — `--boomi-swal-title-font-size`, `-title-font-weight`, `-desc-font-size`, `-border-radius`, `-padding`, `-actions-gap`. Defaults match the previous hardcoded values exactly, so existing embeds look identical until you override them.
+  - ✅ **New toast typography/layout tokens** — `--boomi-toast-font`, `-font-size`, `-font-weight`, `-line-height`, `-padding`, `-min-height`, `-icon-size`, and `-progress-display` (set to `none` to hide the timer progress bar). See [Toast Notifications](./ConfigurationReference.md#toast-notifications).
+  - ✅ **`boomiConfig.dialogs` structural options** — `buttonOrder` (`'cancel-first'` default | `'confirm-first'`), `showIcon`, and `destructiveVariant` (renders the confirm button with a new `--boomi-btn-danger-*` token family for `warning`-type dialogs). None of these change functional behavior (button actions, callback payloads, dismiss/confirm logic) — see [Dialog Structural Options](./ConfigurationReference.md#dialog-structural-options).
+
+</details>
+
 ---
 
 ### All Releases

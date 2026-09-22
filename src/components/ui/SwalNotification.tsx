@@ -14,6 +14,9 @@
 
 import { useEffect, useRef } from 'react';
 import Swal, { SweetAlertResult } from 'sweetalert2';
+import { usePlugin } from '../../context/pluginContext';
+import { slugifyHostId } from '../../utils/text';
+import { injectSwalStyles, removeSwalStyles } from '../../utils/swalStyleBridge';
 
 /**
  * @interface SwalNotificationProps
@@ -47,112 +50,6 @@ interface SwalNotificationProps {
   timerMs?: number;
 }
 
-const SWAL_STYLE_ATTR = 'data-boomi-swal-vars';
-
-// CSS custom properties consumed by the boomi-swal rules that must be
-// resolved and re-declared in document scope (outside Shadow DOM).
-const SWAL_VAR_NAMES = [
-  '--boomi-swal-bg',
-  '--boomi-swal-fg',
-  '--boomi-swal-border',
-  '--boomi-swal-shadow',
-  '--boomi-spinner-overlay-bg',
-  '--boomi-spinner-overlay-blur',
-  '--boomi-update-title-fg',
-  '--boomi-modal-fg',
-  '--boomi-update-desc-fg',
-  '--boomi-input-shadow-focus',
-  '--boomi-btn-primary-bg',
-  '--boomi-btn-primary-fg',
-  '--boomi-btn-primary-border',
-  '--boomi-btn-primary-shadow',
-  '--boomi-btn-primary-bg-hover',
-  '--boomi-btn-primary-bg-active',
-  '--boomi-btn-secondary-bg',
-  '--boomi-btn-secondary-fg',
-  '--boomi-btn-secondary-border',
-  '--boomi-btn-secondary-shadow',
-  '--boomi-btn-secondary-bg-hover',
-  '--boomi-btn-secondary-bg-active',
-  '--boomi-notice-success-fg',
-  '--boomi-notice-warning-fg',
-  '--boomi-notice-error-fg',
-  '--boomi-accent',
-];
-
-// Walk a CSSRuleList recursively and collect rules whose selectors mention
-// boomi-swal / swal2-container, plus boomi-swal keyframe animations.
-function collectSwalRules(ruleList: CSSRuleList, out: string[]): void {
-  for (let i = 0; i < ruleList.length; i++) {
-    const rule = ruleList[i];
-    if (rule instanceof CSSStyleRule) {
-      if (
-        rule.selectorText.includes('boomi-swal') ||
-        rule.selectorText.includes('swal2-container')
-      ) {
-        out.push(rule.cssText);
-      }
-    } else if (rule instanceof CSSKeyframesRule) {
-      if (rule.name.includes('boomi-swal')) {
-        out.push(rule.cssText);
-      }
-    } else if ('cssRules' in rule && (rule as CSSGroupingRule).cssRules) {
-      // Recurse into @layer, @media, @supports, etc.
-      collectSwalRules((rule as CSSGroupingRule).cssRules, out);
-    }
-  }
-}
-
-// Extracts swal CSS rules from the Shadow DOM and injects them into
-// document.head alongside resolved --boomi-* custom property values so that
-// Swal popups (rendered on document.body) pick up the active theme.
-function injectSwalStyles(anchor: HTMLElement | null): void {
-  document.head.querySelectorAll(`style[${SWAL_STYLE_ATTR}]`).forEach((el) => el.remove());
-
-  const root = anchor?.getRootNode();
-  if (!(root instanceof ShadowRoot)) return;
-
-  const host = root.host as HTMLElement;
-  const computed = getComputedStyle(host);
-  const cssChunks: string[] = [];
-
-  // 1. Extract swal-related CSS rules from every shadow DOM stylesheet.
-  root.querySelectorAll('style').forEach((styleEl) => {
-    if (!styleEl.sheet) return;
-    try {
-      const rules: string[] = [];
-      collectSwalRules(styleEl.sheet.cssRules, rules);
-      cssChunks.push(...rules);
-    } catch {
-      // cross-origin sheet — skip
-    }
-  });
-
-  // 2. Resolve all --boomi-* vars from the shadow host and re-declare them on
-  //    the swal container so the rules extracted above can consume them.
-  const varDecls = SWAL_VAR_NAMES.map((name) => {
-    const value = computed.getPropertyValue(name).trim();
-    return value ? `  ${name}: ${value};` : '';
-  })
-    .filter(Boolean)
-    .join('\n');
-
-  if (varDecls) {
-    cssChunks.push(`.swal2-container.boomi-swal {\n${varDecls}\n}`);
-  }
-
-  if (cssChunks.length === 0) return;
-
-  const style = document.createElement('style');
-  style.setAttribute(SWAL_STYLE_ATTR, 'true');
-  style.textContent = cssChunks.join('\n');
-  document.head.appendChild(style);
-}
-
-function removeSwalStyles(): void {
-  document.head.querySelectorAll(`style[${SWAL_STYLE_ATTR}]`).forEach((el) => el.remove());
-}
-
 const SwalNotification: React.FC<SwalNotificationProps> = ({
   type,
   title,
@@ -167,13 +64,22 @@ const SwalNotification: React.FC<SwalNotificationProps> = ({
   timerMs,
 }) => {
   const anchorRef = useRef<HTMLSpanElement>(null);
+  const { hostId, boomiConfig } = usePlugin();
+  const hostSlug = slugifyHostId(hostId);
+  const dialogsCfg = boomiConfig?.dialogs;
+  // Defaults below match today's behavior exactly (AC #5): cancel-first order,
+  // icon shown, primary-colored confirm button.
+  const reverseButtons = dialogsCfg?.buttonOrder === 'confirm-first';
+  const showIcon = dialogsCfg?.showIcon !== false;
+  const isDestructive = Boolean(dialogsCfg?.destructiveVariant) && type === 'warning';
 
   useEffect(() => {
     Swal.fire({
-      icon: type,
+      icon: showIcon ? type : undefined,
       title,
       text: description,
       showCancelButton: showCancel,
+      reverseButtons,
       confirmButtonText,
       cancelButtonText,
       allowOutsideClick,
@@ -181,16 +87,16 @@ const SwalNotification: React.FC<SwalNotificationProps> = ({
       timer: timerMs,
       timerProgressBar: Boolean(timerMs),
       customClass: {
-        container: 'boomi-swal',
+        container: `boomi-swal boomi-swal--${hostSlug}`,
         popup: 'boomi-swal-popup',
-        confirmButton: 'swal2-confirm',
+        confirmButton: isDestructive ? 'swal2-confirm swal2-confirm--danger' : 'swal2-confirm',
         cancelButton: 'swal2-cancel',
         actions: 'boomi-swal-actions',
       },
       showClass: { popup: 'swal2-show boomi-swal-in' },
       hideClass: { popup: 'swal2-hide boomi-swal-out' },
-      didOpen: () => injectSwalStyles(anchorRef.current),
-      didClose: removeSwalStyles,
+      didOpen: () => injectSwalStyles(anchorRef.current, hostSlug),
+      didClose: () => removeSwalStyles(hostSlug),
     }).then((result: SweetAlertResult) => {
       if (result.isConfirmed) {
         onConfirm?.();
@@ -210,6 +116,10 @@ const SwalNotification: React.FC<SwalNotificationProps> = ({
     timerMs,
     onConfirm,
     onCancel,
+    hostSlug,
+    reverseButtons,
+    showIcon,
+    isDestructive,
   ]);
 
   // Hidden anchor element — gives us a reference point to walk up to the

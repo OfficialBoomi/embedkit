@@ -10,7 +10,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Menu } from '@headlessui/react';
 import { AiOutlineDelete, AiOutlineEdit, AiOutlineEye } from 'react-icons/ai';
-import SwalCore from 'sweetalert2/dist/sweetalert2.all.js';
+import Swal from 'sweetalert2';
 import Chart from 'chart.js/auto';
 import { usePlugin } from '../../../context/pluginContext';
 import { useAdminRedisService } from '../../../service/admin/redis.service';
@@ -20,13 +20,16 @@ import AjaxLoader from '../../ui/AjaxLoader';
 import SearchBar from '../../ui/SearchBar';
 import RedisKeyViewModal from './RedisKeyViewModal';
 import RedisKeyEditModal from './RedisKeyEditModal';
+import { injectSwalStyles, removeSwalStyles } from '../../../utils/swalStyleBridge';
+import { slugifyHostId } from '../../../utils/text';
 
 type RedisAdminProps = {
   componentKey: string;
 };
 
 const RedisAdmin: React.FC<RedisAdminProps> = ({ componentKey }) => {
-  const { tenantId } = usePlugin();
+  const { tenantId, hostId } = usePlugin();
+  const hostSlug = slugifyHostId(hostId);
   const tenantLabel = tenantId ? `Tenant: ${tenantId}` : 'Tenant scoped';
   const {
     listSessions,
@@ -85,13 +88,15 @@ const RedisAdmin: React.FC<RedisAdminProps> = ({ componentKey }) => {
   const [isSavingKey, setIsSavingKey] = useState(false);
   const [revealKeyValue, setRevealKeyValue] = useState(false);
   const revealTimeoutRef = useRef<number | null>(null);
+  // Hidden anchor — gives us a node to walk up to the Shadow root so the
+  // shared style bridge (SwalNotification.tsx) can resolve the active theme.
+  const swalAnchorRef = useRef<HTMLSpanElement>(null);
 
   const swalModal = useMemo(
     () =>
-      SwalCore.mixin({
-        target: document.body,
+      Swal.mixin({
         customClass: {
-          container: 'boomi-swal',
+          container: `boomi-swal boomi-swal--${hostSlug}`,
           popup: 'boomi-swal-popup',
           confirmButton: 'swal2-confirm',
           cancelButton: 'swal2-cancel',
@@ -99,8 +104,10 @@ const RedisAdmin: React.FC<RedisAdminProps> = ({ componentKey }) => {
         },
         showClass: { popup: 'swal2-show boomi-swal-in' },
         hideClass: { popup: 'swal2-hide boomi-swal-out' },
+        didOpen: () => injectSwalStyles(swalAnchorRef.current, hostSlug),
+        didClose: () => removeSwalStyles(hostSlug),
       }),
-    []
+    [hostSlug]
   );
 
   const keyTypes = useMemo(
@@ -476,6 +483,7 @@ const RedisAdmin: React.FC<RedisAdminProps> = ({ componentKey }) => {
 
   return (
     <div className="w-full h-full p-6 space-y-6">
+      <span ref={swalAnchorRef} style={{ display: 'none' }} aria-hidden="true" />
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Cache</h1>
         <p className="text-sm opacity-70">{tenantLabel}</p>

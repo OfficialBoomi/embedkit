@@ -25,9 +25,22 @@ export type ModalOffsetConfig = {
   offsetY?: number | string;
 };
 
+/** Structural (non-CSS) theming options for callback dialogs (SwalNotification). SLTN-245. */
+export type DialogsConfig = {
+  /** Confirm/cancel button order. Default 'cancel-first' matches today's behavior. */
+  buttonOrder?: 'cancel-first' | 'confirm-first';
+  /** Whether the type icon (success/warning/error) is shown. Default true. */
+  showIcon?: boolean;
+  /** For 'warning'-type dialogs, render the confirm button with the danger token family instead of primary. Default false. */
+  destructiveVariant?: boolean;
+};
+
 export type PluginUiConfig = {
   /** Theme settings for the plugin UI. */
   theme?: Theme;
+
+  /** Structural options for callback dialogs (button order, icon, destructive styling). */
+  dialogs?: DialogsConfig;
 
   /** Enable ai? Assumes you have passed your apiToken and model in the pre-auth before plugin is enabled. */
   enableAi?: boolean;
