@@ -43,6 +43,7 @@ export type EmbedKitEventType =
   | 'connection.extensions.updated'
   | 'connection.oauth.initiated'
   | 'map.defaults.seeded'
+  | 'map.function.converted'
   | 'map.extensions.updated'
   | 'map.browse.executed'
   | 'schedules.updated'

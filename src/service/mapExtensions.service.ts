@@ -4,7 +4,8 @@ import type {
   EnvironmentMapExtensionCandidate,
   BrowseCandidate,
   BrowseCandidateResponse,
-  EnvExtMinimal
+  EnvExtMinimal,
+  MapExtensionsFunction
  } from '@boomi/embedkit-sdk';
 import { useHttp } from './http';
 import logger from '../logger.service';
@@ -28,6 +29,15 @@ export type MapFunctionBrowseArgs = {
   integrationPackInstanceId: string,
   environmentId: string,
   isSingleInstall?: boolean
+};
+
+/** Result of compiling a platform-defined function into Custom Scripting. */
+export type CompiledFunctionScript = {
+  language: 'Javascript';
+  script: string;
+  inputs: { key: number; name: string; dataType?: string }[];
+  outputs: { key: number; name: string }[];
+  warnings: string[];
 };
 
 export function useMapExtensionsService() {
@@ -83,5 +93,11 @@ export function useMapExtensionsService() {
     });
   }
 
-  return { getMapExtensions, updateMapExtension, dynamicBrowseMapExtensions, mapFunctionBrowse};
+  /** Compile a platform-defined function into JavaScript for the Transformation Editor (opt-in). */
+  async function compileFunction(fn: MapExtensionsFunction): Promise<CompiledFunctionScript> {
+    logger.debug('compiling function to script via service', { id: fn.id, type: fn.type });
+    return http.post('/map-extensions/compile-function', { function: fn });
+  }
+
+  return { getMapExtensions, updateMapExtension, dynamicBrowseMapExtensions, mapFunctionBrowse, compileFunction };
 }

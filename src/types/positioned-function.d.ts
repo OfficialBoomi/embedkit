@@ -45,6 +45,8 @@ export type PositionedFunction = {
   }[];
   script?: string;
   editable?: boolean;
+  /** True when Edit means "convert this platform-defined function to a script first". */
+  convertible?: boolean;
   raw?: MapExtensionsFunction;
   x?: number;
   y?: number;

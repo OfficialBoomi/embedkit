@@ -34,6 +34,7 @@ import {
   parseYFromId,
   toMapExtensionsFunctions,
   fromMapExtensionsFunctions,
+  isConvertibleFunctionType,
 } from '../../utils/ui-utils';
 import EditTransformationsForm, {
   EditTransformationsFormRef,
@@ -45,6 +46,7 @@ import Modal from '../ui/Modal';
 import Page from '../core/Page';
 import ToastNotification from '../ui/ToastNotification';
 import logger from '../../logger.service';
+import { useMapExtensionsService } from '../../service/mapExtensions.service';
 import { emitEmbedKitEvent } from '../../events.service';
 
 /**
@@ -101,6 +103,12 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const formRef = useRef<EditTransformationsFormRef>(null);
   const [editName, setEditName] = useState('');
+  // Opt-in (default off): let customers edit platform-defined functions by compiling
+  // them to JavaScript first. Replaces the partner's function with a customer-owned
+  // script on the next save.
+  const convertFunctionsToScript =
+    boomiConfig?.components?.[componentKey]?.updateMaps?.convertFunctionsToScript ?? false;
+  const { compileFunction } = useMapExtensionsService();
   const editCandidateFormRef = useRef<EditMapCandidateFormRef>(null);
   const [isCandidateModalOpen, setIsCandidateModalOpen] = useState(false);
   const { executeMapExtensions, updatedCandidates, isExecuting, executeError, extensions } =
@@ -341,6 +349,49 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
     }).catch((err: any) => setApiError(err?.message || 'Failed to delete functions'));
   };
 
+  /**
+   * Open the Transformation Editor for a function. Scripting functions open as-is.
+   * Platform-defined functions open only when convertFunctionsToScript is on and the
+   * type is convertible: the SDK compiles them to JavaScript first, and any warnings
+   * (e.g. a Groovy step) are surfaced at the top of the script.
+   */
+  const openFunctionEditor = async (fn: PositionedFunction) => {
+    if (fn.editable !== false && !fn.convertible) {
+      setEditFunction(fn);
+      setEditName(stripYFromId(fn.name));
+      setIsEditing(true);
+      return;
+    }
+    if (!convertFunctionsToScript || !fn.raw || !isConvertibleFunctionType(fn.raw.type)) return;
+    await runWithLoading(async () => {
+      const compiled = await compileFunction(fn.raw!);
+      const banner = compiled.warnings.length
+        ? `// Review before saving: ${compiled.warnings.join(', ')}\n`
+        : '';
+      setEditFunction({
+        ...fn,
+        editable: true,
+        raw: undefined,
+        type: 'Custom Scripting',
+        script: banner + compiled.script,
+        inputs: compiled.inputs.map((i) => ({ key: i.key, name: i.name, dataType: i.dataType ?? 'CHARACTER' })),
+        outputs: compiled.outputs.map((o) => ({ key: o.key, name: o.name })),
+      });
+      setEditName(stripYFromId(fn.name));
+      setIsEditing(true);
+      emitEmbedKitEvent(
+        'map.function.converted',
+        {
+          integrationPackInstanceId: integration.id,
+          integrationPackId: integration.integrationPackId,
+          environmentId: integration.environmentId,
+          componentKey,
+        },
+        { mapId: currentMapId, functionId: fn.id, type: fn.raw?.type, warnings: compiled.warnings }
+      );
+    }).catch((err: any) => setApiError(err?.message || 'Failed to convert function'));
+  };
+
   const handleEditSubmit = async (): Promise<boolean> => {
     if (!formRef.current || !currentMapId) return false;
 
@@ -412,6 +463,12 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
   useEffect(() => {
     if (hasCandidates) setIsCandidateModalOpen(true);
   }, [hasCandidates]);
+
+  const canvasFunctions: PositionedFunction[] = (functionsByMapId[currentMapId] || []).map((f) =>
+    f.editable === false && convertFunctionsToScript && isConvertibleFunctionType(f.raw?.type)
+      ? { ...f, editable: true, convertible: true }
+      : f
+  );
 
   const showTitle = boomiConfig?.components?.[componentKey]?.updateMaps?.showTitle ?? true;
   const showDescription = boomiConfig?.components?.[componentKey]?.updateMaps?.showDescription ?? true;
@@ -522,17 +579,12 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
               <FieldMappingCanvasTree
                 sourceFields={sourceFields}
                 targetFields={targetFields}
-                functions={functionsByMapId[currentMapId] || []}
+                functions={canvasFunctions}
                 mappings={mappingsByMapId[currentMapId] || []}
                 onMappingChange={handleCanvasMappingChange}
                 onTransformationUpdate={handleCanvasFunctionChange}
                 onDeleteTransformation={handleCanvasFunctionDelete}
-                onEditTransformation={(fn) => {
-                  if (fn.editable === false) return; // platform-defined function: not authored here
-                  setEditFunction(fn);
-                  setEditName(stripYFromId(fn.name));
-                  setIsEditing(true);
-                }}
+                onEditTransformation={openFunctionEditor}
                 onAddTransformation={() => {
                   setEditFunction(null);
                   setEditName(`script_${Date.now()}`);
@@ -543,17 +595,12 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
               <FieldMappingCanvas
                 sourceFields={sourceFields}
                 targetFields={targetFields}
-                functions={functionsByMapId[currentMapId] || []}
+                functions={canvasFunctions}
                 mappings={mappingsByMapId[currentMapId] || []}
                 onMappingChange={handleCanvasMappingChange}
                 onTransformationUpdate={handleCanvasFunctionChange}
                 onDeleteTransformation={handleCanvasFunctionDelete}
-                onEditTransformation={(fn) => {
-                  if (fn.editable === false) return; // platform-defined function: not authored here
-                  setEditFunction(fn);
-                  setEditName(stripYFromId(fn.name));
-                  setIsEditing(true);
-                }}
+                onEditTransformation={openFunctionEditor}
                 onAddTransformation={() => {
                   setEditFunction(null);
                   setEditName(`script_${Date.now()}`);

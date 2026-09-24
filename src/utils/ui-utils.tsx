@@ -13,6 +13,21 @@ import { PositionedFunction } from '../types/positioned-function';
 import logger from '../logger.service';
 
 
+/**
+ * Platform-defined function types the SDK can compile into a Custom Scripting
+ * function (see embedkit-sdk CONVERTIBLE_FUNCTION_TYPES; keep in sync). The server
+ * is authoritative: it rejects anything else with 422.
+ */
+export const CONVERTIBLE_FUNCTION_TYPES = new Set([
+  'CurrentDate', 'DateFormat',
+  'TrimWhitespace', 'LeftTrim', 'RightTrim', 'StringToLower', 'StringToUpper',
+  'StringAppend', 'StringPrepend', 'StringRemove', 'StringReplace', 'StringConcat', 'StringSplit',
+  'MathAdd', 'MathSubtract', 'MathMultiply', 'MathDivide', 'MathABS', 'MathCeil', 'MathFloor', 'MathSetPrecision',
+  'UserDefined',
+]);
+export const isConvertibleFunctionType = (type: unknown): boolean =>
+  CONVERTIBLE_FUNCTION_TYPES.has(String(type ?? ''));
+
 /** The only function type the Transformation Editor can author. */
 export const isCustomScripting = (type: unknown): boolean =>
   String(type ?? '').replace(/[\s_-]/g, '').toLowerCase() === 'customscripting';
