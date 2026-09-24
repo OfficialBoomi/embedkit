@@ -463,8 +463,12 @@ Your theme cascades across all plugin UI that uses the provided classes (`.boomi
 | **Tables**          | `.boomi-table-*`           | `--boomi-table-header-*`, `--boomi-table-row-odd-bg`, `--boomi-table-row-even-bg`                                       |
 | **Mapping Canvas**  | `.boomi-map-*`             | `--boomi-map-line`, `--boomi-map-card-*`, `--boomi-map-pin-*`, `--boomi-accent`, `--boomi-muted`                        |
 | **Schedule UI**     | `.boomi-sched-*`           | `--boomi-sched-card-*`, `--boomi-sched-header-*`, `--boomi-sched-input-*`, `--boomi-sched-action-*`                    |
+| **Callback Dialogs**| `.boomi-swal-*`           | `--boomi-swal-bg/-fg/-border/-shadow`, `--boomi-swal-title-fg/-desc-fg`, `--boomi-dialog-font`                          |
+| **Toast Notifications** | `.boomi-toast-*`      | `--boomi-toast-{type}-bg/-fg/-icon`, `--boomi-toast-position/-timer/-radius`, `--boomi-toast-font/-font-size`           |
 
 You can override only the tokens you need — everything else inherits from the active theme (`light`, `dark`, `boomi`, or your custom theme).
+
+> **Font family and callback dialogs/toasts:** the whole embedded UI (including confirm dialogs and toast notifications) can be themed with a single font override — `--boomi-font` (or `--boomi-dialog-font` for just dialogs/toasts). Dialogs and toasts also support structural options (button order, icon visibility, a destructive button variant) via `boomiConfig.dialogs`. See [SweetAlert Dialogs](./ConfigurationReference.md#sweetalert-dialogs) and [Toast Notifications](./ConfigurationReference.md#toast-notifications) in the full Configuration Reference.
 
 ### Switching Themes at Runtime
 

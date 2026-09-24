@@ -6,8 +6,8 @@
  *
  * @description
  * Standardized app-level event system. EmbedKit components emit typed events
- * (feedback was the first; SLTN-156 adds integration, map, schedule, AI
- * transformation and agent-session/message events) and the host application
+ * (feedback was the first; integration, map, schedule, AI transformation and
+ * agent-session/message events followed) and the host application
  * subscribes to them and decides what to do with the data — nothing is ever
  * sent over the network by EmbedKit itself.
  *

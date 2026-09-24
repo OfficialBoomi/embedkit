@@ -36,3 +36,14 @@ export function parseNdjson(s: string): unknown[] {
   }
   return out;
 }
+
+/**
+ * Slugifies a host element id into a value safe to use as a CSS class
+ * fragment (e.g. `boomi-swal--<slug>`) — used to scope per-mount styling
+ * (dialogs/toasts) so multiple EmbedKit mounts on one page don't collide.
+ */
+export function slugifyHostId(hostId: string | undefined): string {
+  if (!hostId) return 'default';
+  const slug = hostId.replace(/[^a-zA-Z0-9-]/g, '-').replace(/^-+/, '');
+  return slug || 'default';
+}
