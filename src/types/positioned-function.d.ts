@@ -20,9 +20,15 @@
  * @property {string} outputs[].name - Output parameter name.
  * @property {number} outputs[].key - Output parameter key identifier.
  * @property {string} [script] - Optional script content defining the function logic.
+ * @property {boolean} [editable] - False for platform-defined function types (CurrentDate, UserDefined, ...)
+ *   that the Transformation Editor cannot author; they are shown and can be wired or deleted, not edited.
+ * @property {MapExtensionsFunction} [raw] - The original SDK function for non-scripting types, passed back
+ *   to the platform untouched on save so configuration, cache type and UDF references survive.
  * @property {number} [x] - Optional x-coordinate for visual positioning on the canvas.
  * @property {number} [y] - Optional y-coordinate for visual positioning on the canvas.
  */
+import type { MapExtensionsFunction } from '@boomi/embedkit-sdk';
+
 export type PositionedFunction = {
   id: string;
   newId?: string;
@@ -38,6 +44,8 @@ export type PositionedFunction = {
     key: number;
   }[];
   script?: string;
+  editable?: boolean;
+  raw?: MapExtensionsFunction;
   x?: number;
   y?: number;
 };

@@ -528,6 +528,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
                 onTransformationUpdate={handleCanvasFunctionChange}
                 onDeleteTransformation={handleCanvasFunctionDelete}
                 onEditTransformation={(fn) => {
+                  if (fn.editable === false) return; // platform-defined function: not authored here
                   setEditFunction(fn);
                   setEditName(stripYFromId(fn.name));
                   setIsEditing(true);
@@ -548,6 +549,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
                 onTransformationUpdate={handleCanvasFunctionChange}
                 onDeleteTransformation={handleCanvasFunctionDelete}
                 onEditTransformation={(fn) => {
+                  if (fn.editable === false) return; // platform-defined function: not authored here
                   setEditFunction(fn);
                   setEditName(stripYFromId(fn.name));
                   setIsEditing(true);

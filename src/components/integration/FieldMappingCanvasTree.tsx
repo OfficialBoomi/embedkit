@@ -845,7 +845,7 @@ const FieldMappingCanvasTree = forwardRef((
                   <div className="flex justify-between items-center py-1">
                     <div className="boomi-map-card-title">Transformation</div>
                     <TranformationActions
-                      onEditTransformation={() => onEditTransformation?.(fn)}
+                      onEditTransformation={fn.editable === false ? undefined : () => onEditTransformation?.(fn)}
                       onDeleteTransformation={() => handleDeleteTransformation(fn)}
                     />
                   </div>
