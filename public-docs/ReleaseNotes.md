@@ -14,7 +14,7 @@
 ### Unreleased
 
 <details open>
-  <summary><strong>Event Hooks for JS Hosts</strong> — Integration, connection, map, schedule, AI, and agent audit events (SLTN-156)</summary>
+  <summary><strong>Event Hooks for JS Hosts</strong> — Integration, connection, map, schedule, AI, and agent audit events</summary>
 
   **Highlights**
   - ✅ **Every embed action is now an event** — Installing or deleting an integration pack, running processes, saving connections, resolving OAuth, editing maps, saving schedules, generating an AI transformation, and agent session/message activity all emit a typed event on the existing event bus (`onEvent` / `BoomiEvents.on` / `boomi:event`). This lets a **non-React, vanilla-JS host** (an Angular wrapper calling `BoomiPlugin` / `RenderComponent` / `DestroyPlugin` directly, for example) build an audit trail without any EmbedKit hooks.
