@@ -484,6 +484,12 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
               {boomiConfig?.components?.[componentKey]?.updateMaps?.description || 'Please map fields below.'}
             </div>
           )}
+          {(boomiConfig?.components?.[componentKey]?.updateMaps?.showDefaultsNote ?? true) && (
+            <div className="boomi-update-desc boomi-update-defaults-note">
+              {boomiConfig?.components?.[componentKey]?.updateMaps?.defaultsNote ||
+                'Pre-configured mappings were copied in when this integration was installed. Removing one restores the original default for that field.'}
+            </div>
+          )}
           <div className="boomi-tabs">
             <nav className="boomi-tablist">
               {maps.map((map, index) => {

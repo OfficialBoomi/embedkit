@@ -42,6 +42,7 @@ export type EmbedKitEventType =
   | 'integration.processes.run'
   | 'connection.extensions.updated'
   | 'connection.oauth.initiated'
+  | 'map.defaults.seeded'
   | 'map.extensions.updated'
   | 'map.browse.executed'
   | 'schedules.updated'

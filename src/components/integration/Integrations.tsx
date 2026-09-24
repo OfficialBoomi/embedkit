@@ -178,6 +178,32 @@ const Integrations: React.FC<IntegrationsProps> = ({
             isAgent: instance.isAgent,
           }
         );
+        // One-time seed of the partner's default mappings ran server-side during
+        // install (SDK createAndAttachIntegrationPackInstance). Surface its result
+        // so the host app can alert on maps that were not seeded.
+        const seed = (instance as any).mapDefaultsSeed;
+        if (seed) {
+          if (seed.failed?.length) {
+            logger.warn('Default mappings were not seeded for some maps', seed.failed);
+          }
+          emitEmbedKitEvent(
+            'map.defaults.seeded',
+            {
+              integrationPackInstanceId: instance.id,
+              integrationPackId: instance.integrationPackId,
+              environmentId: instance.environmentId,
+              componentKey,
+            },
+            {
+              integrationPackInstanceId: instance.id || '',
+              environmentId: instance.environmentId,
+              summariesFound: seed.summariesFound,
+              seeded: seed.seeded,
+              skipped: seed.skipped,
+              failed: seed.failed,
+            }
+          );
+        }
         if (instance.isAgent) {
           handleRenderEditComponent('RunAgent', instance);
         } else if (instance.installationType === 'SINGLE') {
