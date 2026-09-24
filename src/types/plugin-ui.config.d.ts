@@ -25,7 +25,7 @@ export type ModalOffsetConfig = {
   offsetY?: number | string;
 };
 
-/** Structural (non-CSS) theming options for callback dialogs (SwalNotification). SLTN-245. */
+/** Structural (non-CSS) theming options for callback dialogs (SwalNotification). */
 export type DialogsConfig = {
   /** Confirm/cancel button order. Default 'cancel-first' matches today's behavior. */
   buttonOrder?: 'cancel-first' | 'confirm-first';

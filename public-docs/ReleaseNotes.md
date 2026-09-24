@@ -26,7 +26,7 @@
 </details>
 
 <details open>
-  <summary><strong>Callback Dialog & Toast Theming</strong> — CSS fixes, new typography/font tokens, structural options (SLTN-245)</summary>
+  <summary><strong>Callback Dialog & Toast Theming</strong> — CSS fixes, new typography/font tokens, structural options</summary>
 
   **Bug fixes**
   - 🐛 **Six documented `--boomi-swal-*` tokens now actually work** — `--boomi-swal-title-fg`, `-desc-fg`, `-overlay-bg`, `-icon-success`, `-icon-warning`, and `-icon-error` were documented and offered in the Admin Console theme builder, but the dialog CSS read different (undocumented) legacy variable names instead, so setting them had no effect. They're now wired directly, falling back to those legacy names so existing configs that were already using them are unaffected.

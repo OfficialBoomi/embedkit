@@ -1428,7 +1428,7 @@
   /* Toast notifications — themeable via --boomi-toast-* custom properties.
      Swal renders toasts on document.body, so these rules + the resolved vars
      are extracted into document scope at runtime (see ToastNotification.tsx). */
-  /* Typography/padding/icon-size ARE themeable (SLTN-245) — every default
+  /* Typography/padding/icon-size ARE themeable — every default
      below matches SweetAlert2's own toast metrics exactly (verified against
      node_modules/sweetalert2/dist/sweetalert2.css), so a partner who sets
      nothing sees zero change. --boomi-toast-icon-size intentionally drives
@@ -2403,7 +2403,7 @@
     /* Callback dialogs/toasts render outside the Shadow DOM (see the
        SwalNotification/ToastNotification style bridge) and SweetAlert2's own
        CSS is font-family: inherit, so without this bridged token they picked
-       up the HOST PAGE's font instead of --boomi-font. SLTN-245. */
+       up the HOST PAGE's font instead of --boomi-font. */
     --boomi-dialog-font: var(--boomi-font);
 
     /* Core danger tokens */
@@ -2425,7 +2425,7 @@
     --boomi-btn-primary-bg-hover: theme('colors.indigo.700');
     --boomi-btn-primary-bg-active: theme('colors.indigo.800');
 
-    /* Danger Button (SLTN-245 — boomiConfig.dialogs.destructiveVariant) */
+    /* Danger Button (boomiConfig.dialogs.destructiveVariant) */
     --boomi-btn-danger-bg: var(--boomi-danger);
     --boomi-btn-danger-fg: var(--boomi-danger-contrast, theme('colors.white'));
     --boomi-btn-danger-border: var(--boomi-danger-border, var(--boomi-danger));
