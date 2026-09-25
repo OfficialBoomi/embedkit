@@ -1,6 +1,6 @@
 {
   "name": "@boomi/embedkit",
-  "version": "1.5.3",
+  "version": "1.6.0",
   "license": "BSD-2-Clause",
   "author": "Boomi, LP",
   "description": "A JavaScript library for embedding Boomi EmbedKit into an application.",
