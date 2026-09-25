@@ -711,6 +711,26 @@ These variables specifically control the agent chat panel.
 
 ---
 
+**Callback Dialogs & Toasts**
+
+The agent widget can show confirm/alert dialogs and toast notifications (e.g. connection or send errors) — same tokens apply whether the widget is embedded via CDN or the npm/Integration method. These are the theming-relevant tokens; see [`ConfigurationReference.md`](./ConfigurationReference.md#sweetalert-dialogs) for the full reference including defaults and the new `dialogs` structural option.
+
+| Variable | Description |
+|----------|-------------|
+| `--boomi-swal-bg` / `-fg` / `-border` / `-shadow` | Confirm/alert dialog surface |
+| `--boomi-swal-title-fg` / `--boomi-swal-desc-fg` | Dialog title / description text color |
+| `--boomi-swal-overlay-bg` | Dialog backdrop color |
+| `--boomi-swal-icon-success` / `-warning` / `-error` | Dialog type-icon color |
+| `--boomi-dialog-font` | Font family for dialog **and** toast text (title/body/buttons) |
+| `--boomi-swal-title-font-size` / `-title-font-weight` / `-desc-font-size` | Dialog typography |
+| `--boomi-swal-border-radius` / `-padding` / `-actions-gap` | Dialog box model |
+| `--boomi-toast-{success,error,warning,info,question}-bg/-fg/-icon` | Toast per-type colors |
+| `--boomi-toast-position` / `-timer` / `-width` / `-radius` / `-shadow` / `-border` | Toast layout |
+| `--boomi-toast-font` / `-font-size` / `-font-weight` / `-line-height` / `-padding` / `-min-height` / `-icon-size` | Toast typography & sizing |
+| `--boomi-toast-progress-bar` / `-progress-display` | Toast timer progress bar color / visibility (`none` to hide) |
+
+---
+
 ### Full Configuration Reference
 
 Below is a complete example project configuration in JSON, covering all available options. In the Admin Console Builder this is shown under the **JSON** tab.
