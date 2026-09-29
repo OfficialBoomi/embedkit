@@ -23,6 +23,13 @@ const LOGIN_BODY = {
   apiUserName:      env.VITE_API_USERNAME || '',
   apiToken:         env.VITE_API_TOKEN || '',
 
+  // Optional environment scope. Comma-separated environment ids in
+  // VITE_API_ENVIRONMENT_IDS limit every environment, instance and eligible-pack
+  // list for this session to those environments. Omit for all environments.
+  ...(env.VITE_API_ENVIRONMENT_IDS
+    ? { environments: String(env.VITE_API_ENVIRONMENT_IDS).split(',').map((s) => s.trim()).filter(Boolean) }
+    : {}),
+
   // Optional AI block. Set enableAi:false in boomi.config.js if you don't have a key.
   ai: {
     enabled: true,

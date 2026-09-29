@@ -39,7 +39,8 @@ import {
 import { 
   useRunAllProcesses 
 } from '../../hooks/execution-request/useRunAllProcesses'
-import AddIntegrationForm, { AddIntegrationFormRef } from './AddIntegrationForm';
+import AddIntegrationForm, { AddIntegrationFormRef, type AddIntegrationFormResult } from './AddIntegrationForm';
+import AddIntegrationCatalog from './AddIntegrationCatalog';
 import AjaxLoader from '../ui/AjaxLoader';
 import Button from '../ui/Button';
 import Integration from './Integration'; 
@@ -145,10 +146,15 @@ const Integrations: React.FC<IntegrationsProps> = ({
   );
   const visibleListIntegrations = visibleIntegrations.filter((integration) => !integration.isAgent);
 
+  /** Legacy dropdown form: validate, then install. */
   const handleSubmit = async () => {
     const result = formRef.current?.validateAndSubmit();
     if (!result) return;
+    await installIntegration(result);
+  };
 
+  /** Shared install path for both the legacy form and the catalog. */
+  const installIntegration = async (result: AddIntegrationFormResult) => {
     setIsOpen(false);
     setApiError(null);
     setPageIsLoading(true);
@@ -368,6 +374,14 @@ const Integrations: React.FC<IntegrationsProps> = ({
       setPageIsLoading(isRunning);
     }, [isRunning, setPageIsLoading]);
 
+  // 'catalog' (default): searchable cards/table with connector icons and scoped environments.
+  // 'form': the previous dropdown-based form.
+  const addIntegrationLayout: 'catalog' | 'form' =
+    boomiConfig?.components?.[componentKey]?.form?.addIntegration?.layout === 'form' ? 'form' : 'catalog';
+  const existingIntegrationNames = integrationPackInstances
+    .map((i) => i.integrationPackOverrideName || i.integrationPackName)
+    .filter((n): n is string => !!n);
+
   const showSearch = boomiConfig?.components?.[componentKey]?.integrations?.search?.show ?? true;
   const showAdd = boomiConfig?.components?.[componentKey]?.integrations?.addButton?.show ?? true;
   const showType = boomiConfig?.components?.[componentKey]?.integrations?.viewTypeButton?.show ?? true;
@@ -542,22 +556,41 @@ const Integrations: React.FC<IntegrationsProps> = ({
           )}
         </Modal>
       )}
-      <Modal
-        isOpen={isOpen}
-        title={`${boomiConfig?.components?.[componentKey]?.form?.addIntegration?.title || 'Add Integration'}`}
-        description={boomiConfig?.components?.[componentKey]?.form?.addIntegration?.description || 'Add a new integration to your environment. Note: This will not deploy the integration, it will only create the integration instance.'}
-        onClose={() => setIsOpen(false)}
-        onSubmit={handleSubmit}
-        submitLabel="Create Integration"
-      >
-        <AddIntegrationForm
-          ref={formRef}
-          componentKey={componentKey}
-          existingIntegrationNames={integrationPackInstances
-            .map((i) => i.integrationPackOverrideName || i.integrationPackName)
-            .filter((n): n is string => !!n)}
-        />
-      </Modal>
+      {addIntegrationLayout === 'form' ? (
+        <Modal
+          isOpen={isOpen}
+          title={`${boomiConfig?.components?.[componentKey]?.form?.addIntegration?.title || 'Add Integration'}`}
+          description={boomiConfig?.components?.[componentKey]?.form?.addIntegration?.description || 'Add a new integration to your environment. Note: This will not deploy the integration, it will only create the integration instance.'}
+          onClose={() => setIsOpen(false)}
+          onSubmit={handleSubmit}
+          submitLabel="Create Integration"
+        >
+          <AddIntegrationForm
+            ref={formRef}
+            componentKey={componentKey}
+            existingIntegrationNames={existingIntegrationNames}
+          />
+        </Modal>
+      ) : (
+        <Modal
+          isOpen={isOpen}
+          size="wide"
+          title={`${boomiConfig?.components?.[componentKey]?.form?.addIntegration?.title || 'Add Integration'}`}
+          description={boomiConfig?.components?.[componentKey]?.form?.addIntegration?.description || 'Choose an integration to install. This creates the integration instance in the selected environment; it does not deploy it.'}
+          onClose={() => setIsOpen(false)}
+          showSaveButton={false}
+          showCancelButton={false}
+        >
+          {isOpen && (
+            <AddIntegrationCatalog
+              componentKey={componentKey}
+              renderType={renderType}
+              existingIntegrationNames={existingIntegrationNames}
+              onInstall={installIntegration}
+            />
+          )}
+        </Modal>
+      )}
       <Page
         componentKey={componentKey}
         componentName='integrations'
