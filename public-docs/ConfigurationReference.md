@@ -44,6 +44,21 @@ BoomiPlugin({
 
 ---
 
+### Environment scope (login body `environments`)
+
+The login body your server posts to `POST /api/v1/auth/login` may carry `environments: string[]`. When present, **every** environment, instance and eligible-pack list for that tenant's sessions is limited to those environment ids: the environment dropdown shows only them, the integrations list shows only instances attached to at least one of them, and eligible packs report where they are installed within them. Omit it, or send an empty array, for all environments in the child account (the pre-1.7 behavior). Login rejects ids that are not environments of the child account with `422 Environment scope invalid: …`.
+
+```js
+const LOGIN_BODY = {
+  url, parentAccountId, childAccountId, accountGroup, apiUserName, apiToken,
+  environments: ['19f7dd46-d6e7-4ef4-a7aa-11373222ab6c'],   // optional session scope
+  ai: { … },
+  oauth2: { connections: {} },
+};
+```
+
+Instances returned to the client now carry `environments: [{ id, name, classification }]`, every in-scope attachment, in addition to the legacy single `environmentId` (the first of them).
+
 ## 2. boomi.config.js — Top-Level Structure
 
 `boomi.config.js` (or any JS/TS file you import) exports the `PluginUiConfig` object passed as `boomiConfig` to `BoomiPlugin()`.
@@ -382,6 +397,37 @@ components: {
 | `convertFunctionsToScript` | `boolean` | `false` | Let customers edit **platform-defined** functions (CurrentDate, TrimWhitespace, user-defined functions, …) by compiling them to a Custom Scripting function first. Off: those functions render with their connections, can be wired and deleted, and have no Edit action. On: convertible types gain Edit; choosing it compiles deterministically (no LLM), opens the Transformation Editor and emits `map.function.converted`; saving replaces the partner's function with the customer's script. Requires `embedkit-server` on `@boomi/embedkit-sdk` 1.4.0. See [Transformation Editor § 11](./TransformationEditor.md#11-editing-platform-defined-functions-convert-to-script). |
 
 > **Default mappings arrive at install.** Since `@boomi/embedkit-sdk` 1.4.0 the server copies the publisher's default mappings and functions into a new instance's map extensions during install, so **Edit Map(s)** opens with them already drawn. The result is reported through the `map.defaults.seeded` event.
+
+### Add Integration Catalog (`form.addIntegration`)
+
+Since 1.7.0 the Add Integration modal is a **catalog**: a search box over pack names, descriptions and connectors, a card or table view, and one card per eligible pack showing its install type, connector icons and where it is already installed. Selecting a pack opens the install step. The environment list is the session's scoped list (see [Environment scope](#environment-scope-login-body-environments)); for **single-install** packs it also excludes environments that already hold the pack, preselects when exactly one remains, and disables install when none do.
+
+```js
+components: {
+  myIntegrations: {
+    renderType: 'integration',
+    form: {
+      addIntegration: {
+        layout: 'catalog',                     // default. 'form' restores the pre-1.7 dropdown form.
+        catalog: { defaultView: 'grid', showViewToggle: true, searchPlaceholder: 'Search integrations or connectors' },
+        showEnvironmentSelect: true,           // false: install into defaultEnvironmentId without asking
+        defaultEnvironmentId: '…',
+        allowDuplicateIntegrationNames: false,
+        integrationPackName: { label: 'Integration Name', editable: true },
+      },
+    },
+  },
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `layout` | `'catalog' \| 'form'` | `'catalog'` | Which Add Integration experience to render. |
+| `catalog.defaultView` | `'grid' \| 'table'` | `'grid'` | Initial catalog layout. |
+| `catalog.showViewToggle` | `boolean` | `true` | Show the card/table switch. |
+| `catalog.searchPlaceholder` | `string` | built-in | Search box placeholder. |
+
+The remaining `form.addIntegration` keys below apply to both layouts. Connector icons are keyed by connector kind (`salesforce`, `sftp`, `http`, `database`, …); unknown kinds render an initials badge. Override colors with `--boomi-connector-icon-fg` / `--boomi-connector-icon-bg`.
 
 ### Add Integration Form (`form.addIntegration`)
 

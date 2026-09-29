@@ -13,7 +13,19 @@
 
 ### Unreleased
 
-_Nothing pending — everything below has shipped._
+<details open>
+  <summary><strong>Environment scope &amp; Add Integration catalog</strong> — scoped sessions, all attachments per instance, searchable install catalog with connector icons</summary>
+
+  **Bug fixes**
+  - 🐛 **Instances attached to several environments no longer collapse to one** — The integrations list kept only the *last* environment attachment per instance, so a single-install pack deployed to several environments showed up once, pointing at an arbitrary environment, and Edit Connections / Maps / Schedules operated on that environment. Instances now carry `environments: [{ id, name, classification }]` with every in-scope attachment; `environmentId` remains as the first of them.
+  - 🐛 **`environmentSelect.includeEnvironments` now works** — the server expected a differently named parameter and always returned all classifications.
+
+  **New**
+  - ✅ **Environment scope** — Send `environments: [ids]` in the login body to limit a tenant's sessions to those environments across the environment dropdown, the integrations list and the eligible-pack catalog. Login validates the ids. See [Environment scope](./ConfigurationReference.md#environment-scope-login-body-environments).
+  - ✅ **Add Integration catalog** — The Add Integration modal is now a searchable catalog with card/table views, connector icons per pack, and "installed in N environments" chips. Selecting a pack opens the install step; for single-install packs the environment list excludes environments that already hold the pack, preselects when one remains, and disables install when none do. `form.addIntegration.layout: 'form'` restores the previous dropdown form. See [Add Integration Catalog](./ConfigurationReference.md#add-integration-catalog-formaddintegration).
+  - ✅ **Dependency** — Requires `@boomi/embedkit-sdk` with environment scope (unreleased; next minor) and an `embedkit-server` on the same.
+
+</details>
 
 ---
 
