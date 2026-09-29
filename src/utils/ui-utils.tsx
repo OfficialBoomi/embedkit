@@ -12,6 +12,26 @@ import {
 import { PositionedFunction } from '../types/positioned-function';
 import logger from '../logger.service';
 
+
+/**
+ * Platform-defined function types the SDK can compile into a Custom Scripting
+ * function (see embedkit-sdk CONVERTIBLE_FUNCTION_TYPES; keep in sync). The server
+ * is authoritative: it rejects anything else with 422.
+ */
+export const CONVERTIBLE_FUNCTION_TYPES = new Set([
+  'CurrentDate', 'DateFormat',
+  'TrimWhitespace', 'LeftTrim', 'RightTrim', 'StringToLower', 'StringToUpper',
+  'StringAppend', 'StringPrepend', 'StringRemove', 'StringReplace', 'StringConcat', 'StringSplit',
+  'MathAdd', 'MathSubtract', 'MathMultiply', 'MathDivide', 'MathABS', 'MathCeil', 'MathFloor', 'MathSetPrecision',
+  'UserDefined',
+]);
+export const isConvertibleFunctionType = (type: unknown): boolean =>
+  CONVERTIBLE_FUNCTION_TYPES.has(String(type ?? ''));
+
+/** The only function type the Transformation Editor can author. */
+export const isCustomScripting = (type: unknown): boolean =>
+  String(type ?? '').replace(/[\s_-]/g, '').toLowerCase() === 'customscripting';
+
 /**
  * Converts an array of `PositionedFunction` (local UI model) into
  * Boomi `MapExtensionsFunction` objects, returning both the converted functions
@@ -34,6 +54,13 @@ export function toMapExtensionsFunctions(
 
     if (fn.id !== finalId) {
       idMap[fn.id] = finalId;
+    }
+
+    // Platform-defined functions (CurrentDate, TrimWhitespace, UserDefined, ...) are not
+    // authored in the Transformation Editor. Send the original definition back verbatim,
+    // only re-keyed, so their configuration and cache type survive the round trip.
+    if (fn.raw && !isCustomScripting(fn.raw.type)) {
+      return { ...fn.raw, id: finalId };
     }
 
     return {
@@ -93,18 +120,31 @@ export function fromMapExtensionsFunctions(
   if (!boomiFunctions) return [];
 
   return boomiFunctions.map((fn) => {
-    const inputs =
-      fn.Configuration?.Scripting?.Inputs?.Input?.map((input) => ({
-        key: input.index ?? 0,
-        name: input.name ?? '',
-        dataType: input.dataType ?? ScriptingParameter.dataType.CHARACTER,
-      })) || [];
+    const scripting = isCustomScripting(fn.type);
 
+    // Scripting functions describe their pins in Configuration.Scripting; every other
+    // function type (and a scripting function without that block) describes them in
+    // Inputs/Outputs. Reading only the scripting block left platform-defined functions
+    // with no pins, so their mapping lines could not be drawn.
+    const scriptInputs = fn.Configuration?.Scripting?.Inputs?.Input;
+    const inputs =
+      (scripting && scriptInputs?.length
+        ? scriptInputs.map((input) => ({
+            key: input.index ?? 0,
+            name: input.name ?? '',
+            dataType: input.dataType ?? ScriptingParameter.dataType.CHARACTER,
+          }))
+        : fn.Inputs?.Input?.map((input) => ({
+            key: input.key ?? 0,
+            name: input.name ?? '',
+            dataType: ScriptingParameter.dataType.CHARACTER,
+          }))) || [];
+
+    const scriptOutputs = fn.Configuration?.Scripting?.Outputs?.Output;
     const outputs =
-      fn.Configuration?.Scripting?.Outputs?.Output?.map((output) => ({
-        key: output.index ?? 0,
-        name: output.name ?? '',
-      })) || [];
+      (scripting && scriptOutputs?.length
+        ? scriptOutputs.map((output) => ({ key: output.index ?? 0, name: output.name ?? '' }))
+        : fn.Outputs?.Output?.map((output) => ({ key: output.key ?? 0, name: output.name ?? '' }))) || [];
 
     return {
       id: fn.id ?? '',
@@ -113,6 +153,8 @@ export function fromMapExtensionsFunctions(
       inputs,
       outputs,
       script: fn.Configuration?.Scripting?.Script ?? '',
+      editable: scripting,
+      ...(scripting ? {} : { raw: fn }),
       x: undefined,
       y: undefined,
     };

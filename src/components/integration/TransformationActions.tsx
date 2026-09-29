@@ -24,11 +24,12 @@ import DropdownMenu from '../ui/DropdownMenu';
  * @description
  * Props for the `MappingFunctionActions` component.
  *
- * @property {() => void} onEditTransformation - Callback invoked when edit is requested.
+ * @property {() => void} [onEditTransformation] - Callback invoked when edit is requested. Omit it for
+ *   platform-defined functions (CurrentDate, UserDefined, ...) that the editor cannot author; the Edit item is hidden.
  * @property {() => void} onDeleteTransformation - Callback invoked when delete is requested.
  */
 interface MappingFunctionActionsProps {
-  onEditTransformation: () => void;
+  onEditTransformation?: () => void;
   onDeleteTransformation: () => void;
 }
 
@@ -38,18 +39,20 @@ const MappingFunctionActions: React.FC<MappingFunctionActionsProps> = ({
 }) => {
   return (
     <DropdownMenu>
-      <Menu.Item>
-        {({ active }) => (
-          <button
-            onClick={onEditTransformation}
-            className="boomi-menu-item"
-            data-headlessui-state={active ? 'active' : undefined}
-          >
-            <AiOutlineEdit className="boomi-menu-icon" />
-            Edit Transformation
-          </button>
-        )}
-      </Menu.Item>
+      {onEditTransformation && (
+        <Menu.Item>
+          {({ active }) => (
+            <button
+              onClick={onEditTransformation}
+              className="boomi-menu-item"
+              data-headlessui-state={active ? 'active' : undefined}
+            >
+              <AiOutlineEdit className="boomi-menu-icon" />
+              Edit Transformation
+            </button>
+          )}
+        </Menu.Item>
+      )}
       <Menu.Item>
         {({ active }) => (
           <button

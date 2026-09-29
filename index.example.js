@@ -126,3 +126,193 @@ function clearCtx() {
            theme:{enabled:false, defaultTheme:''}, ai:{enabled:false, model:''} });
 }
 window.addEventListener('boomi:context', (e) => setCtx(e.detail));
+
+// ---- in-page console ----
+// Mirrors console.* into the #inpage-console panel with a level filter and a
+// Clear button, so plugin logs are visible without opening devtools.
+(function setupInPageConsole() {
+  const box = document.getElementById('inpage-console');
+  if (!box) return;
+
+  const MAX_LINES = 500;
+  const LEVELS = { debug: 10, log: 15, info: 20, warn: 30, error: 40, off: 100 };
+  const levelSelect = document.getElementById('log-level');
+  let currentLevel = LEVELS[(levelSelect?.value || 'debug')] ?? LEVELS.debug;
+  const history = [];
+
+  const orig = {
+    log:   console.log.bind(console),
+    info:  console.info?.bind(console)  || console.log.bind(console),
+    warn:  console.warn.bind(console),
+    error: console.error.bind(console),
+    debug: console.debug?.bind(console) || console.log.bind(console),
+  };
+
+  const kindToLevel = (kind) => LEVELS[kind] ?? LEVELS.debug;
+
+  const normalize = (args) => args.map(a => {
+    if (typeof a === 'string') return a;
+    try { return JSON.stringify(a, null, 2); } catch { return String(a); }
+  }).join(' ');
+
+  function render() {
+    box.innerHTML = '';
+    const filtered = history.filter(m => kindToLevel(m.kind) >= currentLevel);
+    const toShow = filtered.slice(-MAX_LINES);
+    for (const m of toShow) {
+      const line = document.createElement('div');
+      line.className = m.kind;
+      line.textContent = m.text;
+      box.appendChild(line);
+    }
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function push(kind, args) {
+    history.push({ kind, text: normalize(args) });
+    if (history.length > 5000) history.splice(0, history.length - 5000);
+    render();
+  }
+
+  ['log', 'info', 'warn', 'error', 'debug'].forEach(kind => {
+    console[kind] = (...args) => {
+      orig[kind](...args);
+      push(kind, args);
+    };
+  });
+
+  document.getElementById('clear-console')?.addEventListener('click', () => {
+    history.length = 0;
+    render();
+  });
+
+  levelSelect?.addEventListener('change', (e) => {
+    const val = (e.target?.value || 'debug');
+    currentLevel = LEVELS[val] ?? LEVELS.debug;
+    render();
+  });
+
+  render();
+})();
+
+// ---- console panel resizer ----
+// Drag the divider (or use arrow keys / double-click) to resize the console.
+(function enableSplitResize() {
+  const root      = document.documentElement;
+  const workbench = document.querySelector('.workbench');
+  const pluginEl  = document.querySelector('.plugin-host');
+  const resizer   = document.querySelector('.workbench-resizer');
+  const consoleEl = document.getElementById('inpage-console');
+  const headerEl  = document.querySelector('.console-header');
+
+  if (!workbench || !pluginEl || !resizer || !consoleEl) return;
+
+  const STORAGE_KEY    = 'embedkit.console.height';
+  const MIN_CONSOLE_H  = 32;   
+  const MIN_PLUGIN_H   = 160;  
+  let startY = 0;
+  let startConsoleH = 0;
+
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY) || '', 10);
+  if (!Number.isNaN(saved)) {
+    root.style.setProperty('--console-height', `${saved}px`);
+  }
+
+  function totalAvailable() {
+    return workbench.getBoundingClientRect().height;
+  }
+  function partsHeights() {
+    const resizerH = resizer.getBoundingClientRect().height
+      + parseFloat(getComputedStyle(resizer).marginTop || 0)
+      + parseFloat(getComputedStyle(resizer).marginBottom || 0);
+    const headerH = headerEl?.getBoundingClientRect().height || 0;
+    return { resizerH, headerH };
+  }
+
+  function clampConsoleHeight(nextPx) {
+    const total = totalAvailable();
+    const { resizerH, headerH } = partsHeights();
+    const minForConsole = MIN_CONSOLE_H;
+    const maxForConsole = Math.max(
+      MIN_CONSOLE_H,
+      total - resizerH - MIN_PLUGIN_H - headerH
+    );
+    return Math.min(Math.max(nextPx, minForConsole), maxForConsole);
+  }
+
+  function startDrag(clientY) {
+    startY = clientY;
+    startConsoleH = consoleEl.getBoundingClientRect().height;
+    document.body.classList.add('resizing');
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup',   endDrag);
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend',  endDrag);
+  }
+
+  function onMouseDown(e) { e.preventDefault(); startDrag(e.clientY); }
+  function onTouchStart(e) { if (e.touches?.[0]) { e.preventDefault(); startDrag(e.touches[0].clientY); } }
+
+  function onMouseMove(e) { e.preventDefault(); applyDelta(e.clientY - startY); }
+  function onTouchMove(e) {
+    if (!e.touches?.[0]) return;
+    e.preventDefault();
+    applyDelta(e.touches[0].clientY - startY);
+  }
+
+  function applyDelta(dy) {
+    const next = clampConsoleHeight(startConsoleH - dy);
+    root.style.setProperty('--console-height', `${next}px`);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function endDrag() {
+    document.body.classList.remove('resizing');
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup',   endDrag);
+    window.removeEventListener('touchmove', onTouchMove);
+    window.removeEventListener('touchend',  endDrag);
+    const h = parseInt(getComputedStyle(consoleEl).height, 10);
+    localStorage.setItem(STORAGE_KEY, String(h));
+  }
+
+  resizer.addEventListener('keydown', (e) => {
+    const step = e.shiftKey ? 64 : 16;
+    let delta = 0;
+    if (e.key === 'ArrowUp') delta = -step;    
+    else if (e.key === 'ArrowDown') delta = step;
+    if (delta) {
+      e.preventDefault();
+      const now = parseInt(getComputedStyle(consoleEl).height, 10) || 220;
+      const h = clampConsoleHeight(now - delta); 
+      root.style.setProperty('--console-height', `${h}px`);
+      localStorage.setItem(STORAGE_KEY, String(h));
+    }
+  });
+
+  let lastSavedBeforeCollapse = saved || 220;
+  resizer.addEventListener('dblclick', () => {
+    const current = parseInt(getComputedStyle(consoleEl).height, 10) || 220;
+    if (current > MIN_CONSOLE_H + 8) {
+      lastSavedBeforeCollapse = current;
+      root.style.setProperty('--console-height', `${MIN_CONSOLE_H}px`);
+      localStorage.setItem(STORAGE_KEY, String(MIN_CONSOLE_H));
+    } else {
+      const restored = clampConsoleHeight(lastSavedBeforeCollapse);
+      root.style.setProperty('--console-height', `${restored}px`);
+      localStorage.setItem(STORAGE_KEY, String(restored));
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    const current = parseInt(getComputedStyle(consoleEl).height, 10) || 220;
+    const clamped = clampConsoleHeight(current);
+    if (clamped !== current) {
+      root.style.setProperty('--console-height', `${clamped}px`);
+      localStorage.setItem(STORAGE_KEY, String(clamped));
+    }
+  });
+
+  resizer.addEventListener('mousedown', onMouseDown);
+  resizer.addEventListener('touchstart', onTouchStart, { passive: false });
+})();
