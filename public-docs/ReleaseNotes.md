@@ -6,27 +6,42 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.5.1-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.6.1-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
 
 ### Unreleased
 
-<details open>
-  <summary><strong>Event Hooks for JS Hosts</strong> — Integration, connection, map, schedule, AI, and agent audit events</summary>
+_Nothing pending — everything below has shipped._
 
-  **Highlights**
-  - ✅ **Every embed action is now an event** — Installing or deleting an integration pack, running processes, saving connections, resolving OAuth, editing maps, saving schedules, generating an AI transformation, and agent session/message activity all emit a typed event on the existing event bus (`onEvent` / `BoomiEvents.on` / `boomi:event`). This lets a **non-React, vanilla-JS host** (an Angular wrapper calling `BoomiPlugin` / `RenderComponent` / `DestroyPlugin` directly, for example) build an audit trail without any EmbedKit hooks.
-  - ✅ **Credential-safe payloads** — Connection/environment-extension events report which field *keys* changed, never the values — those fields commonly carry connector credentials. Map events report counts and names, not full mapping data.
-  - ✅ **`outcome` on the envelope** — Every event now carries `outcome: 'success' | 'error'` (currently always `'success'`; reserved for a future failure-emission pass).
-  - ✅ **Documentation** — [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks) now documents every event type, when it fires, and its payload shape; [Getting Started](./GettingStarted.md#audit-logging-from-vanilla-js) adds a vanilla-JS audit-logging walkthrough.
-  - ℹ️ Integration-management events (`integration.*`, `connection.*`, `map.*`, `schedules.*`, `ai.*`) require the **Integration method** (npm) — the CDN embed only mounts Agent components, so only `feedback` and `agent.*` events fire there.
+---
+
+### All Releases
+
+<details open>
+  <summary><strong>v1.6.1</strong> — Partner default mappings on install, platform-function round-trip, opt-in convert-to-script</summary>
+
+  **Bug fixes**
+  - 🐛 **Partner default mappings now appear on a fresh install** — Opening **Edit Map(s)** on a newly installed integration pack used to show an empty canvas even when the publisher had pre-configured field mappings and functions on the map. The Boomi Platform only returns those defaults when asked (`X-BOOMI-includeDefaultMappings`, Integration release May 2026), and EmbedKit never asked. `@boomi/embedkit-sdk` **1.4.0** now copies every default mapping and function into the instance's environment map extensions **once, during install**, so they open as ordinary, editable mappings. The copy is idempotent (a map that already has extensions is left alone) and never fails the install; its outcome is emitted as the new `map.defaults.seeded` event. Default functions that reference the publisher's **user-defined functions** are recreated as environment-level functions on the customer's map, because the platform rejects a cross-account reference.
+  - 🐛 **Saving a map no longer destroys platform-defined functions** — The mapping canvas only understood Custom Scripting functions: it read pins from `Configuration.Scripting` alone and rewrote every function as an empty script on save, so a map containing `CurrentDate`, `TrimWhitespace`, a user-defined function, etc. was corrupted on the first save and rejected by the platform. Those functions now load their pins from `Inputs`/`Outputs`, render with their connections, and are sent back **exactly as received**. They can be wired and deleted; **Edit** is hidden for them unless conversion is enabled (below).
+  - 🐛 **Example dev harness console** — `index.example.js` now installs the in-page console interceptor and panel resizer that `index.example.html` and the harness docs already described; a fresh copy of the example previously showed an empty console.
+
+  **New**
+  - ✅ **Convert platform-defined functions to scripts (opt-in)** — With `updateMaps.convertFunctionsToScript: true` (default `false`), platform-defined functions of a convertible type gain an **Edit** action. Choosing it compiles the function to JavaScript **deterministically, without an LLM** (21 standard string/math/date types, plus user-defined functions flattened step by step), opens the result in the Transformation Editor, and emits `map.function.converted`. From then on it is a customer-owned scripting function the editor's AI assistant can change; saving replaces the partner's function. Functions that need platform services (lookups, properties, document cache) or cross-document state (`Count`, `Sum`, `RunningTotal`, `SequentialValue`, `LineItemIncrement`) and `NumberFormat` are not convertible and keep no Edit action. A Groovy scripting step inside a UDF is emitted as a commented TODO and flagged rather than translated. See [Transformation Editor § 11](./TransformationEditor.md#11-editing-platform-defined-functions-convert-to-script).
+  - ✅ **Delete-restores-default note** — Update Maps shows a short note that removing a mapping restores the partner's default for that field (the default still lives on the map component). Configurable via `updateMaps.showDefaultsNote` / `updateMaps.defaultsNote`.
+  - ✅ **New events** — `map.defaults.seeded` (per-map counts of what was copied, skipped or failed at install) and `map.function.converted` (function id, type, compiler warnings). See [All Event Types](./ConfigurationReference.md#all-event-types).
+  - ✅ **Dependency** — Updated `@boomi/embedkit-sdk` to **1.4.0**. **Server:** `embedkit-server` must run 1.4.0 as well (`main` ≥ `d1f9fef`) for installs to seed and for the new `POST /api/v1/map-extensions/compile-function` route to exist; a client on 1.6.1 against an older server simply behaves as before.
+
+  > **Existing installs are not back-filled.** Instances created before the server moved to SDK 1.4.0 keep their current (empty) map extensions. Re-installing the pack, or running the seed for that instance, brings the defaults in.
 
 </details>
 
-<details open>
-  <summary><strong>Callback Dialog & Toast Theming</strong> — CSS fixes, new typography/font tokens, structural options</summary>
+---
+
+<details>
+  <summary><strong>v1.6.0</strong> — Callback dialog &amp; toast theming</summary>
+
 
   **Bug fixes**
   - 🐛 **Six documented `--boomi-swal-*` tokens now actually work** — `--boomi-swal-title-fg`, `-desc-fg`, `-overlay-bg`, `-icon-success`, `-icon-warning`, and `-icon-error` were documented and offered in the Admin Console theme builder, but the dialog CSS read different (undocumented) legacy variable names instead, so setting them had no effect. They're now wired directly, falling back to those legacy names so existing configs that were already using them are unaffected.
@@ -40,11 +55,28 @@
   - ✅ **New toast typography/layout tokens** — `--boomi-toast-font`, `-font-size`, `-font-weight`, `-line-height`, `-padding`, `-min-height`, `-icon-size`, and `-progress-display` (set to `none` to hide the timer progress bar). See [Toast Notifications](./ConfigurationReference.md#toast-notifications).
   - ✅ **`boomiConfig.dialogs` structural options** — `buttonOrder` (`'cancel-first'` default | `'confirm-first'`), `showIcon`, and `destructiveVariant` (renders the confirm button with a new `--boomi-btn-danger-*` token family for `warning`-type dialogs). None of these change functional behavior (button actions, callback payloads, dismiss/confirm logic) — see [Dialog Structural Options](./ConfigurationReference.md#dialog-structural-options).
 
+
 </details>
 
 ---
 
-### All Releases
+<details>
+  <summary><strong>v1.5.3</strong> — Event hooks for JS hosts (also v1.5.2)</summary>
+
+  > v1.5.2 and v1.5.3 were published on the same day; v1.5.3 is the one to use.
+
+
+  **Highlights**
+  - ✅ **Every embed action is now an event** — Installing or deleting an integration pack, running processes, saving connections, resolving OAuth, editing maps, saving schedules, generating an AI transformation, and agent session/message activity all emit a typed event on the existing event bus (`onEvent` / `BoomiEvents.on` / `boomi:event`). This lets a **non-React, vanilla-JS host** (an Angular wrapper calling `BoomiPlugin` / `RenderComponent` / `DestroyPlugin` directly, for example) build an audit trail without any EmbedKit hooks.
+  - ✅ **Credential-safe payloads** — Connection/environment-extension events report which field *keys* changed, never the values — those fields commonly carry connector credentials. Map events report counts and names, not full mapping data.
+  - ✅ **`outcome` on the envelope** — Every event now carries `outcome: 'success' | 'error'` (currently always `'success'`; reserved for a future failure-emission pass).
+  - ✅ **Documentation** — [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks) now documents every event type, when it fires, and its payload shape; [Getting Started](./GettingStarted.md#audit-logging-from-vanilla-js) adds a vanilla-JS audit-logging walkthrough.
+  - ℹ️ Integration-management events (`integration.*`, `connection.*`, `map.*`, `schedules.*`, `ai.*`) require the **Integration method** (npm) — the CDN embed only mounts Agent components, so only `feedback` and `agent.*` events fire there.
+
+
+</details>
+
+---
 
 <details open>
   <summary><strong>v1.5.1</strong> — Single-install integration pack connections & maps, response feedback & standardized event callbacks</summary>

@@ -356,6 +356,33 @@ components: {
 | `description` | `string` | Override text for the component description. |
 | `mapping.useTreeMode` | `boolean` | When `true`, the mapping canvas uses tree view instead of the default layout. |
 
+### Update Maps (`updateMaps`)
+
+Options for the **Edit Map(s)** screen, under `components[componentKey].updateMaps`.
+
+```js
+components: {
+  myIntegrations: {
+    renderType: 'integration',
+    updateMaps: {
+      title: 'Map Fields',
+      showDescription: true,
+      showDefaultsNote: true,                 // default
+      convertFunctionsToScript: false,        // default — opt in per host
+    },
+  },
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `showTitle` / `title` | `boolean` / `string` | `true` / `'Map Fields'` | Show or override the screen title. |
+| `showDescription` / `description` | `boolean` / `string` | `true` / `'Please map fields below.'` | Show or override the description line. |
+| `showDefaultsNote` / `defaultsNote` | `boolean` / `string` | `true` / built-in copy | Note explaining that removing a mapping restores the partner's default for that field. Defaults copied in at install are ordinary mappings, but the original still lives on the map component, so deleting the copy reverts rather than removes. |
+| `convertFunctionsToScript` | `boolean` | `false` | Let customers edit **platform-defined** functions (CurrentDate, TrimWhitespace, user-defined functions, …) by compiling them to a Custom Scripting function first. Off: those functions render with their connections, can be wired and deleted, and have no Edit action. On: convertible types gain Edit; choosing it compiles deterministically (no LLM), opens the Transformation Editor and emits `map.function.converted`; saving replaces the partner's function with the customer's script. Requires `embedkit-server` on `@boomi/embedkit-sdk` 1.4.0. See [Transformation Editor § 11](./TransformationEditor.md#11-editing-platform-defined-functions-convert-to-script). |
+
+> **Default mappings arrive at install.** Since `@boomi/embedkit-sdk` 1.4.0 the server copies the publisher's default mappings and functions into a new instance's map extensions during install, so **Edit Map(s)** opens with them already drawn. The result is reported through the `map.defaults.seeded` event.
+
 ### Add Integration Form (`form.addIntegration`)
 
 Configures the "Add Integration" install form for an integration component, under `components[componentKey].form.addIntegration`.
@@ -1451,6 +1478,8 @@ type EmbedKitEvent<T> = {
 | `connection.extensions.updated` | A user saves connection/environment-extension changes | `{ integrationPackInstanceId, environmentId?, installationType?, updatedFieldKeys: string[] }` |
 | `connection.oauth.initiated` | A user starts an OAuth2 connector authorization flow | `{ integrationPackInstanceId, environmentId?, connectionId, fieldId }` |
 | `map.extensions.updated` | A user changes a field mapping or a transformation function | `{ integrationPackInstanceId, environmentId?, mapId, action: 'mapping' \| 'function-change' \| 'function-delete' \| 'function-edit', functionId?, functionName?, updatedCount? }` |
+| `map.defaults.seeded` | An integration pack instance was installed and the publisher's default mappings were copied into its map extensions (server on `@boomi/embedkit-sdk` ≥ 1.4.0) | `{ integrationPackInstanceId, environmentId?, summariesFound, seeded: { mapExtensionId, name?, mappings, functions }[], skipped: { mapExtensionId, name?, reason }[], failed: { mapExtensionId?, name?, error }[] }` |
+| `map.function.converted` | A user chose **Edit** on a platform-defined function with `updateMaps.convertFunctionsToScript` on, and it was compiled to a script | `{ mapId, functionId, type, warnings: string[] }` |
 | `map.browse.executed` | A user resolves dynamic-browse candidates (re-authenticating a connector mid-mapping) | `{ integrationPackInstanceId, mapId, succeededCount, failedCount }` |
 | `schedules.updated` | A user saves process schedule changes | `{ integrationPackInstanceId, environmentId?, scheduleCount }` |
 | `ai.transformation.generated` | A user generates a transformation script via AI | `{ integrationPackInstanceId?, functionId, prompt }` |

@@ -259,6 +259,16 @@ Persist a map (including its transformation functions) to Boomi.
 
 Returns the updated `EnvironmentMapExtension` (`200`).
 
+### `POST /api/v1/map-extensions/compile-function`
+
+Compiles a platform-defined extended map function into a Custom Scripting equivalent. Used by the opt-in `updateMaps.convertFunctionsToScript` flow (see § 11). Requires `@boomi/embedkit-sdk` ≥ 1.4.0 on the server.
+
+```json
+{ "function": { "id": "FUNCEXT--0000000002", "type": "UserDefined", "Inputs": {}, "Outputs": {}, "Configuration": { "UserDefinedFunction": { "id": "…", "version": 1 } } } }
+```
+
+Response `200`: `{ language: 'Javascript', script, inputs: [{ key, name, dataType }], outputs: [{ key, name }], warnings: string[] }`. `422`: the type is not convertible.
+
 ### Related Map Extension routes
 
 | Route | Purpose |
@@ -333,3 +343,31 @@ See [Configuration Reference → CSS Design Tokens](./ConfigurationReference.md#
 ---
 
 *For first-time setup see [Getting Started](./GettingStarted.md). For all configuration options and CSS tokens see [Configuration Reference](./ConfigurationReference.md). For the public/CDN embed flow see [CDN Configuration](./CDNConfiguration.md).*
+
+---
+
+## 11. Editing platform-defined functions (convert to script)
+
+Since `@boomi/embedkit-sdk` 1.4.0, installing an integration pack copies the publisher's default mappings **and functions** into the customer's map extensions, so **Edit Map(s)** opens with the partner's `CurrentDate`, `TrimWhitespace`, user-defined functions and so on already on the canvas. The Transformation Editor only authors Custom Scripting, so by default those functions show their connections, can be wired and deleted, but have **no Edit action** and are saved back to the platform exactly as received.
+
+Set `components[componentKey].updateMaps.convertFunctionsToScript: true` to let customers edit them. Choosing **Edit** on a convertible function:
+
+1. asks the server to compile it (`POST /api/v1/map-extensions/compile-function`) — deterministic templates, no LLM;
+2. opens the result in the editor with any compiler warnings as a banner comment at the top of the script;
+3. emits `map.function.converted`.
+
+Saving turns it into an ordinary Custom Scripting function and **replaces the partner's function**. Pin names become identifier-safe (`Original String` → `originalString`) while pin keys are preserved, so existing mapping lines keep working. From there the AI panel (§ 4) works on it like any other script.
+
+**What converts**
+
+| Group | Types |
+|---|---|
+| Strings | `TrimWhitespace`, `LeftTrim`, `RightTrim`, `StringToLower`, `StringToUpper`, `StringAppend`, `StringPrepend`, `StringRemove`, `StringReplace`, `StringConcat`, `StringSplit` |
+| Math | `MathAdd`, `MathSubtract`, `MathMultiply`, `MathDivide`, `MathABS`, `MathCeil`, `MathFloor`, `MathSetPrecision` |
+| Dates | `CurrentDate` (Boomi default mask `yyyyMMdd HHmmss.SSS`), `DateFormat` (Java-style masks `yyyy MM dd HH mm ss SSS`) |
+| Scripting | `CustomScripting` in JavaScript passes through. A **Groovy** script is emitted as a commented TODO with the original source and the warning `groovy-step` — rewrite it in JavaScript, or let the AI panel do it. |
+| User-defined | `UserDefined` — the function's steps are inlined in order as self-contained blocks and wired exactly as the UDF defines; every step must itself be convertible. |
+
+**What does not convert** (no Edit action even with the flag on): `SimpleLookup`, `CrossRefLookup`, `DocumentCacheLookup`, `PropertyGet`, `PropertySet`, `DocumentPropertyGet`, `DocumentPropertySet`, `JapaneseCharacterConversion` (platform services), `Count`, `Sum`, `RunningTotal`, `SequentialValue`, `LineItemIncrement` (state across documents), `NumberFormat`.
+
+> Converting is a one-way, customer-owned copy: it no longer follows the partner's function, and caching behaviour (`cacheType`) is not carried into the script. Keep the flag off if you want customers to stay on the partner's functions.
