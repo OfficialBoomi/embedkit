@@ -3692,9 +3692,24 @@
   /* One fixed-height, non-wrapping row of identical tiles, centered on the card. */
   --_row-art: var(--boomi-connector-icon-art, 28px);
   display: flex; flex-wrap: nowrap; align-items: center; justify-content: center;
-  gap: var(--boomi-connector-icon-gap, 0.5rem); width: 100%; flex: 0 0 auto;
+  gap: 0; width: 100%; flex: 0 0 auto;
   height: var(--boomi-connector-icon-tile, calc(var(--_row-art) + 1rem));
   margin: 0.25rem 0;
+}
+/* Overlapping stack, left to right: each tile slides slightly under the next. */
+.boomi-catalog-connectors > .boomi-connector-icon {
+  position: relative;
+  background-color: var(--boomi-connector-icon-solid-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff)));
+  box-shadow: 0 0 0 2px var(--boomi-connector-icon-ring, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff)));
+  transition: transform 120ms ease;
+}
+.boomi-catalog-connectors > .boomi-connector-icon + .boomi-connector-icon {
+  margin-left: calc(-1 * var(--boomi-connector-icon-overlap, 0.625rem));
+}
+.boomi-catalog-connectors > .boomi-connector-icon:hover { transform: translateY(-2px); z-index: 5; }
+@media (prefers-reduced-motion: reduce) {
+  .boomi-catalog-connectors > .boomi-connector-icon { transition: none; }
+  .boomi-catalog-connectors > .boomi-connector-icon:hover { transform: none; }
 }
 .boomi-catalog-connectors--empty { opacity: 0.8; }
 .boomi-catalog-more, .boomi-catalog-muted { font-size: 0.75rem; color: var(--boomi-muted, inherit); opacity: 0.8; }
@@ -3719,14 +3734,14 @@
   border-radius: var(--boomi-connector-icon-radius, 0.625rem);
   border: var(--boomi-connector-icon-border, 1px solid color-mix(in srgb, currentColor 12%, transparent));
   color: var(--boomi-connector-icon-fg, var(--boomi-accent, currentColor));
-  background: var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent));
+  background-image: linear-gradient(var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent)), var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent)));
 }
 .boomi-connector-icon > svg,
 .boomi-connector-icon > img {
   display: block; flex: 0 0 auto; margin: auto;
   width: var(--_art); height: var(--_art); object-fit: contain;
 }
-.boomi-connector-icon--image { background: var(--boomi-connector-icon-image-bg, var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent))); }
+.boomi-connector-icon--image { background-image: linear-gradient(var(--boomi-connector-icon-image-bg, var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent))), var(--boomi-connector-icon-image-bg, var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent)))); }
 .boomi-connector-icon__badge,
 .boomi-connector-icon--more { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.02em; line-height: 1; text-align: center; }
 .boomi-connector-icon--more { color: var(--boomi-muted, inherit); }

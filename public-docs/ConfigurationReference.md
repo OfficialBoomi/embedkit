@@ -433,9 +433,9 @@ The remaining `form.addIntegration` keys below apply to both layouts.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `catalog.connectorIconSize` | `number` | `28` | Size of the icon art in px. Each icon sits in a rounded-square tile 16px larger (44px by default), centered. Cards show one centered row of up to four tiles at the same position on every card; with more connectors the fourth tile shows `+N`. |
+| `catalog.connectorIconSize` | `number` | `28` | Size of the icon art in px. Each icon sits in a rounded-square tile 16px larger (44px by default), centered. Cards show one centered, overlapping stack of up to four tiles (each tucked slightly under the next, left to right) at the same position on every card; with more connectors the fourth tile shows `+N`. |
 
-> **Content Security Policy.** Host pages that restrict `img-src` must allow the platform host (for example `https://api.boomi.com`), or the icons fall back to glyphs. Tile tokens: `--boomi-connector-icon-tile` (tile size), `--boomi-connector-icon-radius` (default `0.5rem`), `--boomi-connector-icon-border`, `--boomi-connector-icon-bg`, `--boomi-connector-icon-image-bg` (behind platform images), `--boomi-connector-icon-fg` (glyph color) and `--boomi-connector-icon-gap` (space between tiles).
+> **Content Security Policy.** Host pages that restrict `img-src` must allow the platform host (for example `https://api.boomi.com`), or the icons fall back to glyphs. Tile tokens: `--boomi-connector-icon-tile` (tile size), `--boomi-connector-icon-radius` (default `0.5rem`), `--boomi-connector-icon-border`, `--boomi-connector-icon-bg`, `--boomi-connector-icon-image-bg` (behind platform images), `--boomi-connector-icon-fg` (glyph color), `--boomi-connector-icon-overlap` (how far tiles overlap, default `0.625rem`; `0` for side by side), `--boomi-connector-icon-ring` (separator ring, defaults to the card background) and `--boomi-connector-icon-solid-bg` (opaque tile base).
 
 ### Add Integration Form (`form.addIntegration`)
 
