@@ -5,12 +5,14 @@
  * @support https://bitbucket.org/officialboomi/embedkit
  *
  * @description
- * Small monochrome glyph for a connector kind, keyed by the SDK's
- * `connectorIconKey()` output (salesforce, sftp, http, database, ...).
- * Unknown kinds fall back to a two-letter badge so every connector still
- * renders. Colors come from the theme via `currentColor`.
+ * Icon for a connector. Prefers the platform's own connector icon (`iconUrl`,
+ * served by Boomi as a 24x24 SVG), rendered as an <img> so its markup never
+ * runs in the host page. Falls back to a local monochrome glyph keyed by the
+ * SDK's `connectorIconKey()` when there is no URL, the image fails to load, or
+ * the platform only has its generic placeholder for the type and we have a
+ * better glyph. Unknown kinds without either get a two-letter badge.
  */
-import React from 'react';
+import React, { useState } from 'react';
 
 type Glyph = React.ReactNode;
 
@@ -52,8 +54,14 @@ const GLYPHS: Record<string, Glyph> = {
 };
 
 export interface ConnectorIconProps {
-  /** Icon key from the SDK (connectorIconKey). */
+  /** Icon key from the SDK (connectorIconKey); drives the local glyph fallback. */
   iconKey?: string;
+  /** Platform icon URL from the SDK (connectorIconUrl). */
+  iconUrl?: string;
+  /** SDK flag: the platform only has a generic placeholder for this type. */
+  platformIconIsGeneric?: boolean;
+  /** User-facing connector label, e.g. "Boomi for SAP". */
+  displayName?: string;
   /** Connector name for the tooltip and the fallback badge. */
   name?: string;
   /** Connector kind (subType) for the tooltip. */
@@ -68,9 +76,45 @@ const initials = (s?: string) => {
   return parts.length === 1 ? parts[0].slice(0, 2).toUpperCase() : (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
-const ConnectorIcon: React.FC<ConnectorIconProps> = ({ iconKey = 'generic', name, type, size = 20, className = '' }) => {
+const ConnectorIcon: React.FC<ConnectorIconProps> = ({
+  iconKey = 'generic',
+  iconUrl,
+  platformIconIsGeneric = false,
+  displayName,
+  name,
+  type,
+  size = 20,
+  className = '',
+}) => {
+  const [imgFailed, setImgFailed] = useState(false);
   const glyph = GLYPHS[iconKey];
-  const title = [name, type && type !== name ? `(${type})` : ''].filter(Boolean).join(' ') || iconKey;
+  const hasOwnGlyph = !!glyph && iconKey !== 'generic';
+  const usePlatformImage = !!iconUrl && !imgFailed && !(platformIconIsGeneric && hasOwnGlyph);
+  const kind = displayName || type;
+  const title = [name, kind && kind !== name ? `(${kind})` : ''].filter(Boolean).join(' ') || iconKey;
+
+  if (usePlatformImage) {
+    return (
+      <span
+        className={`boomi-connector-icon boomi-connector-icon--image ${className}`.trim()}
+        title={title}
+        data-connector={iconKey}
+        style={{ width: size, height: size }}
+      >
+        <img
+          src={iconUrl}
+          alt={title}
+          width={size}
+          height={size}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          draggable={false}
+          onError={() => setImgFailed(true)}
+        />
+      </span>
+    );
+  }
   return (
     <span
       className={`boomi-connector-icon ${className}`.trim()}
@@ -83,7 +127,7 @@ const ConnectorIcon: React.FC<ConnectorIconProps> = ({ iconKey = 'generic', name
       {glyph ? (
         <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">{glyph}</svg>
       ) : (
-        <span className="boomi-connector-icon__badge" aria-hidden="true">{initials(type || name)}</span>
+        <span className="boomi-connector-icon__badge" aria-hidden="true">{initials(displayName || type || name)}</span>
       )}
     </span>
   );

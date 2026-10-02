@@ -8,7 +8,15 @@
  * be unit-tested directly.
  */
 
-export type CatalogConnector = { componentId?: string; name: string; type?: string; iconKey: string };
+export type CatalogConnector = {
+  componentId?: string;
+  name: string;
+  type?: string;
+  iconKey: string;
+  displayName?: string;
+  iconUrl?: string;
+  platformIconIsGeneric?: boolean;
+};
 
 /** Shape of an eligible pack as returned by GET /integration-packs/eligible (SDK EligibleIntegrationPack). */
 export type CatalogPack = {
@@ -32,7 +40,7 @@ export function filterPacks<T extends CatalogPack>(packs: T[], search: string): 
   const q = norm(search);
   if (!q) return packs;
   return packs.filter((p) => {
-    const hay = [p.name, p.displayDescription ?? p.Description, ...(p.connectors ?? []).flatMap((c) => [c.name, c.type, c.iconKey])]
+    const hay = [p.name, p.displayDescription ?? p.Description, ...(p.connectors ?? []).flatMap((c) => [c.name, c.type, c.iconKey, c.displayName])]
       .map(norm)
       .join(' ');
     return hay.includes(q);

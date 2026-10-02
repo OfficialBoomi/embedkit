@@ -63,6 +63,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
   const nameLabel: string = cfg.integrationPackName?.label ?? 'Integration Name';
   const defaultView: 'grid' | 'table' = (cfg.catalog?.defaultView ?? 'grid') === 'table' ? 'table' : 'grid';
   const showViewToggle: boolean = cfg.catalog?.showViewToggle ?? true;
+  const iconSize: number = Number(cfg.catalog?.connectorIconSize ?? 20) || 20;
 
   const { integrationPacks, isLoading: packsLoading, error: packsError } = useFetchAccountGroupIntegrationPacks({ filter: renderType });
   const { fetchEnvironments, environments, isLoading: envLoading, error: envError } = useFetchEnvironments();
@@ -127,7 +128,16 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
     return (
       <div className="boomi-catalog-connectors" aria-label="Connectors">
         {list.slice(0, MAX_ICONS).map((c) => (
-          <ConnectorIcon key={`${c.iconKey}-${c.name}`} iconKey={c.iconKey} name={c.name} type={c.type} />
+          <ConnectorIcon
+            key={`${c.iconKey}-${c.name}`}
+            iconKey={c.iconKey}
+            iconUrl={c.iconUrl}
+            platformIconIsGeneric={c.platformIconIsGeneric}
+            displayName={c.displayName}
+            name={c.name}
+            type={c.type}
+            size={iconSize}
+          />
         ))}
         {list.length > MAX_ICONS && <span className="boomi-catalog-more" title={list.slice(MAX_ICONS).map((c) => c.name).join(', ')}>+{list.length - MAX_ICONS}</span>}
       </div>

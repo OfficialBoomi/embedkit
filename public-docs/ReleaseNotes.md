@@ -23,6 +23,7 @@
   **New**
   - ✅ **Environment scope** — Send `environments: [ids]` in the login body to limit a tenant's sessions to those environments across the environment dropdown, the integrations list and the eligible-pack catalog. Login validates the ids. See [Environment scope](./ConfigurationReference.md#environment-scope-login-body-environments).
   - ✅ **Add Integration catalog** — The Add Integration modal is now a searchable catalog with card/table views, connector icons per pack, and "installed in N environments" chips. Selecting a pack opens the install step; for single-install packs the environment list excludes environments that already hold the pack, preselects when one remains, and disables install when none do. `form.addIntegration.layout: 'form'` restores the previous dropdown form. See [Add Integration Catalog](./ConfigurationReference.md#add-integration-catalog-formaddintegration).
+  - ✅ **Platform connector icons** — Catalog cards show Boomi's own connector icons (from the platform's connector icon endpoint), with EmbedKit glyphs for types the platform has only a generic icon for and as a load-failure fallback. Connector labels such as "Boomi for SAP" appear in tooltips and are searchable. Host pages with a strict `img-src` CSP must allow the platform host.
   - ✅ **Dependency** — Requires `@boomi/embedkit-sdk` with environment scope (unreleased; next minor) and an `embedkit-server` on the same.
 
 </details>

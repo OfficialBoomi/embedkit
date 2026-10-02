@@ -3696,4 +3696,6 @@
   background: var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 8%, transparent));
 }
 .boomi-connector-icon svg { display: block; }
+.boomi-connector-icon--image { background: var(--boomi-connector-icon-image-bg, transparent); padding: 0; }
+.boomi-connector-icon--image img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .boomi-connector-icon__badge { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.02em; line-height: 1; }

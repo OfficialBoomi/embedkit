@@ -427,7 +427,15 @@ components: {
 | `catalog.showViewToggle` | `boolean` | `true` | Show the card/table switch. |
 | `catalog.searchPlaceholder` | `string` | built-in | Search box placeholder. |
 
-The remaining `form.addIntegration` keys below apply to both layouts. Connector icons are keyed by connector kind (`salesforce`, `sftp`, `http`, `database`, …); unknown kinds render an initials badge. Override colors with `--boomi-connector-icon-fg` / `--boomi-connector-icon-bg`.
+The remaining `form.addIntegration` keys below apply to both layouts.
+
+**Connector icons** are the platform's own connector images, loaded from `https://<platform host>/connector/{connectorType}/icon/SVG` (the host is taken from the tenant's API URL; no authentication). For connector types where the platform only has a generic placeholder (Disk, FTP, SFTP, Database, LDAP, Mail and a few others) EmbedKit draws its own monochrome glyph instead, and any image that fails to load falls back to the glyph too. Tooltips show the connection name and the platform's connector label, which search also matches.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `catalog.connectorIconSize` | `number` | `20` | Icon size in px. |
+
+> **Content Security Policy.** Host pages that restrict `img-src` must allow the platform host (for example `https://api.boomi.com`), or the icons fall back to glyphs. Glyph colors use `--boomi-connector-icon-fg` / `--boomi-connector-icon-bg`; `--boomi-connector-icon-image-bg` sets a backdrop behind platform images.
 
 ### Add Integration Form (`form.addIntegration`)
 

@@ -14,6 +14,10 @@ const single: CatalogPack = { id: 'p1', name: 'LDAP User Add', installationType:
 const multi: CatalogPack = { id: 'p2', name: 'FTP To Your App', Description: 'Moves files', installationType: 'MULTI', connectors: [{ name: 'FTP Connection', type: 'ftp', iconKey: 'ftp' }] };
 
 describe('filterPacks', () => {
+  it('matches connector display names from the platform', () => {
+    const sap: CatalogPack = { id: 'p3', name: 'Financials', installationType: 'MULTI', connectors: [{ name: 'Conn', type: 'invixoconsultinggroupas-OZI90V-boomia-prod', iconKey: 'sap', displayName: 'Boomi for SAP' }] };
+    expect(filterPacks([single, multi, sap], 'boomi for sap').map((p) => p.id)).toEqual(['p3']);
+  });
   it('matches name, description and connector kind, case-insensitively', () => {
     expect(filterPacks([single, multi], 'ldap').map((p) => p.id)).toEqual(['p1']);
     expect(filterPacks([single, multi], 'FILES').map((p) => p.id)).toEqual(['p2']);
