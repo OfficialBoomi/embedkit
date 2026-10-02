@@ -139,7 +139,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
             size={iconSize}
           />
         ))}
-        {list.length > MAX_ICONS && <span className="boomi-catalog-more" title={list.slice(MAX_ICONS).map((c) => c.name).join(', ')}>+{list.length - MAX_ICONS}</span>}
+        {list.length > MAX_ICONS && <span className="boomi-connector-icon boomi-connector-icon--more" style={{ ['--boomi-connector-icon-art' as string]: `${iconSize}px` } as React.CSSProperties} title={list.slice(MAX_ICONS).map((c) => c.name).join(', ')}>+{list.length - MAX_ICONS}</span>}
       </div>
     );
   };

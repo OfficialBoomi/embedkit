@@ -433,9 +433,9 @@ The remaining `form.addIntegration` keys below apply to both layouts.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `catalog.connectorIconSize` | `number` | `20` | Icon size in px. |
+| `catalog.connectorIconSize` | `number` | `20` | Size of the icon art in px. Each icon sits in a rounded-square tile 12px larger, centered, and the row of tiles is centered on the card. |
 
-> **Content Security Policy.** Host pages that restrict `img-src` must allow the platform host (for example `https://api.boomi.com`), or the icons fall back to glyphs. Glyph colors use `--boomi-connector-icon-fg` / `--boomi-connector-icon-bg`; `--boomi-connector-icon-image-bg` sets a backdrop behind platform images.
+> **Content Security Policy.** Host pages that restrict `img-src` must allow the platform host (for example `https://api.boomi.com`), or the icons fall back to glyphs. Tile tokens: `--boomi-connector-icon-tile` (tile size), `--boomi-connector-icon-radius` (default `0.5rem`), `--boomi-connector-icon-border`, `--boomi-connector-icon-bg`, `--boomi-connector-icon-image-bg` (behind platform images), `--boomi-connector-icon-fg` (glyph color) and `--boomi-connector-icon-gap` (space between tiles).
 
 ### Add Integration Form (`form.addIntegration`)
 

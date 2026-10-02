@@ -3676,7 +3676,10 @@
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .boomi-catalog-card__foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding-top: 0.25rem; }
-.boomi-catalog-connectors { display: flex; align-items: center; gap: 0.375rem; flex-wrap: wrap; }
+.boomi-catalog-connectors {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: var(--boomi-connector-icon-gap, 0.5rem); width: 100%;
+}
 .boomi-catalog-more, .boomi-catalog-muted { font-size: 0.75rem; color: var(--boomi-muted, inherit); opacity: 0.8; }
 .boomi-catalog-install { display: flex; flex-direction: column; gap: 1rem; }
 .boomi-catalog-back {
@@ -3690,12 +3693,24 @@
 
 /* ---------- Connector icons ---------- */
 .boomi-connector-icon {
+  /* Rounded-square tile, identical for platform images, glyphs and the +N badge. */
+  --_art: var(--boomi-connector-icon-art, 20px);
+  --_tile: var(--boomi-connector-icon-tile, calc(var(--_art) + 0.75rem));
   display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
-  border-radius: 0.375rem; padding: 0.15rem; box-sizing: content-box;
+  width: var(--_tile); height: var(--_tile); min-width: var(--_tile);
+  box-sizing: border-box; padding: 0; overflow: hidden;
+  border-radius: var(--boomi-connector-icon-radius, 0.5rem);
+  border: var(--boomi-connector-icon-border, 1px solid color-mix(in srgb, currentColor 12%, transparent));
   color: var(--boomi-connector-icon-fg, var(--boomi-accent, currentColor));
-  background: var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 8%, transparent));
+  background: var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent));
 }
-.boomi-connector-icon svg { display: block; }
-.boomi-connector-icon--image { background: var(--boomi-connector-icon-image-bg, transparent); padding: 0; }
-.boomi-connector-icon--image img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.boomi-connector-icon__badge { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.02em; line-height: 1; }
+.boomi-connector-icon > svg,
+.boomi-connector-icon > img {
+  display: block; flex: 0 0 auto; margin: auto;
+  width: var(--_art); height: var(--_art); object-fit: contain;
+}
+.boomi-connector-icon--image { background: var(--boomi-connector-icon-image-bg, var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent))); }
+.boomi-connector-icon__badge,
+.boomi-connector-icon--more { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.02em; line-height: 1; text-align: center; }
+.boomi-connector-icon--more { color: var(--boomi-muted, inherit); }
+.boomi-catalog-table .boomi-catalog-connectors { justify-content: flex-start; }

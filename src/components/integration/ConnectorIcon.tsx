@@ -87,6 +87,8 @@ const ConnectorIcon: React.FC<ConnectorIconProps> = ({
   className = '',
 }) => {
   const [imgFailed, setImgFailed] = useState(false);
+  // Every icon sits in the same rounded-square tile; the art is centered inside it.
+  const tileStyle = { ['--boomi-connector-icon-art' as string]: `${size}px` } as React.CSSProperties;
   const glyph = GLYPHS[iconKey];
   const hasOwnGlyph = !!glyph && iconKey !== 'generic';
   const usePlatformImage = !!iconUrl && !imgFailed && !(platformIconIsGeneric && hasOwnGlyph);
@@ -99,13 +101,11 @@ const ConnectorIcon: React.FC<ConnectorIconProps> = ({
         className={`boomi-connector-icon boomi-connector-icon--image ${className}`.trim()}
         title={title}
         data-connector={iconKey}
-        style={{ width: size, height: size }}
+        style={tileStyle}
       >
         <img
           src={iconUrl}
           alt={title}
-          width={size}
-          height={size}
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
@@ -122,10 +122,10 @@ const ConnectorIcon: React.FC<ConnectorIconProps> = ({
       aria-label={title}
       role="img"
       data-connector={iconKey}
-      style={{ width: size, height: size }}
+      style={tileStyle}
     >
       {glyph ? (
-        <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">{glyph}</svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true">{glyph}</svg>
       ) : (
         <span className="boomi-connector-icon__badge" aria-hidden="true">{initials(displayName || type || name)}</span>
       )}
