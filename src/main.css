@@ -3658,6 +3658,7 @@
 .boomi-catalog-grid {
   list-style: none; margin: 0; padding: 0.25rem;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem;
+  grid-auto-rows: 1fr; /* every card the same height */
   max-height: 60vh; overflow-y: auto;
 }
 .boomi-catalog-card {
@@ -3670,16 +3671,32 @@
 }
 .boomi-catalog-card--selected { border-color: var(--boomi-accent, currentColor); }
 .boomi-catalog-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
-.boomi-catalog-card__title { font-weight: 600; font-size: 0.95rem; line-height: 1.3; overflow-wrap: anywhere; }
+.boomi-catalog-card__title {
+  font-weight: 600; font-size: 0.95rem; line-height: 1.3; overflow-wrap: anywhere;
+  /* Fixed two-line block so everything below starts at the same offset on every card. */
+  height: calc(2 * 1.3em); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
 .boomi-catalog-card__desc {
-  margin: 0; font-size: 0.8rem; color: var(--boomi-muted, inherit); opacity: 0.9;
+  margin: 0; font-size: 0.8rem; line-height: 1.4; color: var(--boomi-muted, inherit); opacity: 0.9;
+  height: calc(3 * 1.4em); flex: 0 0 auto;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
-.boomi-catalog-card__foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding-top: 0.25rem; }
-.boomi-catalog-connectors {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-  gap: var(--boomi-connector-icon-gap, 0.5rem); width: 100%;
+.boomi-catalog-card__foot {
+  margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding-top: 0.25rem;
+  min-height: 2.75rem; flex: 0 0 auto;
 }
+/* Single-line chip so the footer, and therefore the card, is the same height everywhere. */
+.boomi-catalog-card__foot .boomi-chip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+.boomi-catalog-card__foot > :last-child { flex: 0 0 auto; margin-left: auto; }
+.boomi-catalog-connectors {
+  /* One fixed-height, non-wrapping row of identical tiles, centered on the card. */
+  --_row-art: var(--boomi-connector-icon-art, 28px);
+  display: flex; flex-wrap: nowrap; align-items: center; justify-content: center;
+  gap: var(--boomi-connector-icon-gap, 0.5rem); width: 100%; flex: 0 0 auto;
+  height: var(--boomi-connector-icon-tile, calc(var(--_row-art) + 1rem));
+  margin: 0.25rem 0;
+}
+.boomi-catalog-connectors--empty { opacity: 0.8; }
 .boomi-catalog-more, .boomi-catalog-muted { font-size: 0.75rem; color: var(--boomi-muted, inherit); opacity: 0.8; }
 .boomi-catalog-install { display: flex; flex-direction: column; gap: 1rem; }
 .boomi-catalog-back {
@@ -3694,12 +3711,12 @@
 /* ---------- Connector icons ---------- */
 .boomi-connector-icon {
   /* Rounded-square tile, identical for platform images, glyphs and the +N badge. */
-  --_art: var(--boomi-connector-icon-art, 20px);
-  --_tile: var(--boomi-connector-icon-tile, calc(var(--_art) + 0.75rem));
+  --_art: var(--boomi-connector-icon-art, 28px);
+  --_tile: var(--boomi-connector-icon-tile, calc(var(--_art) + 1rem));
   display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
   width: var(--_tile); height: var(--_tile); min-width: var(--_tile);
   box-sizing: border-box; padding: 0; overflow: hidden;
-  border-radius: var(--boomi-connector-icon-radius, 0.5rem);
+  border-radius: var(--boomi-connector-icon-radius, 0.625rem);
   border: var(--boomi-connector-icon-border, 1px solid color-mix(in srgb, currentColor 12%, transparent));
   color: var(--boomi-connector-icon-fg, var(--boomi-accent, currentColor));
   background: var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent));
@@ -3713,4 +3730,5 @@
 .boomi-connector-icon__badge,
 .boomi-connector-icon--more { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.02em; line-height: 1; text-align: center; }
 .boomi-connector-icon--more { color: var(--boomi-muted, inherit); }
-.boomi-catalog-table .boomi-catalog-connectors { justify-content: flex-start; }
+.boomi-catalog-table .boomi-catalog-connectors { justify-content: flex-start; margin: 0; }
+.boomi-catalog-card__head .boomi-chip { flex: 0 0 auto; }

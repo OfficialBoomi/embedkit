@@ -44,7 +44,8 @@ export interface AddIntegrationCatalogProps {
   isInstalling?: boolean;
 }
 
-const MAX_ICONS = 5;
+/** Tiles shown on one row; with more connectors the last tile becomes "+N". */
+const MAX_TILES = 4;
 
 const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
   componentKey,
@@ -63,7 +64,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
   const nameLabel: string = cfg.integrationPackName?.label ?? 'Integration Name';
   const defaultView: 'grid' | 'table' = (cfg.catalog?.defaultView ?? 'grid') === 'table' ? 'table' : 'grid';
   const showViewToggle: boolean = cfg.catalog?.showViewToggle ?? true;
-  const iconSize: number = Number(cfg.catalog?.connectorIconSize ?? 20) || 20;
+  const iconSize: number = Number(cfg.catalog?.connectorIconSize ?? 28) || 28;
 
   const { integrationPacks, isLoading: packsLoading, error: packsError } = useFetchAccountGroupIntegrationPacks({ filter: renderType });
   const { fetchEnvironments, environments, isLoading: envLoading, error: envError } = useFetchEnvironments();
@@ -124,10 +125,21 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
 
   const renderConnectors = (pack: CatalogPack) => {
     const list = pack.connectors ?? [];
-    if (!list.length) return <span className="boomi-catalog-muted">No connectors</span>;
+    // Always render the row (same height on every card) so icons line up across cards.
+    const rowStyle = { ['--boomi-connector-icon-art' as string]: `${iconSize}px` } as React.CSSProperties;
+    if (!list.length) {
+      return (
+        <div className="boomi-catalog-connectors boomi-catalog-connectors--empty" style={rowStyle}>
+          <span className="boomi-catalog-muted">No connectors</span>
+        </div>
+      );
+    }
+    const overflow = list.length > MAX_TILES;
+    const shown = overflow ? list.slice(0, MAX_TILES - 1) : list;
+    const hidden = overflow ? list.slice(MAX_TILES - 1) : [];
     return (
-      <div className="boomi-catalog-connectors" aria-label="Connectors">
-        {list.slice(0, MAX_ICONS).map((c) => (
+      <div className="boomi-catalog-connectors" aria-label="Connectors" style={rowStyle}>
+        {shown.map((c) => (
           <ConnectorIcon
             key={`${c.iconKey}-${c.name}`}
             iconKey={c.iconKey}
@@ -139,7 +151,11 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
             size={iconSize}
           />
         ))}
-        {list.length > MAX_ICONS && <span className="boomi-connector-icon boomi-connector-icon--more" style={{ ['--boomi-connector-icon-art' as string]: `${iconSize}px` } as React.CSSProperties} title={list.slice(MAX_ICONS).map((c) => c.name).join(', ')}>+{list.length - MAX_ICONS}</span>}
+        {overflow && (
+          <span className="boomi-connector-icon boomi-connector-icon--more" title={hidden.map((c) => c.name).join(', ')}>
+            +{hidden.length}
+          </span>
+        )}
       </div>
     );
   };

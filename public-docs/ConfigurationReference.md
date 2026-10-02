@@ -433,7 +433,7 @@ The remaining `form.addIntegration` keys below apply to both layouts.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `catalog.connectorIconSize` | `number` | `20` | Size of the icon art in px. Each icon sits in a rounded-square tile 12px larger, centered, and the row of tiles is centered on the card. |
+| `catalog.connectorIconSize` | `number` | `28` | Size of the icon art in px. Each icon sits in a rounded-square tile 16px larger (44px by default), centered. Cards show one centered row of up to four tiles at the same position on every card; with more connectors the fourth tile shows `+N`. |
 
 > **Content Security Policy.** Host pages that restrict `img-src` must allow the platform host (for example `https://api.boomi.com`), or the icons fall back to glyphs. Tile tokens: `--boomi-connector-icon-tile` (tile size), `--boomi-connector-icon-radius` (default `0.5rem`), `--boomi-connector-icon-border`, `--boomi-connector-icon-bg`, `--boomi-connector-icon-image-bg` (behind platform images), `--boomi-connector-icon-fg` (glyph color) and `--boomi-connector-icon-gap` (space between tiles).
 
