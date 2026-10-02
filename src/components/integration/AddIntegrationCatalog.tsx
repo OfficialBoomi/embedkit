@@ -64,7 +64,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
   const nameLabel: string = cfg.integrationPackName?.label ?? 'Integration Name';
   const defaultView: 'grid' | 'table' = (cfg.catalog?.defaultView ?? 'grid') === 'table' ? 'table' : 'grid';
   const showViewToggle: boolean = cfg.catalog?.showViewToggle ?? true;
-  const iconSize: number = Number(cfg.catalog?.connectorIconSize ?? 28) || 28;
+  const iconSize: number = Number(cfg.catalog?.connectorIconSize ?? 32) || 32;
 
   const { integrationPacks, isLoading: packsLoading, error: packsError } = useFetchAccountGroupIntegrationPacks({ filter: renderType });
   const { fetchEnvironments, environments, isLoading: envLoading, error: envError } = useFetchEnvironments();

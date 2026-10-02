@@ -3690,7 +3690,7 @@
 .boomi-catalog-card__foot > :last-child { flex: 0 0 auto; margin-left: auto; }
 .boomi-catalog-connectors {
   /* One fixed-height, non-wrapping row of identical tiles, centered on the card. */
-  --_row-art: var(--boomi-connector-icon-art, 28px);
+  --_row-art: var(--boomi-connector-icon-art, 32px);
   display: flex; flex-wrap: nowrap; align-items: center; justify-content: center;
   gap: 0; width: 100%; flex: 0 0 auto;
   height: var(--boomi-connector-icon-tile, calc(var(--_row-art) + 1rem));
@@ -3726,7 +3726,7 @@
 /* ---------- Connector icons ---------- */
 .boomi-connector-icon {
   /* Rounded-square tile, identical for platform images, glyphs and the +N badge. */
-  --_art: var(--boomi-connector-icon-art, 28px);
+  --_art: var(--boomi-connector-icon-art, 32px);
   --_tile: var(--boomi-connector-icon-tile, calc(var(--_art) + 1rem));
   display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
   width: var(--_tile); height: var(--_tile); min-width: var(--_tile);
