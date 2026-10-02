@@ -17,6 +17,15 @@ export default defineConfig(({ mode }) => {
       globals: true,
       css: true,
       testTimeout: 30_000,
+      coverage: {
+        // lcov is what SonarQube's JS/TS analyzer consumes
+        // (sonar.javascript.lcov.reportPaths). 'text' keeps a summary in the CI log.
+        provider: 'v8',
+        reporter: ['text', 'lcov'],
+        reportsDirectory: './coverage',
+        include: ['src/**/*.{js,ts,jsx,tsx}'],
+        exclude: ['src/test/**', 'src/**/*.d.ts'],
+      },
     },
   };
 });
