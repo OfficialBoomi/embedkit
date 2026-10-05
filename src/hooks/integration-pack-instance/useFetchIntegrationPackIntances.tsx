@@ -24,7 +24,7 @@ const PAGE_SIZE = 12;
  *
  * @returns {Promise<void>} Resolves when state has been updated.
  */
-export const useFetchIntegrationPackInstances = ({ search, renderType }: { search?: string, renderType: string }) => {
+export const useFetchIntegrationPackInstances = ({ search, renderType, includeConnectors = false }: { search?: string, renderType: string, includeConnectors?: boolean }) => {
   const [integrationPackInstances, setIntegrationPackInstances] = useState<IntegrationPackInstance[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +46,7 @@ export const useFetchIntegrationPackInstances = ({ search, renderType }: { searc
         search,
         page: currentPage,
         pageSize: PAGE_SIZE,
+        includeConnectors,
       });
       logger.debug('[useFetchIntegrationPackInstances] fetched packs', resp);
       
@@ -70,7 +71,7 @@ export const useFetchIntegrationPackInstances = ({ search, renderType }: { searc
     } finally {
       setIsLoading(false);
     }
-  }, [getIntegrationPacks, search, currentPage]);
+  }, [getIntegrationPacks, search, currentPage, includeConnectors]);
 
   // 1) Initial load once
   useEffect(() => {

@@ -101,7 +101,11 @@ const Integrations: React.FC<IntegrationsProps> = ({
     currentPage,
     totalPages,
     goToPage,
-  } = useFetchIntegrationPackInstances({ search: searchContext, renderType: renderType });
+  } = useFetchIntegrationPackInstances({
+    search: searchContext,
+    renderType: renderType,
+    includeConnectors: boomiConfig?.components?.[componentKey]?.integrations?.integration?.showConnectors ?? true,
+  });
   const {
     isRunning,
     error: executionError,

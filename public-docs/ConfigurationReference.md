@@ -1015,6 +1015,7 @@ Keeps `.boomi-card` for its frame and hover. Parts: `__header`, `__type`, `__hea
 | `--boomi-integration-card-desc-fg` / `-font-size` / `-line-height` / `-lines` | inherit / `0.75rem` / `1rem` / `2` | Description (clamped) |
 | `--boomi-integration-card-actions-justify` / `-gap` / `-padding` | `flex-end` / `0.5rem` / `0.5rem` | Button row |
 | `--boomi-integration-card-env-bg` / `-fg` / `-border` / `-radius` / `-padding` / `-font-size` / `-font-weight` | subtle tint / inherit / `0.375rem` / `0.1875rem 0.5rem` / `0.75rem` / `500` | Environment chip at the bottom left of the button row (`.boomi-integration-card__env`; `data-classification="prod"\|"test"`, with `--boomi-integration-card-env-prod-bg` / `-test-bg`). Shows the first in-scope environment and `+N` for more; hide with `integrations.integration.showEnvironment: false`. |
+| `--boomi-integration-card-connectors-margin` / `-justify` | `0.75rem 0 0 0` / `flex-start` | Connector icon stack under the description (`.boomi-integration-card__connectors`, a `.boomi-connector-stack`). The description keeps a fixed height while icons are shown, so the stack sits at the same level on every card. Turn off with `integrations.integration.showConnectors: false`; icon size via `integrations.integration.connectorIconSize` (default `36`). |
 
 #### Catalog card (Add Integration) — `.boomi-catalog-card`
 

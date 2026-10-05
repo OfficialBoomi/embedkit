@@ -24,7 +24,7 @@ import Dropdown, { Option } from '../ui/Dropdown';
 import Input from '../ui/Input';
 import AjaxLoader from '../ui/AjaxLoader';
 import Pagination from '../ui/Pagination';
-import ConnectorIcon from './ConnectorIcon';
+import ConnectorStack from './ConnectorStack';
 import {
   installableEnvironments,
   preselectEnvironment,
@@ -139,42 +139,16 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
     });
   };
 
-  const renderConnectors = (pack: CatalogPack) => {
-    const list = pack.connectors ?? [];
-    // Always render the row (same height on every card) so icons line up across cards.
-    const rowStyle = { ['--boomi-connector-icon-art' as string]: `${iconSize}px` } as React.CSSProperties;
-    if (!list.length) {
-      return (
-        <div className="boomi-catalog-connectors boomi-catalog-connectors--empty" style={rowStyle}>
-          <span className="boomi-catalog-muted">No connectors</span>
-        </div>
-      );
-    }
-    const overflow = list.length > MAX_TILES;
-    const shown = overflow ? list.slice(0, MAX_TILES - 1) : list;
-    const hidden = overflow ? list.slice(MAX_TILES - 1) : [];
-    return (
-      <div className="boomi-catalog-connectors" aria-label="Connectors" style={rowStyle}>
-        {shown.map((c) => (
-          <ConnectorIcon
-            key={`${c.iconKey}-${c.name}`}
-            iconKey={c.iconKey}
-            iconUrl={c.iconUrl}
-            platformIconIsGeneric={c.platformIconIsGeneric}
-            displayName={c.displayName}
-            name={c.name}
-            type={c.type}
-            size={iconSize}
-          />
-        ))}
-        {overflow && (
-          <span className="boomi-connector-icon boomi-connector-icon--more" title={hidden.map((c) => c.name).join(', ')}>
-            +{hidden.length}
-          </span>
-        )}
-      </div>
-    );
-  };
+  // Always render the row (same height on every card) so icons line up across cards.
+  const renderConnectors = (pack: CatalogPack) => (
+    <ConnectorStack
+      connectors={pack.connectors}
+      size={iconSize}
+      maxTiles={MAX_TILES}
+      className="boomi-catalog-connectors"
+      emptyLabel="No connectors"
+    />
+  );
 
   /** Same wording as the cards on the main Integrations page. */
   const typeLabel = (pack: CatalogPack) =>

@@ -23,6 +23,7 @@ import AgentActions from '../agent/AgentActions';
 import IntegrationActions from './IntegrationActions';
 import SwalNotification from '../ui/SwalNotification';
 import IntegrationItem from './IntegrationItem';
+import ConnectorStack from './ConnectorStack';
 
 /**
  * @interface IntegrationProps
@@ -90,6 +91,11 @@ const Integration: React.FC<IntegrationProps> = ({
     </span>
   ) : null;
 
+  // Connector icons for the pack (server attaches connectors[] when showConnectors is on).
+  const cardCfg = boomiConfig?.components?.[componentKey]?.integrations?.integration ?? {};
+  const showConnectors: boolean = cardCfg.showConnectors ?? true;
+  const connectorIconSize: number = Number(cardCfg.connectorIconSize ?? 36) || 36;
+
   const handleDelete = () => setShowNotification(true);
   const handleRunNow = () => setShowRunNotification(true);
 
@@ -147,13 +153,20 @@ const Integration: React.FC<IntegrationProps> = ({
           </div>
 
           <div className="boomi-integration-card__body">
-            <div className="boomi-integration-card__content">
+            <div className={`boomi-integration-card__content${showConnectors ? ' boomi-integration-card__content--connectors' : ''}`}>
               <h3 className="boomi-integration-card__title">
                 {title}
               </h3>
               <p className="boomi-integration-card__desc">
                 {integration.integrationPackDescription}
               </p>
+              {showConnectors && (
+                <ConnectorStack
+                  connectors={integration.connectors}
+                  size={connectorIconSize}
+                  className="boomi-integration-card__connectors"
+                />
+              )}
             </div>
           </div>
 

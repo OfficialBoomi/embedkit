@@ -30,6 +30,8 @@ export type GetIntegrationPacksArgs = {
   search?: string;
   page?: number;
   pageSize?: number;
+  /** Ask the server to attach connectors[] (for icons) to each instance. */
+  includeConnectors?: boolean;
   signal?: AbortSignal;
 };
 
@@ -61,6 +63,7 @@ export function useIntegrationPacksService() {
         ...(search ? { search } : {}),
         ...(typeof page === 'number' ? { page } : {}),
         ...(typeof pageSize === 'number' ? { pageSize } : {}),
+        ...(args.includeConnectors ? { includeConnectors: true } : {}),
       },
     });
   }
