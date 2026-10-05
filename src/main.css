@@ -3736,6 +3736,17 @@
   background: var(--boomi-catalog-card-selected-bg, var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff))));
 }
 .boomi-catalog-card--selected:hover { transform: none; }
+/* Install step: title block on the left, connector stack on the right; no fixed heights. */
+.boomi-catalog-card__header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--boomi-catalog-card-header-gap, 1rem);
+}
+.boomi-catalog-card__headline { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; flex: 1 1 auto; }
+.boomi-catalog-card--selected .boomi-catalog-card__title,
+.boomi-catalog-card--selected .boomi-catalog-card__desc { height: auto; }
+.boomi-catalog-card__header .boomi-catalog-connectors {
+  width: auto; flex: 0 0 auto; justify-content: flex-end; margin: 0;
+}
 /* Modifiers for host styling: .boomi-catalog-card--single | --multi | --installed */
 @media (prefers-reduced-motion: reduce) { .boomi-catalog-card { transition: none; } .boomi-catalog-card:hover { transform: none; } }
 

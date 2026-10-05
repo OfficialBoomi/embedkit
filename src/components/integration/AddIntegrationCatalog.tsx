@@ -199,12 +199,16 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
         </button>
 
         <div className="boomi-catalog-card boomi-catalog-card--selected">
-          <div className="boomi-catalog-card__type">{typeLabel(selected)}</div>
-          <div className="boomi-catalog-card__title">{selected.name}</div>
+          <div className="boomi-catalog-card__header">
+            <div className="boomi-catalog-card__headline">
+              <div className="boomi-catalog-card__type">{typeLabel(selected)}</div>
+              <div className="boomi-catalog-card__title">{selected.name}</div>
+            </div>
+            {renderConnectors(selected)}
+          </div>
           {(selected.displayDescription ?? selected.Description) && (
             <p className="boomi-catalog-card__desc">{selected.displayDescription ?? selected.Description}</p>
           )}
-          {renderConnectors(selected)}
         </div>
 
         {showEnvironmentSelect && !(hideEnvironmentSelectWhenSingle && !envLoading && envOptions.length === 1) && (
