@@ -16,16 +16,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AiOutlineAppstore, AiOutlineUnorderedList, AiOutlineArrowLeft } from 'react-icons/ai';
 import { usePlugin } from '../../context/pluginContext';
-import { useFetchAccountGroupIntegrationPacks } from '../../hooks/account-group/useFetchAccountGroupIntegrationPack';
+import { useFetchEligiblePacksPage } from '../../hooks/account-group/useFetchEligiblePacksPage';
 import { useFetchEnvironments } from '../../hooks/environment/useFetchEnvironments';
 import SearchBar from '../ui/SearchBar';
 import Button from '../ui/Button';
 import Dropdown, { Option } from '../ui/Dropdown';
 import Input from '../ui/Input';
 import AjaxLoader from '../ui/AjaxLoader';
+import Pagination from '../ui/Pagination';
 import ConnectorIcon from './ConnectorIcon';
 import {
-  filterPacks,
   installableEnvironments,
   preselectEnvironment,
   validateInstall,
@@ -68,10 +68,21 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
   const showViewToggle: boolean = cfg.catalog?.showViewToggle ?? true;
   const iconSize: number = Number(cfg.catalog?.connectorIconSize ?? 36) || 36;
 
-  const { integrationPacks, isLoading: packsLoading, error: packsError } = useFetchAccountGroupIntegrationPacks({ filter: renderType });
+  const catalogPageSize: number = Math.min(Math.max(Number(cfg.catalog?.pageSize ?? 12) || 12, 1), 100);
+  // Server-paged: search and paging run on the server; connector icons are resolved per page.
+  const {
+    packs: pagePacks,
+    page,
+    totalPages,
+    total,
+    search,
+    setSearch,
+    goToPage,
+    isLoading: packsLoading,
+    error: packsError,
+  } = useFetchEligiblePacksPage<CatalogPack>({ renderType, pageSize: catalogPageSize });
   const { fetchEnvironments, environments, isLoading: envLoading, error: envError } = useFetchEnvironments();
 
-  const [search, setSearch] = useState('');
   const [view, setView] = useState<'grid' | 'table'>(defaultView);
   const [selected, setSelected] = useState<CatalogPack | null>(null);
   const [environmentId, setEnvironmentId] = useState('');
@@ -81,11 +92,12 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
   // Environments come from the server already limited to the session scope.
   useEffect(() => {
     const include = envCfg.includeEnvironments ?? 'ALL';
-    fetchEnvironments(include, envCfg.environmentId ?? null).catch((e) => logger.error('catalog: environments failed', e));
+    // Names only: skip the per-environment runtime/ONLINE lookups.
+    fetchEnvironments(include, envCfg.environmentId ?? null, { includeStatus: false }).catch((e) => logger.error('catalog: environments failed', e));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const packs = useMemo(() => filterPacks((integrationPacks ?? []) as CatalogPack[], search), [integrationPacks, search]);
+  const packs = pagePacks;
 
   const envOptions: CatalogEnvironment[] = useMemo(
     () => (selected ? installableEnvironments(selected, (environments ?? []) as CatalogEnvironment[]) : []),
@@ -186,7 +198,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
           <AiOutlineArrowLeft className="h-4 w-4" /> Back to catalog
         </button>
 
-        <div className="boomi-card boomi-catalog-card boomi-catalog-card--selected">
+        <div className="boomi-catalog-card boomi-catalog-card--selected">
           <div className="boomi-catalog-card__type">{typeLabel(selected)}</div>
           <div className="boomi-catalog-card__title">{selected.name}</div>
           {(selected.displayDescription ?? selected.Description) && (
@@ -244,7 +256,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
           <SearchBar
             searchCallback={setSearch}
             placeholder={cfg.catalog?.searchPlaceholder ?? 'Search integrations or connectors'}
-            suggestions={(integrationPacks ?? []).map((p: CatalogPack) => p.name).filter((n: unknown): n is string => typeof n === 'string')}
+            suggestions={packs.map((p) => p.name).filter((n): n is string => typeof n === 'string')}
           />
         </div>
         {showViewToggle && (
@@ -264,7 +276,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
       ) : view === 'grid' ? (
         <ul className="boomi-catalog-grid" role="list">
           {packs.map((pack) => (
-            <li key={pack.id} className="boomi-card boomi-catalog-card">
+            <li key={pack.id} className={`boomi-catalog-card boomi-catalog-card--${pack.installationType === 'SINGLE' ? 'single' : 'multi'}${pack.installedInstanceCount ? ' boomi-catalog-card--installed' : ''}`}>
               <div className="boomi-catalog-card__type">{typeLabel(pack)}</div>
               <div className="boomi-catalog-card__title" title={pack.name}>{pack.name}</div>
               <p className="boomi-catalog-card__desc">{pack.displayDescription ?? pack.Description ?? ''}</p>
@@ -273,7 +285,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
                 {/* Placeholder keeps the button at the same height on cards that aren't installed yet. */}
                 {installedChip(pack) ?? <div className="boomi-catalog-installed boomi-catalog-installed--empty" aria-hidden="true">&nbsp;</div>}
                 <div className="boomi-catalog-card__action">
-                  <Button toggle={false} primary={true} showIcon={false} label="Select" onClick={() => choosePack(pack)} />
+                  <Button toggle={false} primary={true} showIcon={false} buttonClass="boomi-catalog-card__select" label="Select" onClick={() => choosePack(pack)} />
                 </div>
               </div>
             </li>
@@ -293,7 +305,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
           </thead>
           <tbody>
             {packs.map((pack) => (
-              <tr key={pack.id} className="boomi-table-row">
+              <tr key={pack.id} className="boomi-table-row boomi-catalog-table__row">
                 <td className="py-3 px-4 text-sm font-medium">{pack.name}</td>
                 <td className="py-3 px-4 text-sm">{pack.displayDescription ?? pack.Description ?? ''}</td>
                 <td className="py-3 px-4 text-sm">{typeLabel(pack)}</td>
@@ -304,6 +316,15 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
             ))}
           </tbody>
         </table>
+      )}
+
+      {!packsError && total > 0 && (
+        <div className="boomi-catalog-pager">
+          <span className="boomi-catalog-pager__summary">
+            {`${(page - 1) * catalogPageSize + 1}–${Math.min(page * catalogPageSize, total)} of ${total}`}
+          </span>
+          {totalPages > 1 && <Pagination currentPage={page} totalPages={totalPages} onPageChange={goToPage} />}
+        </div>
       )}
     </div>
   );

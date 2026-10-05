@@ -9,6 +9,22 @@ export type GetEligiblePacksArgs = {
   signal?: AbortSignal;
 };
 
+/** Paged eligible-pack request (Add Integration catalog). */
+export type GetEligiblePacksPageArgs = GetEligiblePacksArgs & {
+  search?: string;
+  page: number;
+  pageSize: number;
+  includeConnectors?: boolean;
+};
+
+export type EligiblePacksPage<T = any> = {
+  result: T[];
+  page: number;
+  pageSize: number;
+  numberOfResults: number;
+  totalPages: number;
+};
+
 export type GetIntegrationPacksArgs = {
   renderType: string;
   search?: string;
@@ -70,6 +86,23 @@ export function useIntegrationPacksService() {
     return http.post('/integration-packs', body, { signal });
   }
 
+  /** One page of eligible packs; the server resolves connector icons for that page only. */
+  async function getEligibleIntegrationPacksPage(args: GetEligiblePacksPageArgs): Promise<EligiblePacksPage> {
+    const { renderType, notAllowedIds, signal, search, page, pageSize, includeConnectors } = args;
+    logger.debug('Fetching eligible Integration Packs page', { renderType, search, page, pageSize });
+    return http.get('/integration-packs/eligible', {
+      signal,
+      params: {
+        renderType,
+        page,
+        pageSize,
+        ...(search ? { search } : {}),
+        ...(includeConnectors === false ? { includeConnectors: 'false' } : {}),
+        ...(notAllowedIds?.length ? { notAllowedIds: notAllowedIds.join(',') } : {}),
+      },
+    });
+  }
+
   async function getEligibleIntegrationPacks(
     args: GetEligiblePacksArgs
   ): Promise<IntegrationPackInstanceQueryResponse> {
@@ -98,6 +131,7 @@ export function useIntegrationPacksService() {
     getIntegrationPack,
     createIntegrationPack,
     getEligibleIntegrationPacks,
+    getEligibleIntegrationPacksPage,
     deleteIntegrationPackInst, 
   };
 }

@@ -340,6 +340,19 @@
     z-index: 5; /* allow dropdowns to float above neighboring buttons/cards */
   }
 
+  /* Main Integrations card frame: same layer and specificity as .boomi-card, so
+     .boomi-card:hover and .boomi-card--agent (declared later) still win. */
+  .boomi-integration-card {
+    background-color: var(--boomi-integration-card-bg, var(--boomi-card-bg));
+    border-color: var(--boomi-integration-card-border, var(--boomi-card-border));
+    border-radius: var(--boomi-integration-card-radius, var(--boomi-card-radius, 0.75rem));
+    box-shadow: var(--boomi-integration-card-shadow, var(--boomi-card-shadow));
+    color: var(--boomi-integration-card-fg, inherit);
+  }
+  .boomi-integration-card:hover {
+    box-shadow: var(--boomi-integration-card-hover-shadow, var(--boomi-card-hover-shadow, var(--boomi-card-shadow)));
+  }
+
   /* Menu container (panel) */
   .boomi-menu {
     background-color: var(--boomi-menu-bg);
@@ -2276,6 +2289,39 @@
   }
 
 
+  /* ---------- Default scrollbars: every scroll area inside the embed ----------
+     Thin, modern, theme-driven by the same --boomi-scrollbar-* tokens.
+     `:host *` only matches inside the EmbedKit shadow root, never the host page.
+     .boomi-scroll (below) still applies and can be tuned per element. */
+  :host,
+  :host * {
+    scrollbar-width: var(--boomi-scrollbar-firefox-width, thin);
+    scrollbar-color: var(--boomi-scrollbar-thumb) var(--boomi-scrollbar-bg);
+  }
+  :host *::-webkit-scrollbar {
+    width: var(--boomi-scrollbar-width);
+    height: var(--boomi-scrollbar-width);
+    background: transparent;
+  }
+  :host *::-webkit-scrollbar-track {
+    background: var(--boomi-scrollbar-bg);
+    border-radius: var(--boomi-scrollbar-radius);
+  }
+  :host *::-webkit-scrollbar-thumb {
+    background-color: var(--boomi-scrollbar-thumb);
+    border-radius: var(--boomi-scrollbar-radius);
+    border: var(--boomi-scrollbar-thumb-inset, 2px) solid transparent;
+    background-clip: content-box;
+    min-height: 2rem;
+  }
+  :host *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--boomi-scrollbar-thumb-hover);
+    border-width: var(--boomi-scrollbar-thumb-inset-hover, 1px);
+  }
+  :host *::-webkit-scrollbar-thumb:active { background-color: var(--boomi-scrollbar-thumb-active); }
+  :host *::-webkit-scrollbar-corner { background: var(--boomi-scrollbar-corner); }
+  :host *::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
   /* ---------- Firefox ---------- */
   .boomi-scroll {
     /* thumb color | track color */
@@ -2296,7 +2342,7 @@
   .boomi-scroll::-webkit-scrollbar-thumb {
     background-color: var(--boomi-scrollbar-thumb);
     border-radius: var(--boomi-scrollbar-radius);
-    border: 3px solid transparent; /* creates “pill” with padding */
+    border: var(--boomi-scrollbar-thumb-inset, 2px) solid transparent; /* pill with padding */
     background-clip: content-box;
   }
   .boomi-scroll::-webkit-scrollbar-thumb:hover {
@@ -2315,7 +2361,7 @@
 
   /* Optional: show wider thumb on hover (nice for desktop) */
   .boomi-scroll:hover::-webkit-scrollbar-thumb {
-    border-width: 2px;
+    border-width: var(--boomi-scrollbar-thumb-inset-hover, 1px);
   }
 
   /* ---------- Themed chip pulse ---------- */
@@ -2864,9 +2910,12 @@
     --boomi-chip-error-fg: var(--boomi-danger-fg);
     --boomi-chip-error-border: color-mix(in srgb, var(--boomi-danger) 40%, transparent);
 
-    --boomi-scrollbar-width:        10px;     /* total track size */
+    --boomi-scrollbar-width:        8px;      /* total track size; visible thumb = width - 2 x inset */
     --boomi-scrollbar-radius:       999px;    /* pill */
-    --boomi-scrollbar-bg:           color-mix(in srgb, var(--boomi-update-border, #e5e7eb) 35%, transparent);
+    --boomi-scrollbar-thumb-inset:  2px;      /* transparent padding around the thumb (4px visible) */
+    --boomi-scrollbar-thumb-inset-hover: 1px; /* thumb grows to 6px on hover */
+    --boomi-scrollbar-firefox-width: thin;    /* Firefox: thin | auto | none */
+    --boomi-scrollbar-bg:           transparent; /* no visible track by default */
     --boomi-scrollbar-thumb:        color-mix(in srgb, var(--boomi-page-fg-color, #111827) 18%, transparent);
     --boomi-scrollbar-thumb-hover:  color-mix(in srgb, var(--boomi-accent, #6366f1) 28%, transparent);
     --boomi-scrollbar-thumb-active: color-mix(in srgb, var(--boomi-accent, #6366f1) 40%, transparent);
@@ -3266,7 +3315,7 @@
     --boomi-chip-error-fg: theme('colors.rose.100');
     --boomi-chip-error-border: var(--boomi-danger);
 
-    --boomi-scrollbar-bg:           color-mix(in srgb, var(--boomi-update-border, #374151) 35%, transparent);
+    --boomi-scrollbar-bg:           transparent;
     --boomi-scrollbar-thumb:        color-mix(in srgb, var(--boomi-page-fg-color, #ffffff) 18%, transparent);
     --boomi-scrollbar-thumb-hover:  color-mix(in srgb, var(--boomi-accent, #818cf8) 32%, transparent);
     --boomi-scrollbar-thumb-active: color-mix(in srgb, var(--boomi-accent, #818cf8) 45%, transparent);
@@ -3656,40 +3705,80 @@
 .boomi-catalog-search { flex: 1 1 16rem; min-width: 12rem; }
 .boomi-catalog-view { display: flex; gap: 0.25rem; }
 .boomi-catalog-grid {
-  list-style: none; margin: 0; padding: 0.25rem;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem;
+  list-style: none; margin: 0; padding: var(--boomi-catalog-grid-padding, 0.25rem);
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--boomi-catalog-card-min-width, 15rem), 1fr));
+  gap: var(--boomi-catalog-grid-gap, 1rem);
   grid-auto-rows: 1fr; /* every card the same height */
-  max-height: 60vh; overflow-y: auto;
+  max-height: var(--boomi-catalog-grid-max-height, 60vh); overflow-y: auto;
 }
+
+/* ===== Catalog card (Add Integration). Own class and tokens: independent of .boomi-card. =====
+   Tokens fall back to the shared --boomi-card-* values so themes look right out of the box. */
 .boomi-catalog-card {
-  display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem;
-  background: var(--boomi-card-bg, var(--boomi-root-bg-color, #fff));
-  border: 1px solid var(--boomi-card-border, transparent);
-  border-radius: var(--boomi-card-radius, 0.75rem);
-  box-shadow: var(--boomi-card-shadow, none);
-  color: var(--boomi-card-fg, var(--boomi-root-fg-color, inherit));
+  display: flex; flex-direction: column;
+  gap: var(--boomi-catalog-card-gap, 0.5rem);
+  padding: var(--boomi-catalog-card-padding, 1rem);
+  background: var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff)));
+  color: var(--boomi-catalog-card-fg, var(--boomi-card-fg, var(--boomi-root-fg-color, inherit)));
+  border: var(--boomi-catalog-card-border-width, 1px) solid var(--boomi-catalog-card-border, var(--boomi-card-border, transparent));
+  border-radius: var(--boomi-catalog-card-radius, var(--boomi-card-radius, 0.75rem));
+  box-shadow: var(--boomi-catalog-card-shadow, var(--boomi-card-shadow, none));
+  position: relative;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
-.boomi-catalog-card--selected { border-color: var(--boomi-accent, currentColor); }
-.boomi-catalog-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+.boomi-catalog-card:hover {
+  transform: var(--boomi-catalog-card-hover-transform, none);
+  box-shadow: var(--boomi-catalog-card-hover-shadow, var(--boomi-catalog-card-shadow, var(--boomi-card-shadow, none)));
+  border-color: var(--boomi-catalog-card-hover-border, var(--boomi-catalog-card-border, var(--boomi-card-border, transparent)));
+}
+.boomi-catalog-card--selected {
+  border-color: var(--boomi-catalog-card-selected-border, var(--boomi-accent, currentColor));
+  background: var(--boomi-catalog-card-selected-bg, var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff))));
+}
+.boomi-catalog-card--selected:hover { transform: none; }
+/* Modifiers for host styling: .boomi-catalog-card--single | --multi | --installed */
+@media (prefers-reduced-motion: reduce) { .boomi-catalog-card { transition: none; } .boomi-catalog-card:hover { transform: none; } }
+
 /* Type line, as on the main Integrations cards: "Integration" / "Single Install Integration". */
-.boomi-catalog-card__type { font-size: 0.875rem; line-height: 1.25rem; height: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.boomi-catalog-card__type {
+  color: var(--boomi-catalog-card-type-fg, inherit);
+  font-size: var(--boomi-catalog-card-type-font-size, 0.875rem);
+  font-weight: var(--boomi-catalog-card-type-font-weight, 400);
+  letter-spacing: var(--boomi-catalog-card-type-letter-spacing, normal);
+  line-height: 1.25rem; height: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .boomi-catalog-card__title {
-  font-weight: 600; font-size: 1.125rem; line-height: 1.3; overflow-wrap: anywhere;
-  /* Fixed two-line block so everything below starts at the same offset on every card. */
-  height: calc(2 * 1.3em); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  /* Fixed block (lines x line-height) so everything below starts at the same offset on every card. */
+  --_lines: var(--boomi-catalog-card-title-lines, 2);
+  --_lh: var(--boomi-catalog-card-title-line-height, 1.3);
+  color: var(--boomi-catalog-card-title-fg, inherit);
+  font-size: var(--boomi-catalog-card-title-font-size, 1.125rem);
+  font-weight: var(--boomi-catalog-card-title-font-weight, 600);
+  line-height: var(--_lh); overflow-wrap: anywhere;
+  height: calc(var(--_lines) * var(--_lh) * 1em);
+  display: -webkit-box; -webkit-line-clamp: var(--_lines); -webkit-box-orient: vertical; overflow: hidden;
 }
 .boomi-catalog-card__desc {
-  margin: 0; font-size: 0.8rem; line-height: 1.4; color: var(--boomi-muted, inherit); opacity: 0.9;
-  height: calc(3 * 1.4em); flex: 0 0 auto;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  --_lines: var(--boomi-catalog-card-desc-lines, 3);
+  --_lh: var(--boomi-catalog-card-desc-line-height, 1.4);
+  margin: 0; flex: 0 0 auto;
+  color: var(--boomi-catalog-card-desc-fg, var(--boomi-muted, inherit));
+  opacity: var(--boomi-catalog-card-desc-opacity, 0.9);
+  font-size: var(--boomi-catalog-card-desc-font-size, 0.8rem);
+  line-height: var(--_lh);
+  height: calc(var(--_lines) * var(--_lh) * 1em);
+  display: -webkit-box; -webkit-line-clamp: var(--_lines); -webkit-box-orient: vertical; overflow: hidden;
 }
 .boomi-catalog-card__foot {
-  /* Installed pill over a full-width Select button, pinned to the bottom of the card. */
-  margin-top: auto; display: flex; flex-direction: column; align-items: stretch; gap: 0.5rem; padding-top: 0.25rem; flex: 0 0 auto;
+  /* Installed bar over a full-width Select button, pinned to the bottom of the card. */
+  margin-top: auto; display: flex; flex-direction: column; align-items: stretch;
+  gap: var(--boomi-catalog-card-foot-gap, 0.5rem); padding-top: 0.25rem; flex: 0 0 auto;
 }
 .boomi-catalog-installed {
   width: 100%; box-sizing: border-box; text-align: center;
-  padding: 0.3rem 0.5rem; font-size: 0.75rem; font-weight: 500; line-height: 1rem;
+  padding: var(--boomi-catalog-installed-padding, 0.3rem 0.5rem);
+  font-size: var(--boomi-catalog-installed-font-size, 0.75rem);
+  font-weight: var(--boomi-catalog-installed-font-weight, 500); line-height: 1rem;
   border-radius: var(--boomi-catalog-installed-radius, 0.375rem);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   color: var(--boomi-catalog-installed-fg, var(--boomi-notice-success-fg, #065f46));
@@ -3698,7 +3787,21 @@
 }
 .boomi-catalog-installed--empty { visibility: hidden; }
 .boomi-catalog-card__action > div { display: block; width: 100%; }
-.boomi-catalog-card__action button { width: 100%; justify-content: center; }
+/* Select button: defaults follow the primary button tokens; override per card with these. */
+.boomi-catalog-card__action button,
+.boomi-catalog-card__select {
+  width: 100%; justify-content: center;
+  background: var(--boomi-catalog-select-bg, var(--boomi-btn-primary-bg));
+  color: var(--boomi-catalog-select-fg, var(--boomi-btn-primary-fg));
+  border-color: var(--boomi-catalog-select-border, var(--boomi-btn-primary-border, transparent));
+  border-radius: var(--boomi-catalog-select-radius, var(--boomi-btn-radius, 0.375rem));
+  font-weight: var(--boomi-catalog-select-font-weight, 600);
+  min-height: var(--boomi-catalog-select-height, 2.25rem);
+}
+.boomi-catalog-card__action button:hover:not(:disabled),
+.boomi-catalog-card__select:hover:not(:disabled) {
+  background: var(--boomi-catalog-select-bg-hover, var(--boomi-btn-primary-bg-hover, var(--boomi-catalog-select-bg, var(--boomi-btn-primary-bg))));
+}
 .boomi-catalog-connectors {
   /* One fixed-height, non-wrapping row of identical tiles, centered on the card. */
   --_row-art: var(--boomi-connector-icon-art, 36px);
@@ -3710,8 +3813,8 @@
 /* Overlapping stack, left to right: each tile slides slightly under the next. */
 .boomi-catalog-connectors > .boomi-connector-icon {
   position: relative;
-  background-color: var(--boomi-connector-icon-solid-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff)));
-  box-shadow: 0 0 0 2px var(--boomi-connector-icon-ring, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff)));
+  background-color: var(--boomi-connector-icon-solid-bg, var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff))));
+  box-shadow: 0 0 0 2px var(--boomi-connector-icon-ring, var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff))));
   transition: transform 120ms ease;
 }
 .boomi-catalog-connectors > .boomi-connector-icon + .boomi-connector-icon {
@@ -3733,6 +3836,53 @@
 .boomi-catalog-back:hover { text-decoration: underline; }
 .boomi-catalog-actions { display: flex; justify-content: flex-end; }
 .boomi-catalog-table td, .boomi-catalog-table th { vertical-align: middle; }
+.boomi-catalog-table__row { background: var(--boomi-catalog-row-bg, inherit); }
+.boomi-catalog-table__row:hover { background: var(--boomi-catalog-row-bg-hover, var(--boomi-catalog-row-bg, inherit)); }
+/* Smaller tiles in table rows so rows stay compact. */
+.boomi-catalog-table .boomi-catalog-connectors { --boomi-connector-icon-art: var(--boomi-catalog-table-icon-art, 24px); }
+.boomi-catalog-pager { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+.boomi-catalog-pager__summary { font-size: 0.75rem; color: var(--boomi-muted, inherit); opacity: 0.85; }
+
+/* ===== Integrations card (main list). Keeps .boomi-card for its frame and hover;
+   every part below has its own class and --boomi-integration-card-* tokens. ===== */
+.boomi-integration-card__header {
+  display: flex; align-items: center;
+  padding: var(--boomi-integration-card-header-padding, 1rem 0 0 0);
+}
+.boomi-integration-card__type {
+  flex: 1 1 auto; min-width: 0;
+  padding-left: var(--boomi-integration-card-padding-x, 1rem);
+  color: var(--boomi-integration-card-type-fg, inherit);
+  font-size: var(--boomi-integration-card-type-font-size, 0.875rem);
+  font-weight: var(--boomi-integration-card-type-font-weight, 400);
+  line-height: 1.25rem;
+}
+.boomi-integration-card__header-extra { flex: 0 0 auto; padding-right: var(--boomi-integration-card-padding-x, 1rem); }
+.boomi-integration-card__body { display: flex; gap: 1rem; padding: var(--boomi-integration-card-body-padding, 1rem); }
+.boomi-integration-card__content { display: flex; flex-direction: column; width: 100%; min-width: 0; }
+.boomi-integration-card__title {
+  margin: 0; padding-right: 0.5rem;
+  color: var(--boomi-integration-card-title-fg, inherit);
+  font-size: var(--boomi-integration-card-title-font-size, 1.25rem);
+  font-weight: var(--boomi-integration-card-title-font-weight, 600);
+  line-height: var(--boomi-integration-card-title-line-height, 1.75rem);
+  overflow-wrap: break-word; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.boomi-integration-card__desc {
+  margin: 0.25rem 0 0 0;
+  color: var(--boomi-integration-card-desc-fg, inherit);
+  font-size: var(--boomi-integration-card-desc-font-size, 0.75rem);
+  line-height: var(--boomi-integration-card-desc-line-height, 1rem);
+  overflow-wrap: break-word; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: var(--boomi-integration-card-desc-lines, 2); -webkit-box-orient: vertical;
+}
+.boomi-integration-card__footer { display: flex; width: 100%; }
+.boomi-integration-card__actions {
+  display: flex; align-items: center; justify-content: var(--boomi-integration-card-actions-justify, flex-end);
+  gap: var(--boomi-integration-card-actions-gap, 0.5rem);
+  padding: var(--boomi-integration-card-actions-padding, 0.5rem);
+  width: 100%; position: relative; overflow: visible;
+}
 
 /* ---------- Connector icons ---------- */
 .boomi-connector-icon {

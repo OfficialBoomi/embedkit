@@ -125,24 +125,24 @@ const Integration: React.FC<IntegrationProps> = ({
           integration={integration}
           isAgent={isAgent}
         >
-          <div className="flex items-center pt-4">
-            <div className="flex-1 pl-4 text-sm">{type}</div>
-            <div className="flex-none justify-end pr-4"></div>
+          <div className="boomi-integration-card__header">
+            <div className="boomi-integration-card__type">{type}</div>
+            <div className="boomi-integration-card__header-extra"></div>
           </div>
 
-          <div className="flex gap-4 p-4">
-            <div className="flex flex-col w-full">
-              <h3 className="text-xl font-semibold break-words truncate overflow-hidden pr-2">
+          <div className="boomi-integration-card__body">
+            <div className="boomi-integration-card__content">
+              <h3 className="boomi-integration-card__title">
                 {title}
               </h3>
-              <p className="text-xs mt-1 line-clamp-2 break-words overflow-hidden">
+              <p className="boomi-integration-card__desc">
                 {integration.integrationPackDescription}
               </p>
             </div>
           </div>
 
-          <div className="flex w-full">
-            <div className="flex p-2 justify-end items-center gap-x-2 w-full relative overflow-visible">
+          <div className="boomi-integration-card__footer">
+            <div className="boomi-integration-card__actions">
               {(boomiConfig?.components?.[componentKey]?.integrations?.integration?.showEdit ?? true) && (
                 <>
                   {isAgent ? (

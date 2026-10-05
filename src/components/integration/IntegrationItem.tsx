@@ -31,7 +31,7 @@ const IntegrationItem: React.FC<IntegrationItemProps> = ({
   return (
     <li
       ref={isAgent ? (shimmerRef as any) : undefined}
-      className={`boomi-card ${isAgent ? 'boomi-card--agent boomi--agent-shimmer' : ''}`}
+      className={`boomi-card boomi-integration-card ${isAgent ? 'boomi-card--agent boomi--agent-shimmer boomi-integration-card--agent' : ''}`}
     >
       {children}
     </li>

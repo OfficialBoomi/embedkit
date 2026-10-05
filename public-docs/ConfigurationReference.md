@@ -425,7 +425,8 @@ components: {
 | `layout` | `'catalog' \| 'form'` | `'catalog'` | Which Add Integration experience to render. |
 | `catalog.defaultView` | `'grid' \| 'table'` | `'grid'` | Initial catalog layout. |
 | `catalog.showViewToggle` | `boolean` | `true` | Show the card/table switch. |
-| `catalog.searchPlaceholder` | `string` | built-in | Search box placeholder. |
+| `catalog.searchPlaceholder` | `string` | built-in | Search box placeholder. Search runs on the server when the user presses Enter. |
+| `catalog.pageSize` | `number` | `12` | Packs per page (max 100). The catalog is paged on the server; connector icons are resolved only for the visible page. |
 | `hideEnvironmentSelectWhenSingle` | `boolean` | `false` | In the install step, hide the environment dropdown when exactly one environment is available (after the session scope and, for single-install packs, excluding environments that already hold the pack). That environment is used automatically. |
 
 The remaining `form.addIntegration` keys below apply to both layouts.
@@ -996,6 +997,44 @@ cssVars: {
 | `--boomi-card-hover-scale` | Scale transform on hover |
 | `--boomi-card-hover-shadow` | Shadow on hover |
 
+These shared tokens are the defaults for both card types below. Each card type also has its **own class and tokens**, so a host can restyle one without touching the other.
+
+#### Integrations card (main list) — `.boomi-integration-card`
+
+Keeps `.boomi-card` for its frame and hover. Parts: `__header`, `__type`, `__header-extra`, `__body`, `__content`, `__title`, `__desc`, `__footer`, `__actions`; modifier `.boomi-integration-card--agent`. Defaults reproduce the previous look exactly.
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-integration-card-bg` / `-fg` / `-border` / `-radius` / `-shadow` / `-hover-shadow` | shared `--boomi-card-*` | Frame of the main card only |
+| `--boomi-integration-card-padding-x` | `1rem` | Horizontal padding of the type line |
+| `--boomi-integration-card-header-padding` | `1rem 0 0 0` | Type row padding |
+| `--boomi-integration-card-body-padding` | `1rem` | Title/description block padding |
+| `--boomi-integration-card-type-fg` / `-font-size` / `-font-weight` | inherit / `0.875rem` / `400` | "Integration" / "Single Install Integration" line |
+| `--boomi-integration-card-title-fg` / `-font-size` / `-font-weight` / `-line-height` | inherit / `1.25rem` / `600` / `1.75rem` | Title (single line, ellipsis) |
+| `--boomi-integration-card-desc-fg` / `-font-size` / `-line-height` / `-lines` | inherit / `0.75rem` / `1rem` / `2` | Description (clamped) |
+| `--boomi-integration-card-actions-justify` / `-gap` / `-padding` | `flex-end` / `0.5rem` / `0.5rem` | Button row |
+
+#### Catalog card (Add Integration) — `.boomi-catalog-card`
+
+Independent of `.boomi-card`. Parts: `__type`, `__title`, `__desc`, `__foot`, `__action`, `__select` (the Select button), plus `.boomi-catalog-connectors` and `.boomi-catalog-installed`. Modifiers: `--single`, `--multi`, `--installed`, `--selected` (install step).
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-catalog-card-bg` / `-fg` / `-border` / `-border-width` / `-radius` / `-shadow` | shared `--boomi-card-*`, `1px` | Frame |
+| `--boomi-catalog-card-padding` / `-gap` | `1rem` / `0.5rem` | Inner spacing |
+| `--boomi-catalog-card-hover-transform` / `-hover-shadow` / `-hover-border` | `none` / frame values | Hover |
+| `--boomi-catalog-card-selected-border` / `-selected-bg` | accent / frame bg | Selected card in the install step |
+| `--boomi-catalog-card-type-fg` / `-font-size` / `-font-weight` / `-letter-spacing` | inherit / `0.875rem` / `400` / `normal` | Type line |
+| `--boomi-catalog-card-title-fg` / `-font-size` / `-font-weight` / `-line-height` / `-lines` | inherit / `1.125rem` / `600` / `1.3` / `2` | Title (fixed height = lines × line height) |
+| `--boomi-catalog-card-desc-fg` / `-font-size` / `-line-height` / `-lines` / `-opacity` | muted / `0.8rem` / `1.4` / `3` / `0.9` | Description (fixed height) |
+| `--boomi-catalog-card-foot-gap` | `0.5rem` | Space between installed bar and button |
+| `--boomi-catalog-installed-bg` / `-fg` / `-border` / `-radius` / `-padding` / `-font-size` / `-font-weight` | success notice tokens / `0.375rem` / `0.3rem 0.5rem` / `0.75rem` / `500` | "Installed in N environments" bar |
+| `--boomi-catalog-select-bg` / `-bg-hover` / `-fg` / `-border` / `-radius` / `-font-weight` / `-height` | primary button tokens / `600` / `2.25rem` | Full-width Select button |
+| `--boomi-catalog-grid-gap` / `-padding` / `-max-height`, `--boomi-catalog-card-min-width` | `1rem` / `0.25rem` / `60vh` / `15rem` | Grid layout |
+| `--boomi-catalog-row-bg` / `-row-bg-hover`, `--boomi-catalog-table-icon-art` | inherit / `24px` | Table view rows (`.boomi-catalog-table__row`) and icon size |
+
+Connector tiles use the `--boomi-connector-icon-*` tokens described under [Add Integration Catalog](#add-integration-catalog-formaddintegration).
+
 ---
 
 ### Header
@@ -1334,6 +1373,11 @@ Each falls back to its built-in color when unset.
 | `--boomi-scrollbar-thumb-active` | Scrollbar thumb active color |
 | `--boomi-scrollbar-corner` | Scrollbar corner color |
 | `--boomi-scrollbar-radius` | Scrollbar thumb border radius |
+| `--boomi-scrollbar-thumb-inset` | Transparent padding around the thumb (default `2px`; visible thumb = width − 2 × inset) |
+| `--boomi-scrollbar-thumb-inset-hover` | Inset on hover (default `1px`, so the thumb grows slightly) |
+| `--boomi-scrollbar-firefox-width` | Firefox `scrollbar-width` (`thin` default, `auto`, `none`) |
+
+**Every scroll area inside the embed** uses these tokens by default (the rule targets `:host *`, so it never affects the host page). Defaults are thin and unobtrusive: `8px` track, transparent background, a 4px pill thumb that grows to 6px and takes the accent tint on hover. `.boomi-scroll`, `.is-slim` and `.is-ultraslim` still work for per-element tuning.
 
 ---
 
