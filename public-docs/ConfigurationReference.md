@@ -427,6 +427,7 @@ components: {
 | `catalog.showViewToggle` | `boolean` | `true` | Show the card/table switch. |
 | `catalog.searchPlaceholder` | `string` | built-in | Search box placeholder. Search runs on the server when the user presses Enter. |
 | `catalog.pageSize` | `number` | `12` | Packs per page (max 100). The catalog is paged on the server; connector icons are resolved only for the visible page. |
+| `showTargetEnvironment` | `boolean` | `true` | Show "Installing into *Environment*" inside the selected card on the install step, including when the environment dropdown is hidden. Label text: `targetEnvironmentLabel` (default `'Installing into'`). |
 | `hideEnvironmentSelectWhenSingle` | `boolean` | `false` | In the install step, hide the environment dropdown when exactly one environment is available (after the session scope and, for single-install packs, excluding environments that already hold the pack). That environment is used automatically. |
 
 The remaining `form.addIntegration` keys below apply to both layouts.
@@ -1013,6 +1014,7 @@ Keeps `.boomi-card` for its frame and hover. Parts: `__header`, `__type`, `__hea
 | `--boomi-integration-card-title-fg` / `-font-size` / `-font-weight` / `-line-height` | inherit / `1.25rem` / `600` / `1.75rem` | Title (single line, ellipsis) |
 | `--boomi-integration-card-desc-fg` / `-font-size` / `-line-height` / `-lines` | inherit / `0.75rem` / `1rem` / `2` | Description (clamped) |
 | `--boomi-integration-card-actions-justify` / `-gap` / `-padding` | `flex-end` / `0.5rem` / `0.5rem` | Button row |
+| `--boomi-integration-card-env-bg` / `-fg` / `-border` / `-radius` / `-padding` / `-font-size` / `-font-weight` | subtle tint / inherit / `0.375rem` / `0.1875rem 0.5rem` / `0.75rem` / `500` | Environment chip at the bottom left of the button row (`.boomi-integration-card__env`; `data-classification="prod"\|"test"`, with `--boomi-integration-card-env-prod-bg` / `-test-bg`). Shows the first in-scope environment and `+N` for more; hide with `integrations.integration.showEnvironment: false`. |
 
 #### Catalog card (Add Integration) — `.boomi-catalog-card`
 
@@ -1028,6 +1030,7 @@ Independent of `.boomi-card`. Parts: `__type`, `__title`, `__desc`, `__foot`, `_
 | `--boomi-catalog-card-title-fg` / `-font-size` / `-font-weight` / `-line-height` / `-lines` | inherit / `1.125rem` / `600` / `1.3` / `2` | Title (fixed height = lines × line height) |
 | `--boomi-catalog-card-desc-fg` / `-font-size` / `-line-height` / `-lines` / `-opacity` | muted / `0.8rem` / `1.4` / `3` / `0.9` | Description (fixed height) |
 | `--boomi-catalog-card-foot-gap` | `0.5rem` | Space between installed bar and button |
+| `--boomi-catalog-target-env-bg` / `-fg` / `-border` / `-radius` / `-padding` / `-font-size` / `-name-weight` / `-label-opacity` | accent tint / inherit / accent border / `0.5rem` / `0.5rem 0.75rem` / `0.8125rem` / `600` / `0.75` | "Installing into" panel on the install step (`.boomi-catalog-card__target-env`, `__target-env-label`, `-name`, `-class`) |
 | `--boomi-catalog-installed-bg` / `-fg` / `-border` / `-radius` / `-padding` / `-font-size` / `-font-weight` | success notice tokens / `0.375rem` / `0.3rem 0.5rem` / `0.75rem` / `500` | "Installed in N environments" bar |
 | `--boomi-catalog-select-bg` / `-bg-hover` / `-fg` / `-border` / `-radius` / `-font-weight` / `-height` | primary button tokens / `600` / `2.25rem` | Full-width Select button |
 | `--boomi-catalog-grid-gap` / `-padding` / `-max-height`, `--boomi-catalog-card-min-width` | `1rem` / `0.25rem` / `60vh` / `15rem` | Grid layout |

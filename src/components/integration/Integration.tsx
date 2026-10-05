@@ -73,6 +73,22 @@ const Integration: React.FC<IntegrationProps> = ({
   const title = isSingle ? integration.integrationPackName : integration.integrationPackOverrideName;
   const isAgent = !!integration.isAgent;
   const type = isAgent ? 'Agent' : (isSingle ? 'Single Install Integration' : 'Integration');
+  // Environment chip: every in-scope attachment from the server (SDK `environments`), first name + "+N".
+  const showEnvironment = boomiConfig?.components?.[componentKey]?.integrations?.integration?.showEnvironment ?? true;
+  const envRefs: Array<{ id: string; name?: string; classification?: string }> =
+    ((integration as any).environments as Array<{ id: string; name?: string; classification?: string }> | undefined) ?? [];
+  const primaryEnv = envRefs.find((e) => e.id === integration.environmentId) ?? envRefs[0];
+  const otherEnvs = envRefs.filter((e) => e !== primaryEnv);
+  const envChip = showEnvironment && primaryEnv ? (
+    <span
+      className="boomi-integration-card__env"
+      title={envRefs.map((e) => `${e.name ?? e.id}${e.classification ? ` (${e.classification})` : ''}`).join(', ')}
+      data-classification={primaryEnv.classification?.toLowerCase()}
+    >
+      <span className="boomi-integration-card__env-name">{primaryEnv.name ?? primaryEnv.id}</span>
+      {otherEnvs.length > 0 && <span className="boomi-integration-card__env-more">+{otherEnvs.length}</span>}
+    </span>
+  ) : null;
 
   const handleDelete = () => setShowNotification(true);
   const handleRunNow = () => setShowRunNotification(true);
@@ -143,6 +159,7 @@ const Integration: React.FC<IntegrationProps> = ({
 
           <div className="boomi-integration-card__footer">
             <div className="boomi-integration-card__actions">
+              {envChip}
               {(boomiConfig?.components?.[componentKey]?.integrations?.integration?.showEdit ?? true) && (
                 <>
                   {isAgent ? (

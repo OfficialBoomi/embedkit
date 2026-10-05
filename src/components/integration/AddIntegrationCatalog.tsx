@@ -60,6 +60,8 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
   const showEnvironmentSelect: boolean = cfg.showEnvironmentSelect ?? true;
   // Hide the environment dropdown when exactly one environment is available; it is used automatically.
   const hideEnvironmentSelectWhenSingle: boolean = cfg.hideEnvironmentSelectWhenSingle ?? false;
+  // Show which environment the install goes into, on the selected card (also when the dropdown is hidden).
+  const showTargetEnvironment: boolean = cfg.showTargetEnvironment ?? true;
   const defaultEnvironmentId: string = cfg.defaultEnvironmentId ?? envCfg.environmentId ?? '';
   const allowDuplicateNames: boolean = cfg.allowDuplicateIntegrationNames ?? false;
   const nameEditable: boolean = cfg.integrationPackName?.editable ?? true;
@@ -209,6 +211,19 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
           {(selected.displayDescription ?? selected.Description) && (
             <p className="boomi-catalog-card__desc">{selected.displayDescription ?? selected.Description}</p>
           )}
+          {showTargetEnvironment && !noneLeft && (() => {
+            const targetId = showEnvironmentSelect ? environmentId : (defaultEnvironmentId || environmentId);
+            const target = (environments ?? []).find((e: CatalogEnvironment) => e.id === targetId) as CatalogEnvironment | undefined;
+            return (
+              <div className={`boomi-catalog-card__target-env${target ? '' : ' boomi-catalog-card__target-env--pending'}`} aria-live="polite">
+                <span className="boomi-catalog-card__target-env-label">{cfg.targetEnvironmentLabel ?? 'Installing into'}</span>
+                <span className="boomi-catalog-card__target-env-name">
+                  {envLoading ? 'Loading…' : target ? (target.name ?? target.id) : 'Select an environment'}
+                </span>
+                {target?.classification && <span className="boomi-catalog-card__target-env-class">{target.classification}</span>}
+              </div>
+            );
+          })()}
         </div>
 
         {showEnvironmentSelect && !(hideEnvironmentSelectWhenSingle && !envLoading && envOptions.length === 1) && (
