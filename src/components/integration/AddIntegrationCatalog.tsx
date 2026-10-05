@@ -58,13 +58,15 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
   const cfg = boomiConfig?.components?.[componentKey]?.form?.addIntegration ?? {};
   const envCfg = boomiConfig?.components?.[componentKey]?.environmentSelect ?? {};
   const showEnvironmentSelect: boolean = cfg.showEnvironmentSelect ?? true;
+  // Hide the environment dropdown when exactly one environment is available; it is used automatically.
+  const hideEnvironmentSelectWhenSingle: boolean = cfg.hideEnvironmentSelectWhenSingle ?? false;
   const defaultEnvironmentId: string = cfg.defaultEnvironmentId ?? envCfg.environmentId ?? '';
   const allowDuplicateNames: boolean = cfg.allowDuplicateIntegrationNames ?? false;
   const nameEditable: boolean = cfg.integrationPackName?.editable ?? true;
   const nameLabel: string = cfg.integrationPackName?.label ?? 'Integration Name';
   const defaultView: 'grid' | 'table' = (cfg.catalog?.defaultView ?? 'grid') === 'table' ? 'table' : 'grid';
   const showViewToggle: boolean = cfg.catalog?.showViewToggle ?? true;
-  const iconSize: number = Number(cfg.catalog?.connectorIconSize ?? 32) || 32;
+  const iconSize: number = Number(cfg.catalog?.connectorIconSize ?? 36) || 36;
 
   const { integrationPacks, isLoading: packsLoading, error: packsError } = useFetchAccountGroupIntegrationPacks({ filter: renderType });
   const { fetchEnvironments, environments, isLoading: envLoading, error: envError } = useFetchEnvironments();
@@ -160,11 +162,15 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
     );
   };
 
+  /** Same wording as the cards on the main Integrations page. */
+  const typeLabel = (pack: CatalogPack) =>
+    pack.isAgent ? 'Agent' : pack.installationType === 'SINGLE' ? 'Single Install Integration' : 'Integration';
+
   const installedChip = (pack: CatalogPack) => {
     const n = pack.installedInstanceCount ?? 0;
     if (!n) return null;
     const envs = pack.installedEnvironmentIds?.length ?? 0;
-    return <span className="boomi-chip boomi-chip--success">{envs ? `Installed in ${envs} environment${envs === 1 ? '' : 's'}` : `${n} installed`}</span>;
+    return <div className="boomi-catalog-installed">{envs ? `Installed in ${envs} environment${envs === 1 ? '' : 's'}` : `${n} installed`}</div>;
   };
 
   // ---------- install step ----------
@@ -181,17 +187,15 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
         </button>
 
         <div className="boomi-card boomi-catalog-card boomi-catalog-card--selected">
-          <div className="boomi-catalog-card__head">
-            <div className="boomi-catalog-card__title">{selected.name}</div>
-            <span className="boomi-chip">{isSingle ? 'Single install' : 'Multi install'}</span>
-          </div>
+          <div className="boomi-catalog-card__type">{typeLabel(selected)}</div>
+          <div className="boomi-catalog-card__title">{selected.name}</div>
           {(selected.displayDescription ?? selected.Description) && (
             <p className="boomi-catalog-card__desc">{selected.displayDescription ?? selected.Description}</p>
           )}
           {renderConnectors(selected)}
         </div>
 
-        {showEnvironmentSelect && (
+        {showEnvironmentSelect && !(hideEnvironmentSelectWhenSingle && !envLoading && envOptions.length === 1) && (
           envLoading ? (
             <AjaxLoader message="Loading environments..." />
           ) : noneLeft ? (
@@ -261,15 +265,16 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
         <ul className="boomi-catalog-grid" role="list">
           {packs.map((pack) => (
             <li key={pack.id} className="boomi-card boomi-catalog-card">
-              <div className="boomi-catalog-card__head">
-                <div className="boomi-catalog-card__title" title={pack.name}>{pack.name}</div>
-                <span className="boomi-chip">{pack.installationType === 'SINGLE' ? 'Single' : 'Multi'}</span>
-              </div>
+              <div className="boomi-catalog-card__type">{typeLabel(pack)}</div>
+              <div className="boomi-catalog-card__title" title={pack.name}>{pack.name}</div>
               <p className="boomi-catalog-card__desc">{pack.displayDescription ?? pack.Description ?? ''}</p>
               {renderConnectors(pack)}
               <div className="boomi-catalog-card__foot">
-                {installedChip(pack)}
-                <Button toggle={false} primary={true} showIcon={false} label="Select" onClick={() => choosePack(pack)} />
+                {/* Placeholder keeps the button at the same height on cards that aren't installed yet. */}
+                {installedChip(pack) ?? <div className="boomi-catalog-installed boomi-catalog-installed--empty" aria-hidden="true">&nbsp;</div>}
+                <div className="boomi-catalog-card__action">
+                  <Button toggle={false} primary={true} showIcon={false} label="Select" onClick={() => choosePack(pack)} />
+                </div>
               </div>
             </li>
           ))}
@@ -291,7 +296,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
               <tr key={pack.id} className="boomi-table-row">
                 <td className="py-3 px-4 text-sm font-medium">{pack.name}</td>
                 <td className="py-3 px-4 text-sm">{pack.displayDescription ?? pack.Description ?? ''}</td>
-                <td className="py-3 px-4 text-sm">{pack.installationType === 'SINGLE' ? 'Single' : 'Multi'}</td>
+                <td className="py-3 px-4 text-sm">{typeLabel(pack)}</td>
                 <td className="py-3 px-4">{renderConnectors(pack)}</td>
                 <td className="py-3 px-4 text-sm">{pack.installedEnvironmentIds?.length ? `${pack.installedEnvironmentIds.length} env` : (pack.installedInstanceCount ? `${pack.installedInstanceCount}` : '—')}</td>
                 <td className="py-3 px-4 text-right"><Button toggle={false} primary={true} showIcon={false} label="Select" onClick={() => choosePack(pack)} /></td>

@@ -400,7 +400,7 @@ components: {
 
 ### Add Integration Catalog (`form.addIntegration`)
 
-Since 1.7.0 the Add Integration modal is a **catalog**: a search box over pack names, descriptions and connectors, a card or table view, and one card per eligible pack showing its install type, connector icons and where it is already installed. Selecting a pack opens the install step. The environment list is the session's scoped list (see [Environment scope](#environment-scope-login-body-environments)); for **single-install** packs it also excludes environments that already hold the pack, preselects when exactly one remains, and disables install when none do.
+Since 1.7.0 the Add Integration modal is a **catalog**: a search box over pack names, descriptions and connectors, a card or table view, and one card per eligible pack. Cards follow the main Integrations cards: the type on top (**Integration** or **Single Install Integration**), the pack name and description, a centered stack of connector icons, then a full-width "Installed in N environments" bar (when installed) above a full-width **Select** button. Selecting a pack opens the install step. The environment list is the session's scoped list (see [Environment scope](#environment-scope-login-body-environments)); for **single-install** packs it also excludes environments that already hold the pack, preselects when exactly one remains, and disables install when none do.
 
 ```js
 components: {
@@ -426,6 +426,7 @@ components: {
 | `catalog.defaultView` | `'grid' \| 'table'` | `'grid'` | Initial catalog layout. |
 | `catalog.showViewToggle` | `boolean` | `true` | Show the card/table switch. |
 | `catalog.searchPlaceholder` | `string` | built-in | Search box placeholder. |
+| `hideEnvironmentSelectWhenSingle` | `boolean` | `false` | In the install step, hide the environment dropdown when exactly one environment is available (after the session scope and, for single-install packs, excluding environments that already hold the pack). That environment is used automatically. |
 
 The remaining `form.addIntegration` keys below apply to both layouts.
 
@@ -433,7 +434,7 @@ The remaining `form.addIntegration` keys below apply to both layouts.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `catalog.connectorIconSize` | `number` | `32` | Size of the icon art in px. Each icon sits in a rounded-square tile 16px larger (48px by default), centered. Cards show one centered, overlapping stack of up to four tiles (each tucked slightly under the next, left to right) at the same position on every card; with more connectors the fourth tile shows `+N`. |
+| `catalog.connectorIconSize` | `number` | `36` | Size of the icon art in px. Each icon sits in a rounded-square tile 16px larger (52px by default), centered. Cards show one centered, overlapping stack of up to four tiles (each tucked slightly under the next, left to right) at the same position on every card; with more connectors the fourth tile shows `+N`. |
 
 > **Content Security Policy.** Host pages that restrict `img-src` must allow the platform host (for example `https://api.boomi.com`), or the icons fall back to glyphs. Tile tokens: `--boomi-connector-icon-tile` (tile size), `--boomi-connector-icon-radius` (default `0.5rem`), `--boomi-connector-icon-border`, `--boomi-connector-icon-bg`, `--boomi-connector-icon-image-bg` (behind platform images), `--boomi-connector-icon-fg` (glyph color), `--boomi-connector-icon-overlap` (how far tiles overlap, default `0.625rem`; `0` for side by side), `--boomi-connector-icon-ring` (separator ring, defaults to the card background) and `--boomi-connector-icon-solid-bg` (opaque tile base).
 
