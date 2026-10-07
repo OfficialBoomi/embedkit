@@ -249,10 +249,9 @@ const Integrations: React.FC<IntegrationsProps> = ({
             }
           );
         }
+        // Agents open Run Agent; every integration, single-install included, opens the setup wizard.
         if (instance.isAgent) {
           handleRenderEditComponent('RunAgent', instance);
-        } else if (instance.installationType === 'SINGLE') {
-          handleRenderEditComponent('UpdateSchedules', instance);
         } else {
           handleRenderEditComponent('ConfigureIntegration', instance);
         }

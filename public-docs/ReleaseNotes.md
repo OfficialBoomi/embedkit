@@ -19,6 +19,7 @@
   **Bug fixes**
   - 🐛 **Instances attached to several environments no longer collapse to one** — The integrations list kept only the *last* environment attachment per instance, so a single-install pack deployed to several environments showed up once, pointing at an arbitrary environment, and Edit Connections / Maps / Schedules operated on that environment. Instances now carry `environments: [{ id, name, classification }]` with every in-scope attachment; `environmentId` remains as the first of them.
   - ✅ **Unattached integrations flagged** — An installed integration that is attached to no environment (detached in the platform, or an attach that failed during install) shows an orange **Unattached** pill where the environment would be, on the card and in the table (`integrations.integration.unattachedLabel`). Requires a server that reports `environments` per instance.
+  - ✅ **Single-install packs open the setup wizard after install** — Installing a single-install integration now continues into the same setup wizard as any other integration, instead of jumping straight to its schedules.
   - 🐛 **All environments listed** — Asking for `ALL` environments queried only those classified PROD or TEST, so accounts whose environments carry no classification saw just some of them (for example only Production) in environment dropdowns. `ALL` now returns every environment in scope.
   - 🐛 **`environmentSelect.includeEnvironments` now works** — the server expected a differently named parameter and always returned all classifications.
 
