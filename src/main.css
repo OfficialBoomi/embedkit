@@ -4054,6 +4054,9 @@ td > .boomi-integration-card__env--unattached { max-width: none; margin-right: 0
 .boomi-filter__link:disabled { opacity: 0.45; cursor: default; }
 .boomi-filter__note { margin: 0.25rem 0 0.5rem; font-size: 0.8125rem; }
 
+/* Scroll areas stop at their ends instead of rubber-banding (macOS) or scrolling the host page. */
+.boomi-scroll, .boomi-catalog-grid, .boomi-filter__panel { overscroll-behavior: none; }
+
 /* Sortable table headers (1.7 UI) */
 .boomi-sort { display: inline-flex; align-items: center; gap: 0.25rem; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
 .boomi-sort:focus-visible { outline: 2px solid var(--boomi-accent, #6366f1); outline-offset: 2px; border-radius: 0.25rem; }

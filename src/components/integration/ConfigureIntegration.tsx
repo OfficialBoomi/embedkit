@@ -26,6 +26,13 @@ import UpdateMaps from './UpdateMaps';
 import UpdateConnections, { UpdateConnectionsRef } from './UpdateConnections';
 import UpdateSchedules, { UpdateScheduleRef } from './UpdateSchedules';
 import Wizard from '../ui/Wizard';
+import AjaxLoader from '../ui/AjaxLoader';
+import { useEnvironmentExtensionsService } from '../../service/environmentExtensions.service';
+import { useMapExtensionsService } from '../../service/mapExtensions.service';
+import { BrowseSessionStore } from '../../utils/browseSessionStore';
+import logger from '../../logger.service';
+
+type WizardStep = 'connections' | 'maps' | 'schedule';
 import { emitEmbedKitEvent } from '../../events.service';
 
 /**
@@ -58,6 +65,39 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
 }) => {
   const { boomiConfig, setPageIsLoading, renderComponent } = usePlugin();
   const [currentStep, setCurrentStep] = useState(0);
+  // Steps with something to configure; null while checking. Schedule is always last.
+  const [steps, setSteps] = useState<WizardStep[] | null>(null);
+  const { fetchEnvironmentExtensions } = useEnvironmentExtensionsService();
+  const { getMapExtensions } = useMapExtensionsService();
+  const fetchExtRef = useRef(fetchEnvironmentExtensions);
+  fetchExtRef.current = fetchEnvironmentExtensions;
+  const getMapsRef = useRef(getMapExtensions);
+  getMapsRef.current = getMapExtensions;
+
+  useEffect(() => {
+    let cancelled = false;
+    const isSingleInstall = integration.installationType === 'SINGLE';
+    const environmentId = integration.environmentId || '';
+    const integrationPackInstanceId = integration.id || '';
+    (async () => {
+      const [ext, maps] = await Promise.allSettled([
+        fetchExtRef.current({ integrationPackInstanceId, environmentId, isSingleInstall } as any),
+        getMapsRef.current({ integrationPackInstanceId, environmentId, isSingleInstall }),
+      ]);
+      // A failed check keeps the step, so the step itself shows the error.
+      const hasConnections = ext.status !== 'fulfilled' || ((ext.value as any)?.combined ?? []).some((e: any) =>
+        (e?.connections?.connection?.length ?? 0) > 0 ||
+        (e?.processProperties?.ProcessProperty ?? []).some((p: any) => (p?.ProcessPropertyValue?.length ?? 0) > 0));
+      const hasMaps = maps.status !== 'fulfilled' || BrowseSessionStore.attachSessionsAndPrune(maps.value ?? []).length > 0;
+      if (ext.status === 'rejected') logger.warn('Wizard: connection check failed; keeping the step', ext.reason);
+      if (maps.status === 'rejected') logger.warn('Wizard: map check failed; keeping the step', maps.reason);
+      if (cancelled) return;
+      setSteps([...(hasConnections ? ['connections' as const] : []), ...(hasMaps ? ['maps' as const] : []), 'schedule']);
+      setCurrentStep(0);
+    })();
+    return () => { cancelled = true; };
+  }, [integration.id, integration.environmentId, integration.installationType]);
+  const step: WizardStep = steps?.[currentStep] ?? 'schedule';
   const updateConnectionsRef = useRef<UpdateConnectionsRef>(null);
   const updateScheduleRef = useRef<UpdateScheduleRef>(null);
   const [showUpdateToast, setShowUpdateToast] = useState(false);
@@ -66,48 +106,55 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
     error: executionError,
     runAllProcesses,
   } = useRunAllProcesses();
- const connStepKey = `${integration.id}:${currentStep === 0 ? 'active' : 'hidden'}`;
- const schedStepKey = `${integration.id}:${currentStep === 2 ? 'active' : 'hidden'}`;
+  const connStepKey = `${integration.id}:${step === 'connections' ? 'active' : 'hidden'}`;
+  const schedStepKey = `${integration.id}:${step === 'schedule' ? 'active' : 'hidden'}`;
 
-  const wizardPages = [
-    <UpdateConnections
-      componentKey={componentKey}
-      key={`update-connections-${connStepKey}`}
-      ref={updateConnectionsRef}
-      integration={integration}
-      setIsLoading={setPageIsLoading}
-      active={currentStep === 0}
-      wizard={true}
-    />,
-    <UpdateMaps
-      componentKey={componentKey}
-      key="map-fields-maps"
-      integration={integration}
-      setIsLoading={setPageIsLoading}
-      active={currentStep === 1}
-      wizard={true}
-    />,
-    <UpdateSchedules
-      componentKey={componentKey}
-      key={`update-schedule-${schedStepKey}`}
-      ref={updateScheduleRef}
-      integration={integration}
-      setIsLoading={setPageIsLoading}
-      active={currentStep === 2}
-      wizard={true}
-    />,
-  ];
-
-  const labels = [
-    "Make Connections",
-    "Map Fields",
-    "Set Schedule / Run",
-  ];
+  const pageFor: Record<WizardStep, React.ReactElement> = {
+    connections: (
+      <UpdateConnections
+        componentKey={componentKey}
+        key={`update-connections-${connStepKey}`}
+        ref={updateConnectionsRef}
+        integration={integration}
+        setIsLoading={setPageIsLoading}
+        active={step === 'connections'}
+        wizard={true}
+      />
+    ),
+    maps: (
+      <UpdateMaps
+        componentKey={componentKey}
+        key="map-fields-maps"
+        integration={integration}
+        setIsLoading={setPageIsLoading}
+        active={step === 'maps'}
+        wizard={true}
+      />
+    ),
+    schedule: (
+      <UpdateSchedules
+        componentKey={componentKey}
+        key={`update-schedule-${schedStepKey}`}
+        ref={updateScheduleRef}
+        integration={integration}
+        setIsLoading={setPageIsLoading}
+        active={step === 'schedule'}
+        wizard={true}
+      />
+    ),
+  };
+  const labelFor: Record<WizardStep, string> = {
+    connections: 'Make Connections',
+    maps: 'Map Fields',
+    schedule: 'Set Schedule / Run',
+  };
+  const wizardPages = (steps ?? []).map((s) => pageFor[s]);
+  const labels = (steps ?? []).map((s) => labelFor[s]);
 
 
   const handleContinue = async () => {
-    switch (currentStep) {
-      case 0: {
+    switch (step) {
+      case 'connections': {
         const isValid = await updateConnectionsRef.current?.submit?.();
         if (!isValid) return;
         setCurrentStep((prev) => prev + 1);
@@ -116,14 +163,14 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
         break;
       }
 
-      case 1: {
-        setCurrentStep(2);
+      case 'maps': {
+        setCurrentStep((prev) => prev + 1);
         setUpdateMessage('Mappings updated successfully!');
         setShowUpdateToast(true);
         break;
       }
 
-      case 2: {
+      case 'schedule': {
         const isValid = await updateScheduleRef.current?.submit?.();
         if (!isValid) return;
         renderComponent?.({
@@ -180,7 +227,9 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
     }
   }, [currentStep]);
 
-  const bodyContent = simple ? (
+  const bodyContent = steps === null && !simple ? (
+    <div className="flex justify-center items-center py-10"><AjaxLoader /></div>
+  ) : simple ? (
     <UpdateConnections
       componentKey={componentKey}
       ref={updateConnectionsRef}
@@ -214,7 +263,7 @@ return (
       componentKey={componentKey || 'integrationsMain'}
       componentName='configureIntegration'
       isRootNavigation={false}
-      title={`Configure - ${integration.integrationPackOverrideName}`}
+      title={`Configure - ${integration.integrationPackOverrideName || integration.integrationPackName || ''}`}
       description={integration.integrationPackDescription || ''}
       bodyContent={bodyContent}
       levelOne="My Integrations"
