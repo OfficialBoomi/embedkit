@@ -3967,6 +3967,18 @@
 .boomi-integration-card__env-name { overflow: hidden; text-overflow: ellipsis; }
 .boomi-integration-card__env-more { flex: 0 0 auto; opacity: 0.7; }
 .boomi-integration-card__env[data-classification="prod"] { background: var(--boomi-integration-card-env-prod-bg, var(--boomi-integration-card-env-bg, color-mix(in srgb, currentColor 7%, transparent))); }
+.boomi-integration-card__env.boomi-integration-card__env--unattached {
+  /* Orange warning; readable on light and dark card backgrounds. */
+  background: var(--boomi-integration-card-env-unattached-bg, color-mix(in srgb, #ea580c 14%, transparent));
+  color: var(--boomi-integration-card-env-unattached-fg, #c2410c);
+  border-color: var(--boomi-integration-card-env-unattached-border, color-mix(in srgb, #ea580c 50%, transparent));
+  font-weight: 600;
+}
+:host([data-theme="dark"]) .boomi-integration-card__env.boomi-integration-card__env--unattached {
+  color: var(--boomi-integration-card-env-unattached-fg, #fdba74);
+}
+/* In the table the pill sits inline in the Environment cell. */
+td > .boomi-integration-card__env--unattached { max-width: none; margin-right: 0; }
 .boomi-integration-card__env[data-classification="test"] { background: var(--boomi-integration-card-env-test-bg, var(--boomi-integration-card-env-bg, color-mix(in srgb, currentColor 7%, transparent))); }
 .boomi-integration-card__actions {
   display: flex; align-items: center; justify-content: var(--boomi-integration-card-actions-justify, flex-end);

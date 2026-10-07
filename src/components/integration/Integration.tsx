@@ -83,7 +83,20 @@ const Integration: React.FC<IntegrationProps> = ({
     ((integration as any).environments as Array<{ id: string; name?: string; classification?: string }> | undefined) ?? [];
   const primaryEnv = envRefs.find((e) => e.id === integration.environmentId) ?? envRefs[0];
   const otherEnvs = envRefs.filter((e) => e !== primaryEnv);
-  const envChip = showEnvironment && primaryEnv ? (
+  // Unattached: the server reported the instance's environments and there are none
+  // (an older server sends no list, so nothing is shown rather than a false warning).
+  const unattached = Array.isArray((integration as any).environments) && envRefs.length === 0;
+  const unattachedLabel: string =
+    boomiConfig?.components?.[componentKey]?.integrations?.integration?.unattachedLabel ?? 'Unattached';
+  const unattachedChip = (
+    <span
+      className="boomi-integration-card__env boomi-integration-card__env--unattached"
+      title="Not attached to any environment. Attach it in the platform before running or editing it."
+    >
+      <span className="boomi-integration-card__env-name">{unattachedLabel}</span>
+    </span>
+  );
+  const envChip = showEnvironment && unattached ? unattachedChip : showEnvironment && primaryEnv ? (
     <span
       className="boomi-integration-card__env"
       title={envRefs.map((e) => `${e.name ?? e.id}${e.classification ? ` (${e.classification})` : ''}`).join(', ')}
@@ -288,7 +301,7 @@ const Integration: React.FC<IntegrationProps> = ({
               className="py-4 pl-4 pr-3 text-xs whitespace-nowrap"
               title={envRefs.map((e) => `${e.name ?? e.id}${e.classification ? ` (${e.classification})` : ''}`).join(', ') || undefined}
             >
-              {primaryEnv ? (primaryEnv.name ?? primaryEnv.id) : '—'}
+              {unattached ? unattachedChip : primaryEnv ? (primaryEnv.name ?? primaryEnv.id) : '—'}
               {otherEnvs.length > 0 && <span className="boomi-integration-card__env-more"> +{otherEnvs.length}</span>}
             </td>
           )}

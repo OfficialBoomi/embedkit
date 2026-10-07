@@ -420,7 +420,8 @@ components: {
 | `agentButton.label` | `string` | `'Run Agent'` | `'Run Agent'` | Run Agent button text on agent cards. |
 | `showEdit` | `boolean` | `true` | `true` | `false` turns off editing from the card entirely: no Edit or Run Agent button, and the card is not clickable. |
 | `showControls` | `boolean` | `true` | `true` | Show the actions (⋮) menu. |
-| `showEnvironment` | `boolean` | `false` | `true` | Show the environment the instance is attached to (first in-scope environment, `+N` for more). |
+| `showEnvironment` | `boolean` | `false` | `true` | Show the environment the instance is attached to (first in-scope environment, `+N` for more). An instance attached to no environment shows an orange **Unattached** pill instead, on the card and in the table. |
+| `unattachedLabel` | `string` | `'Unattached'` | `'Unattached'` | Text of that pill. |
 | `showConnectors` | `boolean` | `false` | `true` | Show the pack's connector icons under the description. The list asks the server for them only when this is on. |
 | `connectorIconSize` | `number` | `36` | `36` | Connector icon art size in px. |
 
@@ -1091,6 +1092,7 @@ Keeps `.boomi-card` for its frame and hover. Parts: `__header`, `__type`, `__hea
 | `--boomi-integration-card-actions-justify` / `-gap` / `-padding` | `flex-end` / `0.5rem` / `0.5rem` | Button row |
 | `--boomi-integration-card-env-bg` / `-fg` / `-border` / `-radius` / `-padding` / `-font-size` / `-font-weight` | subtle tint / inherit / `0.375rem` / `0.1875rem 0.5rem` / `0.75rem` / `500` | Environment chip (`.boomi-integration-card__env`): a full-width row above the button at `uiVersion` 1.7.0+ (`__env-row`; `--boomi-integration-card-env-justify`, default `center`, and `--boomi-integration-card-env-row-padding`), otherwise at the bottom left of the button row; `data-classification="prod"\|"test"`, with `--boomi-integration-card-env-prod-bg` / `-test-bg`). Shows the first in-scope environment and `+N` for more; on by default at `uiVersion` 1.7.0+; set `integrations.integration.showEnvironment` to override. |
 | `--boomi-integration-card-focus-ring` | accent | Focus outline of a clickable card (`--clickable`). |
+| `--boomi-integration-card-env-unattached-bg` / `-fg` / `-border` | orange tint / `#c2410c` (`#fdba74` dark) / orange | **Unattached** pill (`.boomi-integration-card__env--unattached`) for instances attached to no environment. |
 | `--boomi-integration-card-connectors-margin` / `-justify` | `0.75rem 0 0 0` / `flex-start` | Connector icon stack under the description (`.boomi-integration-card__connectors`, a `.boomi-connector-stack`). The description keeps a fixed height while icons are shown, so the stack sits at the same level on every card. On by default at `uiVersion` 1.7.0+; set `integrations.integration.showConnectors` to override. Icon size via `integrations.integration.connectorIconSize` (default `36`). |
 
 #### Catalog card (Add Integration) — `.boomi-catalog-item` and `.boomi-catalog-card`
