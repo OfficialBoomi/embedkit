@@ -14,6 +14,7 @@ import PluginContextProvider from './context/pluginContext';
 import Root from './components/Root';
 import ErrorBoundary from './components/ErrorBoundary';
 import tailwindCss from './main.css?inline';
+import { uiVersionCss } from './utils/ui-version';
 import logger from './logger.service';
 import { getBrowserId } from './utils/browserId';
 import { BoomiEvents } from './events.service';
@@ -110,7 +111,10 @@ function toVarName(key: string, prefix = '--boomi-show-') {
 function applyBoomiConfigVars(shadowRoot: ShadowRoot, config: any, componentKey: ComponentKey) {
   if (!config) return;
 
+  // UI-version defaults go first so the host's cssVars below still override them.
   const chunks: string[] = [];
+  const versionCss = uiVersionCss(config, componentKey);
+  if (versionCss) chunks.push(versionCss);
   let globalCss = '';
   const flags = config.components ?? {};
   for (const [key, val] of Object.entries(flags)) {

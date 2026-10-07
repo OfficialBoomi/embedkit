@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePlugin } from '../../context/pluginContext';
-import { useIntegrationPacksService, type EligiblePacksPage } from '../../service/integrationPacks.service';
+import { useIntegrationPacksService, EMPTY_FILTERS, type EligiblePacksPage, type ListFilters } from '../../service/integrationPacks.service';
 import logger from '../../logger.service';
 
 export type UseFetchEligiblePacksPageArgs = {
@@ -30,6 +30,18 @@ export const useFetchEligiblePacksPage = <T = any,>({ renderType, pageSize = 12,
   const [search, setSearchRaw] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [filters, setFiltersRaw] = useState<ListFilters>(EMPTY_FILTERS);
+  const filterKey = `${filters.environmentIds.join(',')}|${filters.connectorTypes.join(',')}`;
+  /** A new filter always starts on page 1. */
+  const setFilters = useCallback((f: ListFilters) => { setFiltersRaw(f); setPage(1); }, []);
+  /** Filter options for the current search (environments packs are installed in, connector types). */
+  const loadFacets = useCallback(async () => {
+    const resp = await fetchPageRef.current({
+      renderType, page: 1, pageSize: 1, includeConnectors: false, includeFacets: true,
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    });
+    return resp?.facets ?? { environments: [], connectors: [] };
+  }, [renderType, debouncedSearch]);
   const [data, setData] = useState<EligiblePacksPage<T>>({ result: [], page: 1, pageSize, numberOfResults: 0, totalPages: 1 });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +72,7 @@ export const useFetchEligiblePacksPage = <T = any,>({ renderType, pageSize = 12,
         pageSize,
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
         ...(notAllowedIds.length ? { notAllowedIds } : {}),
+        filters,
       });
       if (id !== requestId.current) return; // a newer request superseded this one
       setData({
@@ -78,7 +91,7 @@ export const useFetchEligiblePacksPage = <T = any,>({ renderType, pageSize = 12,
       if (id === requestId.current) setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [renderType, page, pageSize, debouncedSearch, notAllowedKey]);
+  }, [renderType, page, pageSize, debouncedSearch, notAllowedKey, filterKey]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -92,6 +105,10 @@ export const useFetchEligiblePacksPage = <T = any,>({ renderType, pageSize = 12,
     totalPages: data.totalPages,
     search,
     setSearch: setSearchRaw,
+    filters,
+    setFilters,
+    loadFacets,
+    facetsKey: `${renderType}|${debouncedSearch}`,
     goToPage,
     reload: load,
     isLoading,

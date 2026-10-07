@@ -25,6 +25,9 @@ import Input from '../ui/Input';
 import AjaxLoader from '../ui/AjaxLoader';
 import Pagination from '../ui/Pagination';
 import ConnectorStack from './ConnectorStack';
+import IntegrationItem from './IntegrationItem';
+import ListFilterButton from '../ui/ListFilterButton';
+import { uiVersionAtLeast, UI_VERSIONS } from '../../utils/ui-version';
 import {
   installableEnvironments,
   preselectEnvironment,
@@ -69,6 +72,15 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
   const defaultView: 'grid' | 'table' = (cfg.catalog?.defaultView ?? 'grid') === 'table' ? 'table' : 'grid';
   const showViewToggle: boolean = cfg.catalog?.showViewToggle ?? true;
   const iconSize: number = Number(cfg.catalog?.connectorIconSize ?? 36) || 36;
+  // Type line follows the main Integrations cards (integrations.integration.showType) unless the
+  // catalog sets its own; both default to off on the 1.7 UI.
+  const cardCfg = boomiConfig?.components?.[componentKey]?.integrations?.integration ?? {};
+  const catalogUi = uiVersionAtLeast(boomiConfig, componentKey, UI_VERSIONS.CATALOG);
+  const showType: boolean = cfg.catalog?.showType ?? cardCfg.showType ?? !catalogUi;
+  // Install button on catalog cards (default on). When it is off, clicking the card starts the install.
+  // The table view always shows the button.
+  const showInstallButton: boolean = cfg.catalog?.installButton?.show ?? true;
+  const installLabel: string = cfg.catalog?.installButton?.label ?? 'Install';
 
   const catalogPageSize: number = Math.min(Math.max(Number(cfg.catalog?.pageSize ?? 12) || 12, 1), 100);
   // Server-paged: search and paging run on the server; connector icons are resolved per page.
@@ -80,9 +92,16 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
     search,
     setSearch,
     goToPage,
+    filters,
+    setFilters,
+    loadFacets,
+    facetsKey,
     isLoading: packsLoading,
     error: packsError,
   } = useFetchEligiblePacksPage<CatalogPack>({ renderType, pageSize: catalogPageSize });
+  // Environment / connector filter beside the search box; on by default at uiVersion 1.7.0.
+  const showFilter: boolean = cfg.catalog?.filter?.show ?? boomiConfig?.components?.[componentKey]?.integrations?.filter?.show ?? catalogUi;
+  const filtered = filters.environmentIds.length + filters.connectorTypes.length > 0;
   const { fetchEnvironments, environments, isLoading: envLoading, error: envError } = useFetchEnvironments();
 
   const [view, setView] = useState<'grid' | 'table'>(defaultView);
@@ -177,7 +196,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
         <div className="boomi-catalog-card boomi-catalog-card--selected">
           <div className="boomi-catalog-card__header">
             <div className="boomi-catalog-card__headline">
-              <div className="boomi-catalog-card__type">{typeLabel(selected)}</div>
+              {showType && <div className="boomi-catalog-card__type">{typeLabel(selected)}</div>}
               <div className="boomi-catalog-card__title">{selected.name}</div>
             </div>
             {renderConnectors(selected)}
@@ -252,6 +271,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
             suggestions={packs.map((p) => p.name).filter((n): n is string => typeof n === 'string')}
           />
         </div>
+        {showFilter && <ListFilterButton value={filters} onChange={setFilters} loadFacets={loadFacets} facetsKey={facetsKey} />}
         {showViewToggle && (
           <div className="boomi-catalog-view">
             <Button toggle={false} primary={view === 'grid'} showIcon={true} iconOnly={true} icon={<AiOutlineAppstore className="h-5 w-5" />} hoverText="Cards" onClick={() => setView('grid')} />
@@ -265,23 +285,53 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
       ) : packsError ? (
         <div className="boomi-notice boomi-notice--error">{packsError}</div>
       ) : packs.length === 0 ? (
-        <p className="boomi-catalog-muted">{search ? 'No integrations match your search.' : 'No integrations are available to install.'}</p>
+        <p className="boomi-catalog-muted">{search || filtered ? 'No integrations match your search or filters.' : 'No integrations are available to install.'}</p>
       ) : view === 'grid' ? (
         <ul className="boomi-catalog-grid" role="list">
           {packs.map((pack) => (
-            <li key={pack.id} className={`boomi-catalog-card boomi-catalog-card--${pack.installationType === 'SINGLE' ? 'single' : 'multi'}${pack.installedInstanceCount ? ' boomi-catalog-card--installed' : ''}`}>
-              <div className="boomi-catalog-card__type">{typeLabel(pack)}</div>
-              <div className="boomi-catalog-card__title" title={pack.name}>{pack.name}</div>
-              <p className="boomi-catalog-card__desc">{pack.displayDescription ?? pack.Description ?? ''}</p>
-              {renderConnectors(pack)}
-              <div className="boomi-catalog-card__foot">
-                {/* Placeholder keeps the button at the same height on cards that aren't installed yet. */}
-                {installedChip(pack) ?? <div className="boomi-catalog-installed boomi-catalog-installed--empty" aria-hidden="true">&nbsp;</div>}
-                <div className="boomi-catalog-card__action">
-                  <Button toggle={false} primary={true} showIcon={false} buttonClass="boomi-catalog-card__select" label="Select" onClick={() => choosePack(pack)} />
+            // Same markup and classes as the main Integrations cards, so both are the same size.
+            <IntegrationItem
+              key={pack.id}
+              integration={pack as any}
+              isAgent={!!pack.isAgent}
+              className={`boomi-integration-card--ui-1-7 boomi-catalog-item boomi-catalog-item--${pack.installationType === 'SINGLE' ? 'single' : 'multi'}${pack.installedInstanceCount ? ' boomi-catalog-item--installed' : ''}`}
+              onActivate={showInstallButton ? undefined : () => choosePack(pack)}
+              activateLabel={`${installLabel} ${pack.name ?? ''}`.trim()}
+            >
+              {showType && (
+                <div className="boomi-integration-card__header">
+                  <div className="boomi-integration-card__type">{typeLabel(pack)}</div>
+                </div>
+              )}
+              <div className="boomi-integration-card__body">
+                <div className="boomi-integration-card__content boomi-integration-card__content--connectors">
+                  <div className="boomi-integration-card__title-row">
+                    <h3 className="boomi-integration-card__title" title={pack.name}>{pack.name}</h3>
+                  </div>
+                  <p className="boomi-integration-card__desc">{pack.displayDescription ?? pack.Description ?? ''}</p>
+                  <ConnectorStack
+                    connectors={pack.connectors}
+                    size={iconSize}
+                    maxTiles={MAX_TILES}
+                    className="boomi-integration-card__connectors"
+                    emptyLabel="No connectors"
+                  />
                 </div>
               </div>
-            </li>
+              <div className="boomi-integration-card__footer boomi-integration-card__footer--stacked">
+                {/* Placeholder keeps every card the same height when a pack isn't installed yet. */}
+                <div className="boomi-integration-card__env-row">
+                  {installedChip(pack) ?? <div className="boomi-catalog-installed boomi-catalog-installed--empty" aria-hidden="true">&nbsp;</div>}
+                </div>
+                {showInstallButton && (
+                  <div className="boomi-integration-card__actions">
+                    <div className="boomi-integration-card__edit">
+                      <Button toggle={false} primary={true} showIcon={false} buttonClass="boomi-catalog-card__select" label={installLabel} onClick={() => choosePack(pack)} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </IntegrationItem>
           ))}
         </ul>
       ) : (
@@ -304,7 +354,7 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
                 <td className="py-3 px-4 text-sm">{typeLabel(pack)}</td>
                 <td className="py-3 px-4">{renderConnectors(pack)}</td>
                 <td className="py-3 px-4 text-sm">{pack.installedEnvironmentIds?.length ? `${pack.installedEnvironmentIds.length} env` : (pack.installedInstanceCount ? `${pack.installedInstanceCount}` : '—')}</td>
-                <td className="py-3 px-4 text-right"><Button toggle={false} primary={true} showIcon={false} label="Select" onClick={() => choosePack(pack)} /></td>
+                <td className="py-3 px-4 text-right"><Button toggle={false} primary={true} showIcon={false} label={installLabel} onClick={() => choosePack(pack)} /></td>
               </tr>
             ))}
           </tbody>

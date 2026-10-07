@@ -59,6 +59,13 @@ export type ComponentConfig = {
   showDescription?: boolean;
   description?: string;
 
+  /**
+   * EmbedKit release whose UI this component should have, e.g. '1.7.0'. Omit to keep
+   * the 1.6.1 UI. Upgrading the package never changes a component's look until this is
+   * raised; explicit per-feature settings still override it.
+   */
+  uiVersion?: string;
+
   /** Optional mapping feature flag */
   mapping?: Mapping;
 

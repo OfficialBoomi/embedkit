@@ -41,6 +41,7 @@ import {
 } from '../../hooks/execution-request/useRunAllProcesses'
 import AddIntegrationForm, { AddIntegrationFormRef, type AddIntegrationFormResult } from './AddIntegrationForm';
 import AddIntegrationCatalog from './AddIntegrationCatalog';
+import { uiVersionAtLeast, UI_VERSIONS } from '../../utils/ui-version';
 import AjaxLoader from '../ui/AjaxLoader';
 import Button from '../ui/Button';
 import Integration from './Integration'; 
@@ -48,6 +49,9 @@ import Modal from '../ui/Modal';
 import Page from '../core/Page';
 import Pagination from '../ui/Pagination'
 import SearchBar from '../ui/SearchBar';
+import ListFilterButton from '../ui/ListFilterButton';
+import { EMPTY_FILTERS, type ListFilters, type ListSort } from '../../service/integrationPacks.service';
+import { AiOutlineArrowUp, AiOutlineArrowDown, AiOutlineSwap } from 'react-icons/ai';
 import ToastNotification from '../ui/ToastNotification';
 import ViewExecutionDetails from './ViewExecutionDetails';
 import logger from '../../logger.service';
@@ -73,6 +77,8 @@ const Integrations: React.FC<IntegrationsProps> = ({
   }) => {
   const { boomiConfig, setPageIsLoading, renderComponent } = usePlugin();
   const renderType = boomiConfig?.components?.[componentKey]?.renderType ?? 'all';
+  // 1.7 UI (catalog, connector icons, environment chip) only when this component opts in via uiVersion.
+  const catalogUi = uiVersionAtLeast(boomiConfig, componentKey, UI_VERSIONS.CATALOG);
   const simple = boomiConfig?.components?.[componentKey]?.integrations?.simple ?? false;
   const [toasts, setToasts] = useState<{
     delete: boolean;
@@ -88,6 +94,9 @@ const Integrations: React.FC<IntegrationsProps> = ({
   const { deleteIntegrationPackInstance } = useDeleteIntegrationPackInstance();
   const { createInstance } = useCreateIntegrationPackInstance();
   const [searchContext, setSearchContext] = useState<string>('');
+  // Server-side filter and sort (1.7 UI). Changing either goes back to page 1.
+  const [filters, setFilters] = useState<ListFilters>(EMPTY_FILTERS);
+  const [sort, setSort] = useState<ListSort | undefined>(undefined);
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [isOpen, setIsOpen] = useState(false);
   const formRef = useRef<AddIntegrationFormRef>(null);
@@ -101,11 +110,37 @@ const Integrations: React.FC<IntegrationsProps> = ({
     currentPage,
     totalPages,
     goToPage,
+    loadFacets,
   } = useFetchIntegrationPackInstances({
     search: searchContext,
     renderType: renderType,
-    includeConnectors: boomiConfig?.components?.[componentKey]?.integrations?.integration?.showConnectors ?? true,
+    includeConnectors: boomiConfig?.components?.[componentKey]?.integrations?.integration?.showConnectors ?? catalogUi,
+    sort,
+    filters,
   });
+  const listCfg = boomiConfig?.components?.[componentKey]?.integrations ?? {};
+  const showFilter: boolean = listCfg.filter?.show ?? catalogUi;
+  const sortable: boolean = listCfg.table?.sortable ?? catalogUi;
+  const showEnvironmentColumn: boolean = listCfg.integration?.showEnvironment ?? catalogUi;
+  const changeFilters = (next: ListFilters) => { setFilters(next); goToPage(1); };
+  /** Click a header: ascending, then descending, then back to the default order. */
+  const changeSort = (by: ListSort['by']) => {
+    setSort((cur) => (cur?.by !== by ? { by, dir: 'asc' } : cur.dir === 'asc' ? { by, dir: 'desc' } : undefined));
+    goToPage(1);
+  };
+  const header = (by: ListSort['by'], label: string) => {
+    if (!sortable) return label;
+    const activeDir = sort?.by === by ? sort.dir : undefined;
+    const Icon = activeDir === 'asc' ? AiOutlineArrowUp : activeDir === 'desc' ? AiOutlineArrowDown : AiOutlineSwap;
+    return (
+      <button type="button" className={`boomi-sort${activeDir ? ' boomi-sort--active' : ''}`} onClick={() => changeSort(by)}>
+        {label}
+        <Icon className="boomi-sort__icon" style={activeDir ? undefined : { transform: 'rotate(90deg)' }} aria-hidden="true" />
+      </button>
+    );
+  };
+  const ariaSort = (by: ListSort['by']) =>
+    sortable ? (sort?.by === by ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none') : undefined;
   const {
     isRunning,
     error: executionError,
@@ -378,10 +413,11 @@ const Integrations: React.FC<IntegrationsProps> = ({
       setPageIsLoading(isRunning);
     }, [isRunning, setPageIsLoading]);
 
-  // 'catalog' (default): searchable cards/table with connector icons and scoped environments.
-  // 'form': the previous dropdown-based form.
+  // 'catalog': searchable cards/table with connector icons and scoped environments.
+  // 'form': the dropdown-based form. Default follows the component's uiVersion.
+  const layoutCfg = boomiConfig?.components?.[componentKey]?.form?.addIntegration?.layout;
   const addIntegrationLayout: 'catalog' | 'form' =
-    boomiConfig?.components?.[componentKey]?.form?.addIntegration?.layout === 'form' ? 'form' : 'catalog';
+    layoutCfg === 'form' || layoutCfg === 'catalog' ? layoutCfg : catalogUi ? 'catalog' : 'form';
   const existingIntegrationNames = integrationPackInstances
     .map((i) => i.integrationPackOverrideName || i.integrationPackName)
     .filter((n): n is string => !!n);
@@ -393,7 +429,7 @@ const Integrations: React.FC<IntegrationsProps> = ({
   const headerContent = (
     <>
       {showSearch && (
-        <div className="flex-none pr-6 pt-4 pb-4">
+        <div className={`flex-none pr-6 pt-4 pb-4${showFilter ? ' flex items-center gap-2' : ''}`}>
           <SearchBar
             searchCallback={searchIntegrations}
             suggestions={Array.from(
@@ -404,6 +440,14 @@ const Integrations: React.FC<IntegrationsProps> = ({
               )
             )}
           />
+          {showFilter && (
+            <ListFilterButton value={filters} onChange={changeFilters} loadFacets={loadFacets} facetsKey={`${renderType}|${searchContext}`} />
+          )}
+        </div>
+      )}
+      {!showSearch && showFilter && (
+        <div className="flex-none pr-6 pt-4 pb-4">
+          <ListFilterButton value={filters} onChange={changeFilters} loadFacets={loadFacets} facetsKey={`${renderType}|${searchContext}`} />
         </div>
       )}
       {showAdd && (
@@ -440,7 +484,11 @@ const Integrations: React.FC<IntegrationsProps> = ({
     <>
         <ul
           role="list"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-8"
+          className={
+            catalogUi
+              ? 'boomi-integration-grid'
+              : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-8'
+          }
         >
         {isLoading ? (
           <div className="col-span-full flex justify-center items-center"><AjaxLoader /></div>
@@ -478,8 +526,11 @@ const Integrations: React.FC<IntegrationsProps> = ({
       <table className='w-full table-auto rounded-lg shadow-sm'>
         <thead className="boomi-table-header">
           <tr>
-            <th className="py-3 px-4 text-left text-sm font-semibold w-1/6">Name</th>
-            <th className="py-3 text-left text-sm font-semibold w-3/6 w-full">Description</th>
+            <th className="py-3 px-4 text-left text-sm font-semibold w-1/6" aria-sort={ariaSort('name')}>{header('name', 'Name')}</th>
+            <th className="py-3 text-left text-sm font-semibold w-3/6 w-full" aria-sort={ariaSort('description')}>{header('description', 'Description')}</th>
+            {showEnvironmentColumn && (
+              <th className="py-3 pl-4 pr-3 text-left text-sm font-semibold whitespace-nowrap" aria-sort={ariaSort('environment')}>{header('environment', 'Environment')}</th>
+            )}
             <th className="py-3 text-left text-sm font-semibold w-1/6">Execution History</th>
             {(boomiConfig?.components?.[componentKey]?.integrations?.integration?.showControls ?? true) && (
               <th className="py-3 px-4"></th>
@@ -578,7 +629,7 @@ const Integrations: React.FC<IntegrationsProps> = ({
       ) : (
         <Modal
           isOpen={isOpen}
-          size="wide"
+          size="catalog"
           title={`${boomiConfig?.components?.[componentKey]?.form?.addIntegration?.title || 'Add Integration'}`}
           description={boomiConfig?.components?.[componentKey]?.form?.addIntegration?.description || 'Choose an integration to install. This creates the integration instance in the selected environment; it does not deploy it.'}
           onClose={() => setIsOpen(false)}

@@ -451,6 +451,21 @@
     max-width: 1100px;
   }
 
+  /* Add Integration catalog: exactly N cards across (cards, gaps, grid padding, scrollbar, modal padding). */
+  .boomi-modal-container--catalog {
+    width: calc(
+      var(--boomi-catalog-columns, 3) * var(--boomi-integration-card-width, 16rem)
+      + (var(--boomi-catalog-columns, 3) - 1) * var(--boomi-integration-grid-column-gap, 1.5rem)
+      + 5.5rem
+    );
+    max-width: 95%;
+  }
+  /* Phones: let the catalog fill the width and stack its cards. */
+  @media (max-width: 640px) {
+    .boomi-modal-container--catalog { width: 95%; }
+    .boomi-catalog-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--boomi-integration-card-width, 16rem)), 1fr)); }
+  }
+
   /* Close Button */
   .boomi-modal-close {
     position: absolute;
@@ -2289,39 +2304,6 @@
   }
 
 
-  /* ---------- Default scrollbars: every scroll area inside the embed ----------
-     Thin, modern, theme-driven by the same --boomi-scrollbar-* tokens.
-     `:host *` only matches inside the EmbedKit shadow root, never the host page.
-     .boomi-scroll (below) still applies and can be tuned per element. */
-  :host,
-  :host * {
-    scrollbar-width: var(--boomi-scrollbar-firefox-width, thin);
-    scrollbar-color: var(--boomi-scrollbar-thumb) var(--boomi-scrollbar-bg);
-  }
-  :host *::-webkit-scrollbar {
-    width: var(--boomi-scrollbar-width);
-    height: var(--boomi-scrollbar-width);
-    background: transparent;
-  }
-  :host *::-webkit-scrollbar-track {
-    background: var(--boomi-scrollbar-bg);
-    border-radius: var(--boomi-scrollbar-radius);
-  }
-  :host *::-webkit-scrollbar-thumb {
-    background-color: var(--boomi-scrollbar-thumb);
-    border-radius: var(--boomi-scrollbar-radius);
-    border: var(--boomi-scrollbar-thumb-inset, 2px) solid transparent;
-    background-clip: content-box;
-    min-height: 2rem;
-  }
-  :host *::-webkit-scrollbar-thumb:hover {
-    background-color: var(--boomi-scrollbar-thumb-hover);
-    border-width: var(--boomi-scrollbar-thumb-inset-hover, 1px);
-  }
-  :host *::-webkit-scrollbar-thumb:active { background-color: var(--boomi-scrollbar-thumb-active); }
-  :host *::-webkit-scrollbar-corner { background: var(--boomi-scrollbar-corner); }
-  :host *::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
-
   /* ---------- Firefox ---------- */
   .boomi-scroll {
     /* thumb color | track color */
@@ -2342,7 +2324,7 @@
   .boomi-scroll::-webkit-scrollbar-thumb {
     background-color: var(--boomi-scrollbar-thumb);
     border-radius: var(--boomi-scrollbar-radius);
-    border: var(--boomi-scrollbar-thumb-inset, 2px) solid transparent; /* pill with padding */
+    border: var(--boomi-scrollbar-thumb-inset, 3px) solid transparent; /* pill with padding */
     background-clip: content-box;
   }
   .boomi-scroll::-webkit-scrollbar-thumb:hover {
@@ -2361,7 +2343,7 @@
 
   /* Optional: show wider thumb on hover (nice for desktop) */
   .boomi-scroll:hover::-webkit-scrollbar-thumb {
-    border-width: var(--boomi-scrollbar-thumb-inset-hover, 1px);
+    border-width: var(--boomi-scrollbar-thumb-inset-hover, 2px);
   }
 
   /* ---------- Themed chip pulse ---------- */
@@ -2910,12 +2892,9 @@
     --boomi-chip-error-fg: var(--boomi-danger-fg);
     --boomi-chip-error-border: color-mix(in srgb, var(--boomi-danger) 40%, transparent);
 
-    --boomi-scrollbar-width:        8px;      /* total track size; visible thumb = width - 2 x inset */
+    --boomi-scrollbar-width:        10px;     /* total track size */
     --boomi-scrollbar-radius:       999px;    /* pill */
-    --boomi-scrollbar-thumb-inset:  2px;      /* transparent padding around the thumb (4px visible) */
-    --boomi-scrollbar-thumb-inset-hover: 1px; /* thumb grows to 6px on hover */
-    --boomi-scrollbar-firefox-width: thin;    /* Firefox: thin | auto | none */
-    --boomi-scrollbar-bg:           transparent; /* no visible track by default */
+    --boomi-scrollbar-bg:           color-mix(in srgb, var(--boomi-update-border, #e5e7eb) 35%, transparent);
     --boomi-scrollbar-thumb:        color-mix(in srgb, var(--boomi-page-fg-color, #111827) 18%, transparent);
     --boomi-scrollbar-thumb-hover:  color-mix(in srgb, var(--boomi-accent, #6366f1) 28%, transparent);
     --boomi-scrollbar-thumb-active: color-mix(in srgb, var(--boomi-accent, #6366f1) 40%, transparent);
@@ -3315,7 +3294,7 @@
     --boomi-chip-error-fg: theme('colors.rose.100');
     --boomi-chip-error-border: var(--boomi-danger);
 
-    --boomi-scrollbar-bg:           transparent;
+    --boomi-scrollbar-bg:           color-mix(in srgb, var(--boomi-update-border, #374151) 35%, transparent);
     --boomi-scrollbar-thumb:        color-mix(in srgb, var(--boomi-page-fg-color, #ffffff) 18%, transparent);
     --boomi-scrollbar-thumb-hover:  color-mix(in srgb, var(--boomi-accent, #818cf8) 32%, transparent);
     --boomi-scrollbar-thumb-active: color-mix(in srgb, var(--boomi-accent, #818cf8) 45%, transparent);
@@ -3702,12 +3681,20 @@
 /* ---------- Add Integration catalog ---------- */
 .boomi-catalog { display: flex; flex-direction: column; gap: 1rem; }
 .boomi-catalog-toolbar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-.boomi-catalog-search { flex: 1 1 16rem; min-width: 12rem; }
-.boomi-catalog-view { display: flex; gap: 0.25rem; }
+.boomi-catalog-search { flex: 0 1 auto; min-width: 12rem; }
+/* SearchBar has a fixed 400px width; let it shrink on narrow screens instead of overflowing. */
+.boomi-catalog-search > div { max-width: 100%; }
+/* The filter sits right after the search box; the card/table toggle goes to the far right. */
+.boomi-catalog-view { display: flex; gap: 0.25rem; margin-left: auto; }
 .boomi-catalog-grid {
   list-style: none; margin: 0; padding: var(--boomi-catalog-grid-padding, 0.25rem);
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--boomi-catalog-card-min-width, 15rem), 1fr));
-  gap: var(--boomi-catalog-grid-gap, 1rem);
+  /* A fixed number of columns, each the main Integrations card width (.boomi-integration-grid).
+     If the modal is a little narrower, cards shrink instead of dropping a column. */
+  display: grid;
+  grid-template-columns: repeat(var(--boomi-catalog-columns, 3), minmax(0, var(--boomi-integration-card-width, 16rem)));
+  justify-content: center;
+  column-gap: var(--boomi-catalog-grid-gap, var(--boomi-integration-grid-column-gap, 1.5rem));
+  row-gap: var(--boomi-catalog-grid-gap, var(--boomi-integration-grid-row-gap, 2rem));
   grid-auto-rows: 1fr; /* every card the same height */
   max-height: var(--boomi-catalog-grid-max-height, 60vh); overflow-y: auto;
 }
@@ -3744,6 +3731,10 @@
 .boomi-catalog-card__headline { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; flex: 1 1 auto; }
 .boomi-catalog-card--selected .boomi-catalog-card__title,
 .boomi-catalog-card--selected .boomi-catalog-card__desc { height: auto; }
+/* Grid cards: connector icons left-aligned, as on the main Integrations cards. */
+.boomi-catalog-card > .boomi-catalog-connectors {
+  justify-content: var(--boomi-catalog-card-connectors-justify, flex-start);
+}
 .boomi-catalog-card__header .boomi-catalog-connectors {
   width: auto; flex: 0 0 auto; justify-content: flex-end; margin: 0;
 }
@@ -3761,9 +3752,9 @@
 .boomi-catalog-card__title {
   /* Fixed block (lines x line-height) so everything below starts at the same offset on every card. */
   --_lines: var(--boomi-catalog-card-title-lines, 2);
-  --_lh: var(--boomi-catalog-card-title-line-height, 1.3);
+  --_lh: var(--boomi-catalog-card-title-line-height, 1.5);
   color: var(--boomi-catalog-card-title-fg, inherit);
-  font-size: var(--boomi-catalog-card-title-font-size, 1.125rem);
+  font-size: var(--boomi-catalog-card-title-font-size, 1rem);
   font-weight: var(--boomi-catalog-card-title-font-weight, 600);
   line-height: var(--_lh); overflow-wrap: anywhere;
   height: calc(var(--_lines) * var(--_lh) * 1em);
@@ -3891,6 +3882,44 @@
   line-height: 1.25rem;
 }
 .boomi-integration-card__header-extra { flex: 0 0 auto; padding-right: var(--boomi-integration-card-padding-x, 1rem); }
+/* Title row: the actions menu sits at its right when the type row is hidden (1.7 UI). */
+.boomi-integration-card__title-row { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.boomi-integration-card__title-row > .boomi-integration-card__title { flex: 1 1 auto; min-width: 0; }
+.boomi-integration-card__menu { flex: 0 0 auto; display: flex; align-items: center; }
+/* 1.7 UI: the Edit / Run Agent button fills the button row (beside the environment chip, if any). */
+.boomi-integration-card__edit { flex: 1 1 auto; min-width: 0; }
+.boomi-integration-card__edit > div { display: block; width: 100%; }
+.boomi-integration-card__edit button { width: 100%; justify-content: center; }
+/* 1.7 UI: the environment is a full-width row above the button row. */
+.boomi-integration-card__footer--stacked { flex-direction: column; }
+.boomi-integration-card__env-row {
+  display: flex;
+  padding: var(--boomi-integration-card-env-row-padding, 0 0.5rem 0.5rem 0.5rem);
+}
+.boomi-integration-card__env-row > .boomi-integration-card__env {
+  width: 100%; max-width: none; margin-right: 0;
+  justify-content: var(--boomi-integration-card-env-justify, center);
+  padding: var(--boomi-integration-card-env-row-chip-padding, 0.3rem 0.5rem);
+}
+.boomi-integration-card__footer--stacked .boomi-integration-card__actions { padding-top: 0; }
+/* 1.7 UI: smaller title; fixed-width cards (shared with the Add Integration catalog) instead of 1-4 stretched columns. */
+.boomi-integration-card--ui-1-7 .boomi-integration-card__title {
+  font-size: var(--boomi-integration-card-title-font-size, 1rem);
+  line-height: var(--boomi-integration-card-title-line-height, 1.5rem);
+}
+.boomi-integration-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--boomi-integration-card-width, 16rem)), var(--boomi-integration-card-width, 16rem)));
+  justify-content: start;
+  column-gap: var(--boomi-integration-grid-column-gap, 1.5rem);
+  row-gap: var(--boomi-integration-grid-row-gap, 2rem);
+}
+/* Clicking the card opens Edit when the Edit button is off. */
+.boomi-integration-card--clickable { cursor: pointer; }
+.boomi-integration-card--clickable:focus-visible {
+  outline: 2px solid var(--boomi-integration-card-focus-ring, var(--boomi-accent, #6366f1));
+  outline-offset: 2px;
+}
 .boomi-integration-card__body { display: flex; gap: 1rem; padding: var(--boomi-integration-card-body-padding, 1rem); }
 .boomi-integration-card__content { display: flex; flex-direction: column; width: 100%; min-width: 0; }
 .boomi-integration-card__title {
@@ -3965,3 +3994,52 @@
 .boomi-connector-icon--more { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.02em; line-height: 1; text-align: center; }
 .boomi-connector-icon--more { color: var(--boomi-muted, inherit); }
 .boomi-catalog-table .boomi-catalog-connectors { justify-content: flex-start; margin: 0; }
+
+/* ---------- List filter (integrations list + Add Integration catalog) ---------- */
+.boomi-filter { position: relative; flex: 0 0 auto; display: inline-flex; }
+.boomi-filter__button {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: var(--boomi-filter-size, 2.5rem); height: var(--boomi-filter-size, 2.5rem);
+  border-radius: var(--boomi-filter-radius, 0.5rem);
+  border: 1px solid var(--boomi-filter-border, var(--boomi-input-border, color-mix(in srgb, currentColor 25%, transparent)));
+  background: var(--boomi-filter-bg, var(--boomi-input-bg, transparent));
+  color: var(--boomi-filter-fg, inherit);
+  font-size: 1.25rem; cursor: pointer;
+}
+.boomi-filter__button:hover { border-color: var(--boomi-filter-border-hover, var(--boomi-accent, currentColor)); }
+.boomi-filter__button:focus-visible { outline: 2px solid var(--boomi-accent, #6366f1); outline-offset: 2px; }
+.boomi-filter__button--active { color: var(--boomi-filter-active-fg, var(--boomi-accent, currentColor)); border-color: var(--boomi-filter-active-fg, var(--boomi-accent, currentColor)); }
+.boomi-filter__badge {
+  position: absolute; top: -0.4rem; right: -0.4rem;
+  min-width: 1.125rem; height: 1.125rem; padding: 0 0.25rem; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.6875rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
+  background: var(--boomi-filter-badge-bg, var(--boomi-accent, #6366f1));
+  color: var(--boomi-filter-badge-fg, var(--boomi-btn-primary-fg, #fff));
+}
+.boomi-filter__panel {
+  position: absolute; right: 0; top: calc(100% + 0.375rem); z-index: 600;
+  width: var(--boomi-filter-panel-width, 16rem); max-width: 80vw;
+  max-height: var(--boomi-filter-panel-max-height, 22rem); overflow-y: auto;
+  padding: 0.625rem 0.75rem; text-align: left;
+}
+.boomi-filter__group { border: 0; margin: 0 0 0.625rem; padding: 0; min-width: 0; }
+.boomi-filter__legend {
+  padding: 0; margin-bottom: 0.25rem;
+  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.7;
+}
+.boomi-filter__option { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.8125rem; cursor: pointer; }
+.boomi-filter__option input { flex: 0 0 auto; accent-color: var(--boomi-accent, #6366f1); }
+.boomi-filter__label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boomi-filter__meta { flex: 0 0 auto; font-size: 0.6875rem; opacity: 0.6; }
+.boomi-filter__icon { --boomi-connector-icon-tile: 1.625rem; }
+.boomi-filter__foot { display: flex; justify-content: flex-end; border-top: 1px solid var(--boomi-menu-border, color-mix(in srgb, currentColor 15%, transparent)); padding-top: 0.5rem; }
+.boomi-filter__link { background: none; border: 0; padding: 0; color: var(--boomi-accent, currentColor); font-size: 0.8125rem; cursor: pointer; }
+.boomi-filter__link:disabled { opacity: 0.45; cursor: default; }
+.boomi-filter__note { margin: 0.25rem 0 0.5rem; font-size: 0.8125rem; }
+
+/* Sortable table headers (1.7 UI) */
+.boomi-sort { display: inline-flex; align-items: center; gap: 0.25rem; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.boomi-sort:focus-visible { outline: 2px solid var(--boomi-accent, #6366f1); outline-offset: 2px; border-radius: 0.25rem; }
+.boomi-sort__icon { font-size: 0.875em; opacity: 0.35; }
+.boomi-sort--active .boomi-sort__icon { opacity: 1; color: var(--boomi-accent, currentColor); }
