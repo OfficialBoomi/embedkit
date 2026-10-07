@@ -55,11 +55,13 @@
   - 🐛 **Instances attached to several environments no longer collapse to one** — The list kept only the *last* attachment per instance, so Edit Connections / Maps / Schedules could act on the wrong environment. Instances now carry every in-scope attachment in `environments`; `environmentId` is the first.
   - 🐛 **`environmentSelect.includeEnvironments` now works** — the server expected a differently named parameter and always returned every classification.
   - 🐛 **Single-install connection lookups** — The wizard's connection step queried per process for single-install packs and failed with `400 extensionGroupId must be id for Multi-Install or Single-Install Integration Pack`. It now sends `isSingleInstall`, which reads the environment-level settings.
+  - 🐛 **Default mappings for browsed maps** — Maps whose profiles must be browsed with connection credentials (for example an LDAP password) can't be saved until the connection is set up, so copying the publisher's default mappings at install failed for them (platform 500). They are now skipped at install (`map.defaults.seeded` reports `needs-browse-session`) and copied in **Map Fields** right after the user authenticates the browse, which emits `map.defaults.seeded` again.
+  - 🐛 **Default mappings with cross-reference functions** — Publisher functions containing a Cross Reference Lookup were recreated with the wrong body and rejected (400 "Unable to read message body"). They are now translated to the API's `CrossReferenceLookup` shape with their column bindings.
+  - 🐛 **Qualified default mappings no longer block a map** — Default mappings that address a qualified element (for example `Address[Name='Work']/City`) have no counterpart in the extension profile. They are now left out and listed as `omitted` in `map.defaults.seeded`, and the rest of the map's defaults are copied; previously the whole map failed.
   - 🐛 **Screen titles** — Configure, Update Maps, Update Schedule(s) and Run Agent showed "undefined" for instances without an override name; they now show the pack name.
   - 🐛 **No scroll bounce** — Scroll areas stop at their ends instead of rubber-banding (macOS) or scrolling the host page.
 
   **Known issues**
-  - ⚠️ **Default mappings not copied for some maps** — On installing a pack whose maps use the *LDAP (Retired)* connector, two maps failed to receive the publisher's default mappings (platform 500 and 400). The install itself succeeds and the result is reported in `map.defaults.seeded`. Under investigation.
   - ⚠️ **Single-install connection save** — Loading and editing single-install connections is verified; saving is still being tested.
 
   **Still to come in this release**

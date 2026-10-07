@@ -153,7 +153,25 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
     if (!result) return false;
 
     try {
-      const failed = await executeMapExtensions(result.candidates);
+      const failed = await executeMapExtensions(result.candidates, {
+        onDefaultsSeeded: (seed) => emitEmbedKitEvent(
+          'map.defaults.seeded',
+          {
+            integrationPackInstanceId: integration.id,
+            integrationPackId: integration.integrationPackId,
+            environmentId: integration.environmentId,
+            componentKey,
+          },
+          {
+            integrationPackInstanceId: integration.id || '',
+            environmentId: integration.environmentId,
+            summariesFound: seed.summariesFound,
+            seeded: seed.seeded,
+            skipped: seed.skipped,
+            failed: seed.failed,
+          }
+        ),
+      });
       if (Array.isArray(failed) && failed.length > 0) {
         editCandidateFormRef.current?.applyErrorsFromCandidates(
           failed,
