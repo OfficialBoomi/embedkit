@@ -162,7 +162,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-1"
+            className="boomi-search-clear"
             aria-label="Clear search"
             title="Clear"
           >

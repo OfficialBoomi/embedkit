@@ -120,6 +120,30 @@
   .boomi-input::placeholder {
     color: var(--boomi-input-placeholder);
   }
+
+  /* Search clear (x). Plain positioning, no Tailwind translate/ring utilities:
+     those rely on @property variables that do not register inside a shadow root. */
+  .boomi-search-clear {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.125rem;
+    border: 0;
+    border-radius: 9999px;
+    background: none;
+    cursor: pointer;
+    color: var(--boomi-search-clear-fg, currentColor);
+  }
+  .boomi-search-clear:hover {
+    color: var(--boomi-search-clear-hover-fg, var(--boomi-search-clear-fg, currentColor));
+  }
+  .boomi-search-clear:focus-visible {
+    outline: 2px solid var(--boomi-input-outline-focus, var(--boomi-input-border-focus, currentColor));
+    outline-offset: 1px;
+  }
   .boomi-input:focus {
     outline: none;
   }
