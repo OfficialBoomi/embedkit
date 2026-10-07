@@ -429,7 +429,7 @@ const Integrations: React.FC<IntegrationsProps> = ({
   const headerContent = (
     <>
       {showSearch && (
-        <div className={`flex-none pr-6 pt-4 pb-4${showFilter ? ' flex items-center gap-2' : ''}`}>
+        <div className={showFilter ? 'boomi-list-search flex-none pr-2 pt-4 pb-4' : 'flex-none pr-6 pt-4 pb-4'}>
           <SearchBar
             searchCallback={searchIntegrations}
             suggestions={Array.from(
@@ -446,7 +446,7 @@ const Integrations: React.FC<IntegrationsProps> = ({
         </div>
       )}
       {!showSearch && showFilter && (
-        <div className="flex-none pr-6 pt-4 pb-4">
+        <div className="flex-none pr-2 pt-4 pb-4">
           <ListFilterButton value={filters} onChange={changeFilters} loadFacets={loadFacets} facetsKey={`${renderType}|${searchContext}`} />
         </div>
       )}
