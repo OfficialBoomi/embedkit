@@ -2,6 +2,8 @@
 
 This document is the complete reference for all user-facing configuration options in Boomi EmbedKit. It covers initialization, agent configuration, component configuration, theming, form customization, and every CSS design token available for styling.
 
+> **New in 1.7:** the integrations list, Add Integration catalog, setup wizard, environment scope and their flags are explained end to end in the [Integrations Guide](./IntegrationsGuide.md).
+
 ---
 
 ## Table of Contents
@@ -182,7 +184,7 @@ agents: {
 | `hideIcon` | `boolean` | Hides the launcher icon entirely. |
 | `shape` | `'circle' \| 'pill'` | Shape of the floating launcher button. |
 | `position` | `UIPosition` | Position of the floating launcher. See [UIPosition](#uiposition) below. |
-| `ui` | `AgentUiConfig` | All chat UI configuration. See [AgentUiConfig](#agentUiconfig) below. |
+| `ui` | `AgentUiConfig` | All chat UI configuration. See [AgentUiConfig](#agentuiconfig) below. |
 | `feedback` | `AgentFeedbackConfig` | Thumbs up / thumbs down / comment feedback on agent responses. See [Response Feedback](#response-feedback-feedback) below. |
 | `form.configureAgent` | `FormConfig` | Custom form fields shown in the agent configuration dialog. |
 
@@ -438,7 +440,7 @@ The table view adds an **Environment** column (the first in-scope environment, `
 | `integrations.table.sortable` | `boolean` | `false` | `true` | Sortable table headers. |
 | `integrations.integration.showEnvironment` | `boolean` | `false` | `true` | Also controls the table's Environment column. |
 
-Filter options are loaded the first time the panel opens (and again after the search changes). Tokens: `--boomi-filter-size`, `-radius`, `-border`, `-border-hover`, `-bg`, `-fg`, `-active-fg`, `-badge-bg`, `-badge-fg`, `-panel-width`, `-panel-max-height`; the panel uses the menu tokens (`--boomi-menu-*`).
+Filter options are loaded the first time the panel opens (and again after the search changes). Tokens are listed under [List filter, sorting and tables](#list-filter-sorting-and-tables).
 
 **Layout at 1.7.0+.** The actions menu moves to the right end of the top visible row: the type row when `showType` is on, otherwise the title row. The environment is a full-width row above the button, and the Edit or Run Agent button spans the full width. Before 1.7.0 the card keeps its original layout (menu and button at the bottom right, environment chip inline at the bottom left) whatever you set here.
 
@@ -1092,6 +1094,8 @@ Keeps `.boomi-card` for its frame and hover. Parts: `__header`, `__type`, `__hea
 | `--boomi-integration-card-actions-justify` / `-gap` / `-padding` | `flex-end` / `0.5rem` / `0.5rem` | Button row |
 | `--boomi-integration-card-env-bg` / `-fg` / `-border` / `-radius` / `-padding` / `-font-size` / `-font-weight` | subtle tint / inherit / `0.375rem` / `0.1875rem 0.5rem` / `0.75rem` / `500` | Environment chip (`.boomi-integration-card__env`): a full-width row above the button at `uiVersion` 1.7.0+ (`__env-row`; `--boomi-integration-card-env-justify`, default `center`, and `--boomi-integration-card-env-row-padding`), otherwise at the bottom left of the button row; `data-classification="prod"\|"test"`, with `--boomi-integration-card-env-prod-bg` / `-test-bg`). Shows the first in-scope environment and `+N` for more; on by default at `uiVersion` 1.7.0+; set `integrations.integration.showEnvironment` to override. |
 | `--boomi-integration-card-focus-ring` | accent | Focus outline of a clickable card (`--clickable`). |
+| `--boomi-integration-card-title-row-gap` | `0.5rem` | Space between the title and the actions menu in the title row. |
+| `--boomi-integration-card-env-justify` / `-env-row-padding` / `-env-row-chip-padding` | `center` / `0 0.5rem 0.5rem` / `0.3rem 0.5rem` | Full-width environment row (1.7 UI). |
 | `--boomi-integration-card-env-unattached-bg` / `-fg` / `-border` | orange tint / `#c2410c` (`#fdba74` dark) / orange | **Unattached** pill (`.boomi-integration-card__env--unattached`) for instances attached to no environment. |
 | `--boomi-integration-card-connectors-margin` / `-justify` | `0.75rem 0 0 0` / `flex-start` | Connector icon stack under the description (`.boomi-integration-card__connectors`, a `.boomi-connector-stack`). The description keeps a fixed height while icons are shown, so the stack sits at the same level on every card. On by default at `uiVersion` 1.7.0+; set `integrations.integration.showConnectors` to override. Icon size via `integrations.integration.connectorIconSize` (default `36`). |
 
@@ -1118,6 +1122,38 @@ Cards in the catalog grid are Integrations cards (`.boomi-card.boomi-integration
 | `--boomi-catalog-row-bg` / `-row-bg-hover`, `--boomi-catalog-table-icon-art` | inherit / `24px` | Table view rows (`.boomi-catalog-table__row`) and icon size |
 
 Connector tiles use the `--boomi-connector-icon-*` tokens described under [Add Integration Catalog](#add-integration-catalog-formaddintegration).
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-catalog-search-min-width` | `12rem` | Minimum width of the catalog search box. |
+| `--boomi-catalog-toolbar-gap` | `0.5rem` | Space between search, filter and the view toggle. |
+| `--boomi-catalog-table-radius` / `-shadow` | `0.5rem` / small shadow | Catalog table frame. |
+| `--boomi-catalog-table-cell-padding` | `0.75rem 1rem` | Header and cell padding in the catalog table. |
+| `--boomi-catalog-table-th-font-size` / `-th-font-weight` / `-td-font-size` / `-name-font-weight` | `0.875rem` / `600` / `0.875rem` / `500` | Catalog table text. |
+
+#### List filter, sorting and tables
+
+The filter icon, sortable headers and tables on the integrations list (1.7 UI), plus the toolbar around the search box.
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-filter-size` / `-radius` | `2.5rem` / `0.5rem` | Filter icon button size and corners. |
+| `--boomi-filter-bg` / `-fg` / `-border` / `-border-hover` | input tokens / inherit / input border / accent | Filter button colors. |
+| `--boomi-filter-active-fg` | accent | Button color while filters are active. |
+| `--boomi-filter-badge-bg` / `-badge-fg` | accent / primary button text | Active-filter count badge. |
+| `--boomi-filter-panel-width` / `-panel-max-height` / `-panel-padding` | `16rem` / `22rem` / `0.625rem 0.75rem` | Filter panel (also uses the `--boomi-menu-*` colors). |
+| `--boomi-filter-legend-font-size` / `-legend-opacity` / `-legend-fg` | `0.6875rem` / `0.7` / inherit | "Environment" and "Connector" group labels. |
+| `--boomi-filter-option-font-size` / `-option-fg` | `0.8125rem` / inherit | Checkbox rows. |
+| `--boomi-sort-icon-size` / `-icon-opacity` / `-active-fg` | `0.875em` / `0.35` / accent | Sort arrows on table headers; the active column's arrow uses `-active-fg`. |
+| `--boomi-list-toolbar-gap` / `-toolbar-padding` | `0.5rem` / `1rem 0.5rem 1rem 0` | Search box, filter and add button row (`.boomi-list-search`). |
+| `--boomi-list-search-padding` | `1rem 1.5rem 1rem 0` | Search box without the filter (1.6.1 layout). |
+| `--boomi-integrations-table-radius` / `-shadow` | `0.5rem` / small shadow | Integrations table frame (`.boomi-integrations-table`). |
+| `--boomi-integrations-table-th-padding-y` / `-th-font-size` / `-th-line-height` / `-th-font-weight` | `0.75rem` / `0.875rem` / `1.25rem` / `600` | Header cells. |
+| `--boomi-integrations-table-td-padding-y` / `-td-font-size` / `-td-line-height` | `1rem` / `0.75rem` / `1rem` | Body cells. |
+| `--boomi-integrations-table-td-padding-left` | `1rem`, `0.5rem` from 40rem wide | Left padding of the name and description cells. |
+| `--boomi-integrations-table-text-max-width` | `24rem` | Maximum width of the name and description cells. |
+| `--boomi-integrations-table-name-width` / `-description-width` / `-history-width` | `16.67%` / `100%` / `16.67%` | Column widths. |
+| `--boomi-wizard-loading-padding` | `2.5rem` | Space around the loader while the setup wizard checks which steps to show. |
 
 ---
 
