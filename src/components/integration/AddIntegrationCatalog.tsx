@@ -335,26 +335,26 @@ const AddIntegrationCatalog: React.FC<AddIntegrationCatalogProps> = ({
           ))}
         </ul>
       ) : (
-        <table className="w-full table-auto rounded-lg shadow-sm boomi-catalog-table">
+        <table className="boomi-catalog-table">
           <thead className="boomi-table-header">
             <tr>
-              <th className="py-3 px-4 text-left text-sm font-semibold">Name</th>
-              <th className="py-3 px-4 text-left text-sm font-semibold">Description</th>
-              <th className="py-3 px-4 text-left text-sm font-semibold">Type</th>
-              <th className="py-3 px-4 text-left text-sm font-semibold">Connectors</th>
-              <th className="py-3 px-4 text-left text-sm font-semibold">Installed</th>
-              <th className="py-3 px-4"></th>
+              <th className="boomi-catalog-table__th">Name</th>
+              <th className="boomi-catalog-table__th">Description</th>
+              <th className="boomi-catalog-table__th">Type</th>
+              <th className="boomi-catalog-table__th">Connectors</th>
+              <th className="boomi-catalog-table__th">Installed</th>
+              <th className="boomi-catalog-table__th-action"></th>
             </tr>
           </thead>
           <tbody>
             {packs.map((pack) => (
               <tr key={pack.id} className="boomi-table-row boomi-catalog-table__row">
-                <td className="py-3 px-4 text-sm font-medium">{pack.name}</td>
-                <td className="py-3 px-4 text-sm">{pack.displayDescription ?? pack.Description ?? ''}</td>
-                <td className="py-3 px-4 text-sm">{typeLabel(pack)}</td>
-                <td className="py-3 px-4">{renderConnectors(pack)}</td>
-                <td className="py-3 px-4 text-sm">{pack.installedEnvironmentIds?.length ? `${pack.installedEnvironmentIds.length} env` : (pack.installedInstanceCount ? `${pack.installedInstanceCount}` : '—')}</td>
-                <td className="py-3 px-4 text-right"><Button toggle={false} primary={true} showIcon={false} label={installLabel} onClick={() => choosePack(pack)} /></td>
+                <td className="boomi-catalog-table__td boomi-catalog-table__td--name">{pack.name}</td>
+                <td className="boomi-catalog-table__td">{pack.displayDescription ?? pack.Description ?? ''}</td>
+                <td className="boomi-catalog-table__td">{typeLabel(pack)}</td>
+                <td className="boomi-catalog-table__td boomi-catalog-table__td--connectors">{renderConnectors(pack)}</td>
+                <td className="boomi-catalog-table__td">{pack.installedEnvironmentIds?.length ? `${pack.installedEnvironmentIds.length} env` : (pack.installedInstanceCount ? `${pack.installedInstanceCount}` : '—')}</td>
+                <td className="boomi-catalog-table__td boomi-catalog-table__td--action"><Button toggle={false} primary={true} showIcon={false} label={installLabel} onClick={() => choosePack(pack)} /></td>
               </tr>
             ))}
           </tbody>

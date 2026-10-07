@@ -294,18 +294,18 @@ const Integration: React.FC<IntegrationProps> = ({
 
       ) : viewType === 'on' ? (
         <tr key={integration.id} className={`boomi-table-row ${isAgent ? 'boomi-table-row--agent' : ''}`}>
-          <td className="py-4 pl-4 pr-3 text-xs sm:pl-2 max-w-sm break-words">{title}</td>
-          <td className="py-4 pl-4 pr-3 text-xs sm:pl-2 max-w-sm break-words">{integration.integrationPackDescription}</td>
+          <td className="boomi-integrations-table__td boomi-integrations-table__td--name">{title}</td>
+          <td className="boomi-integrations-table__td boomi-integrations-table__td--description">{integration.integrationPackDescription}</td>
           {showEnvironment && (
             <td
-              className="py-4 pl-4 pr-3 text-xs whitespace-nowrap"
+              className="boomi-integrations-table__td boomi-integrations-table__td--environment"
               title={envRefs.map((e) => `${e.name ?? e.id}${e.classification ? ` (${e.classification})` : ''}`).join(', ') || undefined}
             >
               {unattached ? unattachedChip : primaryEnv ? (primaryEnv.name ?? primaryEnv.id) : '—'}
               {otherEnvs.length > 0 && <span className="boomi-integration-card__env-more"> +{otherEnvs.length}</span>}
             </td>
           )}
-          <td className="py-4">
+          <td className="boomi-integrations-table__td boomi-integrations-table__td--history">
             <ExecutionTimeline
               id={integration.id || ''}
               showFooter={false}
@@ -314,7 +314,7 @@ const Integration: React.FC<IntegrationProps> = ({
             />
           </td>
           {(boomiConfig?.components?.[componentKey]?.integrations?.integration?.showControls ?? true) && (
-            <td className="flex px-4 pt-4 items-right text-right justify-end relative overflow-visible">
+            <td className="boomi-integrations-table__td boomi-integrations-table__td--actions">
               {isAgent ? (
                 <AgentActions
                   onRunNow={() => onEditClick('RunAgent', integration)}

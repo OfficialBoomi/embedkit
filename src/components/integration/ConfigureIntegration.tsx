@@ -228,7 +228,7 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
   }, [currentStep]);
 
   const bodyContent = steps === null && !simple ? (
-    <div className="flex justify-center items-center py-10"><AjaxLoader /></div>
+    <div className="boomi-wizard-loading"><AjaxLoader /></div>
   ) : simple ? (
     <UpdateConnections
       componentKey={componentKey}

@@ -428,7 +428,7 @@ const Integrations: React.FC<IntegrationsProps> = ({
   const headerContent = (
     <>
       {showSearch && (
-        <div className={showFilter ? 'boomi-list-search flex-none pr-2 pt-4 pb-4' : 'flex-none pr-6 pt-4 pb-4'}>
+        <div className={showFilter ? 'boomi-list-search' : 'boomi-list-search-plain'}>
           <SearchBar
             searchCallback={searchIntegrations}
             suggestions={Array.from(
@@ -445,7 +445,7 @@ const Integrations: React.FC<IntegrationsProps> = ({
         </div>
       )}
       {!showSearch && showFilter && (
-        <div className="flex-none pr-2 pt-4 pb-4">
+        <div className="boomi-list-search">
           <ListFilterButton value={filters} onChange={changeFilters} loadFacets={loadFacets} facetsKey={`${renderType}|${searchContext}`} />
         </div>
       )}
@@ -522,17 +522,17 @@ const Integrations: React.FC<IntegrationsProps> = ({
     </>
   ) : (
     <div className="">
-      <table className='w-full table-auto rounded-lg shadow-sm'>
+      <table className="boomi-integrations-table">
         <thead className="boomi-table-header">
           <tr>
-            <th className="py-3 px-4 text-left text-sm font-semibold w-1/6" aria-sort={ariaSort('name')}>{header('name', 'Name')}</th>
-            <th className="py-3 text-left text-sm font-semibold w-3/6 w-full" aria-sort={ariaSort('description')}>{header('description', 'Description')}</th>
+            <th className="boomi-integrations-table__th boomi-integrations-table__th--name" aria-sort={ariaSort('name')}>{header('name', 'Name')}</th>
+            <th className="boomi-integrations-table__th boomi-integrations-table__th--description" aria-sort={ariaSort('description')}>{header('description', 'Description')}</th>
             {showEnvironmentColumn && (
-              <th className="py-3 pl-4 pr-3 text-left text-sm font-semibold whitespace-nowrap" aria-sort={ariaSort('environment')}>{header('environment', 'Environment')}</th>
+              <th className="boomi-integrations-table__th boomi-integrations-table__th--environment" aria-sort={ariaSort('environment')}>{header('environment', 'Environment')}</th>
             )}
-            <th className="py-3 text-left text-sm font-semibold w-1/6">Execution History</th>
+            <th className="boomi-integrations-table__th boomi-integrations-table__th--history">Execution History</th>
             {(boomiConfig?.components?.[componentKey]?.integrations?.integration?.showControls ?? true) && (
-              <th className="py-3 px-4"></th>
+              <th className="boomi-integrations-table__th-actions"></th>
             )}
           </tr>
         </thead>
