@@ -11,6 +11,13 @@
     background-repeat: no-repeat, repeat, repeat;
   }
 
+  /* Chrome makes this overflow-auto wrapper keyboard-focusable and draws its
+     default focus ring on it. It stays focusable and scrollable; only the ring
+     is suppressed. Inner controls keep their own focus styles. */
+  .boomi-plugin-root:focus-visible {
+    outline: none;
+  }
+
   /* Global cursor: pointer for interactive elements */
   .boomi-plugin-root a,
   .boomi-plugin-root button,
