@@ -640,7 +640,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
       componentKey = {componentKey}
       componentName='updateMaps'
       isRootNavigation={false}
-      title={`Update Maps - ${integration.integrationPackOverrideName}`}
+      title={`Update Maps - ${(integration.integrationPackOverrideName || integration.integrationPackName || '')}`}
       description={integration.integrationPackDescription || ''}
       headerContent={<></>}
       bodyContent={bodyContent}

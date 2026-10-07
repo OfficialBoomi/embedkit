@@ -79,12 +79,9 @@ export const useFetchEnvironmentExtensions = ({}: {} = {}) => {
         if (!environmentId && !(Array.isArray(environments) && environments.length)) {
           throw new Error('Code [1003] - environmentId or environments[] required');
         }
+        // Single-install packs keep their extensions at the environment level; the
+        // server queries them without an extension group.
         const single = isSingleInstall ?? false;
-        if (single) {
-          const msg = 'Code [1004] - Cannot edit connection details for this type of integration. ';
-          setError(msg);
-          throw new Error(msg);
-        }
 
         setIsLoading(true);
         setError(null);

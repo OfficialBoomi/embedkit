@@ -37,7 +37,11 @@ export const useFetchEnvironments = () => {
    * @throws {Error} If the Boomi plugin is not initialized or required parameters are missing.
    */
   const fetchEnvironments = useCallback(
-    async (includeEnvironments?: 'PROD' | 'TEST' | 'ALL', environmentId?: string | null) => {
+    async (
+      includeEnvironments?: 'PROD' | 'TEST' | 'ALL',
+      environmentId?: string | null,
+      opts: { includeStatus?: boolean } = {}
+    ) => {
       setIsLoading(true);
       setError(null);
       setEnvironments([]);
@@ -55,6 +59,7 @@ export const useFetchEnvironments = () => {
         const resp = await getEnvironments({
           includeEnvironments,
           environmentId: environmentId ?? undefined,
+          ...(opts.includeStatus === false ? { includeStatus: false } : {}),
         });
 
         // Support both axios-like and fetch-like clients

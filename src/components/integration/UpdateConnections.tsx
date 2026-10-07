@@ -326,7 +326,7 @@ const UpdateConnections = forwardRef<UpdateConnectionsRef, UpdateConnectionsProp
   useEffect(() => {
     if (!integration?.environmentId || !integration?.id) return;
     if (active || !wizard) {
-      fetchEnvironmentExtensions([], integration.environmentId, integration.id)
+      fetchEnvironmentExtensions([], integration.environmentId, integration.id, integration.installationType === 'SINGLE')
         .catch(err => {
           setApiError(err.message);
           logger.error('Failed to fetch environment extensions', err);

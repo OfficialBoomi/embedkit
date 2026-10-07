@@ -340,6 +340,19 @@
     z-index: 5; /* allow dropdowns to float above neighboring buttons/cards */
   }
 
+  /* Main Integrations card frame: same layer and specificity as .boomi-card, so
+     .boomi-card:hover and .boomi-card--agent (declared later) still win. */
+  .boomi-integration-card {
+    background-color: var(--boomi-integration-card-bg, var(--boomi-card-bg));
+    border-color: var(--boomi-integration-card-border, var(--boomi-card-border));
+    border-radius: var(--boomi-integration-card-radius, var(--boomi-card-radius, 0.75rem));
+    box-shadow: var(--boomi-integration-card-shadow, var(--boomi-card-shadow));
+    color: var(--boomi-integration-card-fg, inherit);
+  }
+  .boomi-integration-card:hover {
+    box-shadow: var(--boomi-integration-card-hover-shadow, var(--boomi-card-hover-shadow, var(--boomi-card-shadow)));
+  }
+
   /* Menu container (panel) */
   .boomi-menu {
     background-color: var(--boomi-menu-bg);
@@ -436,6 +449,21 @@
   .boomi-modal-container--wide {
     width: 90%;
     max-width: 1100px;
+  }
+
+  /* Add Integration catalog: exactly N cards across (cards, gaps, grid padding, scrollbar, modal padding). */
+  .boomi-modal-container--catalog {
+    width: calc(
+      var(--boomi-catalog-columns, 3) * var(--boomi-integration-card-width, 16rem)
+      + (var(--boomi-catalog-columns, 3) - 1) * var(--boomi-integration-grid-column-gap, 1.5rem)
+      + 5.5rem
+    );
+    max-width: 95%;
+  }
+  /* Phones: let the catalog fill the width and stack its cards. */
+  @media (max-width: 640px) {
+    .boomi-modal-container--catalog { width: 95%; }
+    .boomi-catalog-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--boomi-integration-card-width, 16rem)), 1fr)); }
   }
 
   /* Close Button */
@@ -2296,7 +2324,7 @@
   .boomi-scroll::-webkit-scrollbar-thumb {
     background-color: var(--boomi-scrollbar-thumb);
     border-radius: var(--boomi-scrollbar-radius);
-    border: 3px solid transparent; /* creates “pill” with padding */
+    border: var(--boomi-scrollbar-thumb-inset, 3px) solid transparent; /* pill with padding */
     background-clip: content-box;
   }
   .boomi-scroll::-webkit-scrollbar-thumb:hover {
@@ -2315,7 +2343,7 @@
 
   /* Optional: show wider thumb on hover (nice for desktop) */
   .boomi-scroll:hover::-webkit-scrollbar-thumb {
-    border-width: 2px;
+    border-width: var(--boomi-scrollbar-thumb-inset-hover, 2px);
   }
 
   /* ---------- Themed chip pulse ---------- */
@@ -3649,3 +3677,464 @@
     background: var(--boomi-thread-separator, color-mix(in srgb, var(--boomi-card-border) 55%, transparent));
     opacity: .65;
   }
+
+/* ---------- Add Integration catalog ---------- */
+.boomi-catalog { display: flex; flex-direction: column; gap: 1rem; }
+.boomi-catalog-toolbar { display: flex; align-items: center; gap: var(--boomi-catalog-toolbar-gap, 0.5rem); flex-wrap: wrap; }
+.boomi-catalog-search { flex: 0 1 auto; min-width: var(--boomi-catalog-search-min-width, 12rem); }
+/* SearchBar has a fixed 400px width and its own right padding; let it shrink instead of
+   overflowing, and drop the padding so the filter sits one gap away. */
+.boomi-catalog-search > div { max-width: 100%; padding-right: 0; }
+/* Integrations list (1.7 UI): search, filter and the New button one small gap apart. */
+.boomi-list-search {
+  display: flex; align-items: center; flex: none;
+  gap: var(--boomi-list-toolbar-gap, 0.5rem);
+  padding: var(--boomi-list-toolbar-padding, 1rem 0.5rem 1rem 0);
+}
+/* Search box without the filter (1.6.1 layout). */
+.boomi-list-search-plain { flex: none; padding: var(--boomi-list-search-padding, 1rem 1.5rem 1rem 0); }
+.boomi-list-search > div:first-child { padding-right: 0; }
+/* The filter sits right after the search box; the card/table toggle goes to the far right. */
+.boomi-catalog-view { display: flex; gap: 0.25rem; margin-left: auto; }
+.boomi-catalog-grid {
+  list-style: none; margin: 0; padding: var(--boomi-catalog-grid-padding, 0.25rem);
+  /* A fixed number of columns, each the main Integrations card width (.boomi-integration-grid).
+     If the modal is a little narrower, cards shrink instead of dropping a column. */
+  display: grid;
+  grid-template-columns: repeat(var(--boomi-catalog-columns, 3), minmax(0, var(--boomi-integration-card-width, 16rem)));
+  justify-content: center;
+  column-gap: var(--boomi-catalog-grid-gap, var(--boomi-integration-grid-column-gap, 1.5rem));
+  row-gap: var(--boomi-catalog-grid-gap, var(--boomi-integration-grid-row-gap, 2rem));
+  grid-auto-rows: 1fr; /* every card the same height */
+  max-height: var(--boomi-catalog-grid-max-height, 60vh); overflow-y: auto;
+}
+
+/* ===== Catalog card (Add Integration). Own class and tokens: independent of .boomi-card. =====
+   Tokens fall back to the shared --boomi-card-* values so themes look right out of the box. */
+.boomi-catalog-card {
+  display: flex; flex-direction: column;
+  gap: var(--boomi-catalog-card-gap, 0.5rem);
+  padding: var(--boomi-catalog-card-padding, 1rem);
+  background: var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff)));
+  color: var(--boomi-catalog-card-fg, var(--boomi-card-fg, var(--boomi-root-fg-color, inherit)));
+  border: var(--boomi-catalog-card-border-width, 1px) solid var(--boomi-catalog-card-border, var(--boomi-card-border, transparent));
+  border-radius: var(--boomi-catalog-card-radius, var(--boomi-card-radius, 0.75rem));
+  box-shadow: var(--boomi-catalog-card-shadow, var(--boomi-card-shadow, none));
+  position: relative;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+.boomi-catalog-card:hover {
+  transform: var(--boomi-catalog-card-hover-transform, none);
+  box-shadow: var(--boomi-catalog-card-hover-shadow, var(--boomi-catalog-card-shadow, var(--boomi-card-shadow, none)));
+  border-color: var(--boomi-catalog-card-hover-border, var(--boomi-catalog-card-border, var(--boomi-card-border, transparent)));
+}
+.boomi-catalog-card--selected {
+  border-color: var(--boomi-catalog-card-selected-border, var(--boomi-accent, currentColor));
+  background: var(--boomi-catalog-card-selected-bg, var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff))));
+}
+.boomi-catalog-card--selected:hover { transform: none; }
+/* Install step: title block on the left, connector stack on the right; no fixed heights. */
+.boomi-catalog-card__header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--boomi-catalog-card-header-gap, 1rem);
+}
+.boomi-catalog-card__headline { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; flex: 1 1 auto; }
+.boomi-catalog-card--selected .boomi-catalog-card__title,
+.boomi-catalog-card--selected .boomi-catalog-card__desc { height: auto; }
+/* Grid cards: connector icons left-aligned, as on the main Integrations cards. */
+.boomi-catalog-card > .boomi-catalog-connectors {
+  justify-content: var(--boomi-catalog-card-connectors-justify, flex-start);
+}
+.boomi-catalog-card__header .boomi-catalog-connectors {
+  width: auto; flex: 0 0 auto; justify-content: flex-end; margin: 0;
+}
+/* Modifiers for host styling: .boomi-catalog-card--single | --multi | --installed */
+@media (prefers-reduced-motion: reduce) { .boomi-catalog-card { transition: none; } .boomi-catalog-card:hover { transform: none; } }
+
+/* Type line, as on the main Integrations cards: "Integration" / "Single Install Integration". */
+.boomi-catalog-card__type {
+  color: var(--boomi-catalog-card-type-fg, inherit);
+  font-size: var(--boomi-catalog-card-type-font-size, 0.875rem);
+  font-weight: var(--boomi-catalog-card-type-font-weight, 400);
+  letter-spacing: var(--boomi-catalog-card-type-letter-spacing, normal);
+  line-height: 1.25rem; height: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.boomi-catalog-card__title {
+  /* Fixed block (lines x line-height) so everything below starts at the same offset on every card. */
+  --_lines: var(--boomi-catalog-card-title-lines, 2);
+  --_lh: var(--boomi-catalog-card-title-line-height, 1.5);
+  color: var(--boomi-catalog-card-title-fg, inherit);
+  font-size: var(--boomi-catalog-card-title-font-size, 1rem);
+  font-weight: var(--boomi-catalog-card-title-font-weight, 600);
+  line-height: var(--_lh); overflow-wrap: anywhere;
+  height: calc(var(--_lines) * var(--_lh) * 1em);
+  display: -webkit-box; -webkit-line-clamp: var(--_lines); -webkit-box-orient: vertical; overflow: hidden;
+}
+.boomi-catalog-card__desc {
+  --_lines: var(--boomi-catalog-card-desc-lines, 3);
+  --_lh: var(--boomi-catalog-card-desc-line-height, 1.4);
+  margin: 0; flex: 0 0 auto;
+  color: var(--boomi-catalog-card-desc-fg, var(--boomi-muted, inherit));
+  opacity: var(--boomi-catalog-card-desc-opacity, 0.9);
+  font-size: var(--boomi-catalog-card-desc-font-size, 0.8rem);
+  line-height: var(--_lh);
+  height: calc(var(--_lines) * var(--_lh) * 1em);
+  display: -webkit-box; -webkit-line-clamp: var(--_lines); -webkit-box-orient: vertical; overflow: hidden;
+}
+.boomi-catalog-card__foot {
+  /* Installed bar over a full-width Select button, pinned to the bottom of the card. */
+  margin-top: auto; display: flex; flex-direction: column; align-items: stretch;
+  gap: var(--boomi-catalog-card-foot-gap, 0.5rem); padding-top: 0.25rem; flex: 0 0 auto;
+}
+.boomi-catalog-installed {
+  width: 100%; box-sizing: border-box; text-align: center;
+  padding: var(--boomi-catalog-installed-padding, 0.3rem 0.5rem);
+  font-size: var(--boomi-catalog-installed-font-size, 0.75rem);
+  font-weight: var(--boomi-catalog-installed-font-weight, 500); line-height: 1rem;
+  border-radius: var(--boomi-catalog-installed-radius, 0.375rem);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--boomi-catalog-installed-fg, var(--boomi-notice-success-fg, #065f46));
+  background: var(--boomi-catalog-installed-bg, var(--boomi-notice-success-bg, #d1fae5));
+  border: 1px solid var(--boomi-catalog-installed-border, var(--boomi-notice-success-border, transparent));
+}
+.boomi-catalog-installed--empty { visibility: hidden; }
+.boomi-catalog-card__action > div { display: block; width: 100%; }
+/* Select button: defaults follow the primary button tokens; override per card with these. */
+.boomi-catalog-card__action button,
+.boomi-catalog-card__select {
+  width: 100%; justify-content: center;
+  background: var(--boomi-catalog-select-bg, var(--boomi-btn-primary-bg));
+  color: var(--boomi-catalog-select-fg, var(--boomi-btn-primary-fg));
+  border-color: var(--boomi-catalog-select-border, var(--boomi-btn-primary-border, transparent));
+  border-radius: var(--boomi-catalog-select-radius, var(--boomi-btn-radius, 0.375rem));
+  font-weight: var(--boomi-catalog-select-font-weight, 600);
+  min-height: var(--boomi-catalog-select-height, 2.25rem);
+}
+.boomi-catalog-card__action button:hover:not(:disabled),
+.boomi-catalog-card__select:hover:not(:disabled) {
+  background: var(--boomi-catalog-select-bg-hover, var(--boomi-btn-primary-bg-hover, var(--boomi-catalog-select-bg, var(--boomi-btn-primary-bg))));
+}
+/* Connector stack (ConnectorStack), shared by catalog and installed cards. */
+.boomi-connector-stack {
+  /* One fixed-height, non-wrapping row of identical tiles, centered on the card. */
+  --_row-art: var(--boomi-connector-icon-art, 36px);
+  display: flex; flex-wrap: nowrap; align-items: center; justify-content: center;
+  gap: 0; width: 100%; flex: 0 0 auto;
+  height: var(--boomi-connector-icon-tile, calc(var(--_row-art) + 1rem));
+  margin: 0.25rem 0;
+}
+/* Overlapping stack, left to right: each tile slides slightly under the next. */
+.boomi-connector-stack > .boomi-connector-icon {
+  position: relative;
+  background-color: var(--boomi-connector-icon-solid-bg, var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff))));
+  box-shadow: 0 0 0 2px var(--boomi-connector-icon-ring, var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff))));
+  transition: transform 120ms ease;
+}
+.boomi-connector-stack > .boomi-connector-icon + .boomi-connector-icon {
+  margin-left: calc(-1 * var(--boomi-connector-icon-overlap, 0.625rem));
+}
+.boomi-connector-stack > .boomi-connector-icon:hover { transform: translateY(-2px); z-index: 5; }
+@media (prefers-reduced-motion: reduce) {
+  .boomi-connector-stack > .boomi-connector-icon { transition: none; }
+  .boomi-connector-stack > .boomi-connector-icon:hover { transform: none; }
+}
+.boomi-connector-stack--empty { opacity: 0.8; }
+.boomi-catalog-more, .boomi-catalog-muted { font-size: 0.75rem; color: var(--boomi-muted, inherit); opacity: 0.8; }
+.boomi-catalog-install { display: flex; flex-direction: column; gap: 1rem; }
+.boomi-catalog-back {
+  display: inline-flex; align-items: center; gap: 0.375rem; align-self: flex-start;
+  background: none; border: 0; padding: 0; cursor: pointer; font-size: 0.85rem;
+  color: var(--boomi-wizard-link-fg, var(--boomi-accent, inherit));
+}
+.boomi-catalog-back:hover { text-decoration: underline; }
+.boomi-catalog-actions { display: flex; justify-content: flex-end; }
+.boomi-catalog-table td, .boomi-catalog-table th { vertical-align: middle; }
+.boomi-catalog-table__row { background: var(--boomi-catalog-row-bg, inherit); }
+.boomi-catalog-table__row:hover { background: var(--boomi-catalog-row-bg-hover, var(--boomi-catalog-row-bg, inherit)); }
+/* Smaller tiles in table rows so rows stay compact. */
+.boomi-catalog-table .boomi-catalog-connectors { --boomi-connector-icon-art: var(--boomi-catalog-table-icon-art, 24px); }
+.boomi-catalog-pager { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+.boomi-catalog-pager__summary { font-size: 0.75rem; color: var(--boomi-muted, inherit); opacity: 0.85; }
+
+/* Install step: target environment, inside the selected card. */
+.boomi-catalog-card__target-env {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: var(--boomi-catalog-target-env-gap, 0.5rem);
+  margin-top: var(--boomi-catalog-target-env-margin, 0.25rem);
+  padding: var(--boomi-catalog-target-env-padding, 0.5rem 0.75rem);
+  border-radius: var(--boomi-catalog-target-env-radius, 0.5rem);
+  background: var(--boomi-catalog-target-env-bg, color-mix(in srgb, var(--boomi-accent, #4f46e5) 8%, transparent));
+  border: 1px solid var(--boomi-catalog-target-env-border, color-mix(in srgb, var(--boomi-accent, #4f46e5) 22%, transparent));
+  color: var(--boomi-catalog-target-env-fg, inherit);
+  font-size: var(--boomi-catalog-target-env-font-size, 0.8125rem);
+}
+.boomi-catalog-card__target-env-label { opacity: var(--boomi-catalog-target-env-label-opacity, 0.75); }
+.boomi-catalog-card__target-env-name { font-weight: var(--boomi-catalog-target-env-name-weight, 600); }
+.boomi-catalog-card__target-env-class {
+  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 0.0625rem 0.375rem; border-radius: 0.25rem;
+  background: var(--boomi-catalog-target-env-class-bg, color-mix(in srgb, currentColor 10%, transparent));
+}
+.boomi-catalog-card__target-env--pending .boomi-catalog-card__target-env-name { font-weight: 400; font-style: italic; opacity: 0.8; }
+
+/* ===== Integrations card (main list). Keeps .boomi-card for its frame and hover;
+   every part below has its own class and --boomi-integration-card-* tokens. ===== */
+.boomi-integration-card__header {
+  display: flex; align-items: center;
+  padding: var(--boomi-integration-card-header-padding, 1rem 0 0 0);
+}
+.boomi-integration-card__type {
+  flex: 1 1 auto; min-width: 0;
+  padding-left: var(--boomi-integration-card-padding-x, 1rem);
+  color: var(--boomi-integration-card-type-fg, inherit);
+  font-size: var(--boomi-integration-card-type-font-size, 0.875rem);
+  font-weight: var(--boomi-integration-card-type-font-weight, 400);
+  line-height: 1.25rem;
+}
+.boomi-integration-card__header-extra { flex: 0 0 auto; padding-right: var(--boomi-integration-card-padding-x, 1rem); }
+/* Title row: the actions menu sits at its right when the type row is hidden (1.7 UI). */
+.boomi-integration-card__title-row { display: flex; align-items: center; gap: var(--boomi-integration-card-title-row-gap, 0.5rem); min-width: 0; }
+.boomi-integration-card__title-row > .boomi-integration-card__title { flex: 1 1 auto; min-width: 0; }
+.boomi-integration-card__menu { flex: 0 0 auto; display: flex; align-items: center; }
+/* 1.7 UI: the Edit / Run Agent button fills the button row (beside the environment chip, if any). */
+.boomi-integration-card__edit { flex: 1 1 auto; min-width: 0; }
+.boomi-integration-card__edit > div { display: block; width: 100%; }
+.boomi-integration-card__edit button { width: 100%; justify-content: center; }
+/* 1.7 UI: the environment is a full-width row above the button row. */
+.boomi-integration-card__footer--stacked { flex-direction: column; }
+.boomi-integration-card__env-row {
+  display: flex;
+  padding: var(--boomi-integration-card-env-row-padding, 0 0.5rem 0.5rem 0.5rem);
+}
+.boomi-integration-card__env-row > .boomi-integration-card__env {
+  width: 100%; max-width: none; margin-right: 0;
+  justify-content: var(--boomi-integration-card-env-justify, center);
+  padding: var(--boomi-integration-card-env-row-chip-padding, 0.3rem 0.5rem);
+}
+.boomi-integration-card__footer--stacked .boomi-integration-card__actions { padding-top: 0; }
+/* 1.7 UI: smaller title; fixed-width cards (shared with the Add Integration catalog) instead of 1-4 stretched columns. */
+.boomi-integration-card--ui-1-7 .boomi-integration-card__title {
+  font-size: var(--boomi-integration-card-title-font-size, 1rem);
+  line-height: var(--boomi-integration-card-title-line-height, 1.5rem);
+}
+.boomi-integration-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--boomi-integration-card-width, 16rem)), var(--boomi-integration-card-width, 16rem)));
+  justify-content: start;
+  column-gap: var(--boomi-integration-grid-column-gap, 1.5rem);
+  row-gap: var(--boomi-integration-grid-row-gap, 2rem);
+}
+/* Clicking the card opens Edit when the Edit button is off. */
+.boomi-integration-card--clickable { cursor: pointer; }
+.boomi-integration-card--clickable:focus-visible {
+  outline: 2px solid var(--boomi-integration-card-focus-ring, var(--boomi-accent, #6366f1));
+  outline-offset: 2px;
+}
+.boomi-integration-card__body { display: flex; gap: 1rem; padding: var(--boomi-integration-card-body-padding, 1rem); }
+.boomi-integration-card__content { display: flex; flex-direction: column; width: 100%; min-width: 0; }
+.boomi-integration-card__title {
+  margin: 0; padding-right: 0.5rem;
+  color: var(--boomi-integration-card-title-fg, inherit);
+  font-size: var(--boomi-integration-card-title-font-size, 1.25rem);
+  font-weight: var(--boomi-integration-card-title-font-weight, 600);
+  line-height: var(--boomi-integration-card-title-line-height, 1.75rem);
+  overflow-wrap: break-word; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.boomi-integration-card__desc {
+  margin: 0.25rem 0 0 0;
+  color: var(--boomi-integration-card-desc-fg, inherit);
+  font-size: var(--boomi-integration-card-desc-font-size, 0.75rem);
+  line-height: var(--boomi-integration-card-desc-line-height, 1rem);
+  overflow-wrap: break-word; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: var(--boomi-integration-card-desc-lines, 2); -webkit-box-orient: vertical;
+}
+/* With connectors shown, the description is a fixed block so the icons sit at the same level on every card. */
+.boomi-integration-card__content--connectors .boomi-integration-card__desc {
+  height: calc(var(--boomi-integration-card-desc-lines, 2) * var(--boomi-integration-card-desc-line-height, 1rem));
+}
+.boomi-integration-card__connectors {
+  margin: var(--boomi-integration-card-connectors-margin, 0.75rem 0 0 0);
+  justify-content: var(--boomi-integration-card-connectors-justify, flex-start);
+}
+.boomi-integration-card__footer { display: flex; width: 100%; }
+/* Environment chip at the bottom left of the button row; buttons stay on the right. */
+.boomi-integration-card__env {
+  margin-right: auto; min-width: 0; max-width: 60%;
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: var(--boomi-integration-card-env-padding, 0.1875rem 0.5rem);
+  border-radius: var(--boomi-integration-card-env-radius, 0.375rem);
+  background: var(--boomi-integration-card-env-bg, color-mix(in srgb, currentColor 7%, transparent));
+  border: 1px solid var(--boomi-integration-card-env-border, color-mix(in srgb, currentColor 14%, transparent));
+  color: var(--boomi-integration-card-env-fg, inherit);
+  font-size: var(--boomi-integration-card-env-font-size, 0.75rem);
+  font-weight: var(--boomi-integration-card-env-font-weight, 500);
+  line-height: 1rem; white-space: nowrap;
+}
+.boomi-integration-card__env-name { overflow: hidden; text-overflow: ellipsis; }
+.boomi-integration-card__env-more { flex: 0 0 auto; opacity: 0.7; }
+.boomi-integration-card__env[data-classification="prod"] { background: var(--boomi-integration-card-env-prod-bg, var(--boomi-integration-card-env-bg, color-mix(in srgb, currentColor 7%, transparent))); }
+.boomi-integration-card__env.boomi-integration-card__env--unattached {
+  /* Orange warning; readable on light and dark card backgrounds. */
+  background: var(--boomi-integration-card-env-unattached-bg, color-mix(in srgb, #ea580c 14%, transparent));
+  color: var(--boomi-integration-card-env-unattached-fg, #c2410c);
+  border-color: var(--boomi-integration-card-env-unattached-border, color-mix(in srgb, #ea580c 50%, transparent));
+  font-weight: 600;
+}
+:host([data-theme="dark"]) .boomi-integration-card__env.boomi-integration-card__env--unattached {
+  color: var(--boomi-integration-card-env-unattached-fg, #fdba74);
+}
+/* In the table the pill sits inline in the Environment cell. */
+td > .boomi-integration-card__env--unattached { max-width: none; margin-right: 0; }
+.boomi-integration-card__env[data-classification="test"] { background: var(--boomi-integration-card-env-test-bg, var(--boomi-integration-card-env-bg, color-mix(in srgb, currentColor 7%, transparent))); }
+.boomi-integration-card__actions {
+  display: flex; align-items: center; justify-content: var(--boomi-integration-card-actions-justify, flex-end);
+  gap: var(--boomi-integration-card-actions-gap, 0.5rem);
+  padding: var(--boomi-integration-card-actions-padding, 0.5rem);
+  width: 100%; position: relative; overflow: visible;
+}
+
+/* ---------- Connector icons ---------- */
+.boomi-connector-icon {
+  /* Rounded-square tile, identical for platform images, glyphs and the +N badge. */
+  --_art: var(--boomi-connector-icon-art, 36px);
+  --_tile: var(--boomi-connector-icon-tile, calc(var(--_art) + 1rem));
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  width: var(--_tile); height: var(--_tile); min-width: var(--_tile);
+  box-sizing: border-box; padding: 0; overflow: hidden;
+  border-radius: var(--boomi-connector-icon-radius, 0.625rem);
+  border: var(--boomi-connector-icon-border, 1px solid color-mix(in srgb, currentColor 12%, transparent));
+  color: var(--boomi-connector-icon-fg, var(--boomi-accent, currentColor));
+  background-image: linear-gradient(var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent)), var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent)));
+}
+.boomi-connector-icon > svg,
+.boomi-connector-icon > img {
+  display: block; flex: 0 0 auto; margin: auto;
+  width: var(--_art); height: var(--_art); object-fit: contain;
+}
+.boomi-connector-icon--image { background-image: linear-gradient(var(--boomi-connector-icon-image-bg, var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent))), var(--boomi-connector-icon-image-bg, var(--boomi-connector-icon-bg, color-mix(in srgb, currentColor 6%, transparent)))); }
+.boomi-connector-icon__badge,
+.boomi-connector-icon--more { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.02em; line-height: 1; text-align: center; }
+.boomi-connector-icon--more { color: var(--boomi-muted, inherit); }
+.boomi-catalog-table .boomi-catalog-connectors { justify-content: flex-start; margin: 0; }
+
+/* ---------- List filter (integrations list + Add Integration catalog) ---------- */
+.boomi-filter { position: relative; flex: 0 0 auto; display: inline-flex; }
+.boomi-filter__button {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: var(--boomi-filter-size, 2.5rem); height: var(--boomi-filter-size, 2.5rem);
+  border-radius: var(--boomi-filter-radius, 0.5rem);
+  border: 1px solid var(--boomi-filter-border, var(--boomi-input-border, color-mix(in srgb, currentColor 25%, transparent)));
+  background: var(--boomi-filter-bg, var(--boomi-input-bg, transparent));
+  color: var(--boomi-filter-fg, inherit);
+  font-size: 1.25rem; cursor: pointer;
+}
+.boomi-filter__button:hover { border-color: var(--boomi-filter-border-hover, var(--boomi-accent, currentColor)); }
+.boomi-filter__button:focus-visible { outline: 2px solid var(--boomi-accent, #6366f1); outline-offset: 2px; }
+.boomi-filter__button--active { color: var(--boomi-filter-active-fg, var(--boomi-accent, currentColor)); border-color: var(--boomi-filter-active-fg, var(--boomi-accent, currentColor)); }
+.boomi-filter__badge {
+  position: absolute; top: -0.4rem; right: -0.4rem;
+  min-width: 1.125rem; height: 1.125rem; padding: 0 0.25rem; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.6875rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
+  background: var(--boomi-filter-badge-bg, var(--boomi-accent, #6366f1));
+  color: var(--boomi-filter-badge-fg, var(--boomi-btn-primary-fg, #fff));
+}
+.boomi-filter__panel {
+  position: absolute; right: 0; top: calc(100% + 0.375rem); z-index: 600;
+  width: var(--boomi-filter-panel-width, 16rem); max-width: 80vw;
+  max-height: var(--boomi-filter-panel-max-height, 22rem); overflow-y: auto;
+  padding: var(--boomi-filter-panel-padding, 0.625rem 0.75rem); text-align: left;
+}
+.boomi-filter__group { border: 0; margin: 0 0 0.625rem; padding: 0; min-width: 0; }
+.boomi-filter__legend {
+  padding: 0; margin-bottom: 0.25rem;
+  font-size: var(--boomi-filter-legend-font-size, 0.6875rem); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  opacity: var(--boomi-filter-legend-opacity, 0.7); color: var(--boomi-filter-legend-fg, inherit);
+}
+.boomi-filter__option { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; font-size: var(--boomi-filter-option-font-size, 0.8125rem); color: var(--boomi-filter-option-fg, inherit); cursor: pointer; }
+.boomi-filter__option input { flex: 0 0 auto; accent-color: var(--boomi-accent, #6366f1); }
+.boomi-filter__label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boomi-filter__meta { flex: 0 0 auto; font-size: 0.6875rem; opacity: 0.6; }
+.boomi-filter__icon { --boomi-connector-icon-tile: 1.625rem; }
+.boomi-filter__foot { display: flex; justify-content: flex-end; border-top: 1px solid var(--boomi-menu-border, color-mix(in srgb, currentColor 15%, transparent)); padding-top: 0.5rem; }
+.boomi-filter__link { background: none; border: 0; padding: 0; color: var(--boomi-accent, currentColor); font-size: 0.8125rem; cursor: pointer; }
+.boomi-filter__link:disabled { opacity: 0.45; cursor: default; }
+.boomi-filter__note { margin: 0.25rem 0 0.5rem; font-size: 0.8125rem; }
+
+/* Scroll areas stop at their ends instead of rubber-banding (macOS) or scrolling the host page. */
+.boomi-scroll, .boomi-catalog-grid, .boomi-filter__panel { overscroll-behavior: none; }
+
+/* Sortable table headers (1.7 UI) */
+.boomi-sort { display: inline-flex; align-items: center; gap: 0.25rem; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.boomi-sort:focus-visible { outline: 2px solid var(--boomi-accent, #6366f1); outline-offset: 2px; border-radius: 0.25rem; }
+.boomi-sort__icon { font-size: var(--boomi-sort-icon-size, 0.875em); opacity: var(--boomi-sort-icon-opacity, 0.35); }
+.boomi-sort--active .boomi-sort__icon { opacity: 1; color: var(--boomi-sort-active-fg, var(--boomi-accent, currentColor)); }
+
+
+/* ---------- Integrations table (main list) ----------
+   Defaults reproduce the previous Tailwind utilities exactly; every value is a token. */
+.boomi-integrations-table {
+  width: 100%; table-layout: auto;
+  border-radius: var(--boomi-integrations-table-radius, 0.5rem);
+  box-shadow: var(--boomi-integrations-table-shadow, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1));
+}
+.boomi-integrations-table__th {
+  text-align: left;
+  padding-block: var(--boomi-integrations-table-th-padding-y, 0.75rem);
+  font-size: var(--boomi-integrations-table-th-font-size, 0.875rem);
+  line-height: var(--boomi-integrations-table-th-line-height, 1.25rem);
+  font-weight: var(--boomi-integrations-table-th-font-weight, 600);
+}
+.boomi-integrations-table__th--name { padding-inline: 1rem; width: var(--boomi-integrations-table-name-width, calc(1 / 6 * 100%)); }
+.boomi-integrations-table__th--description { width: var(--boomi-integrations-table-description-width, 100%); }
+.boomi-integrations-table__th--environment { padding-inline: 1rem 0.75rem; white-space: nowrap; }
+.boomi-integrations-table__th--history { width: var(--boomi-integrations-table-history-width, calc(1 / 6 * 100%)); }
+/* Empty header over the action buttons: padding only, browser header defaults otherwise. */
+.boomi-integrations-table__th-actions { padding: var(--boomi-integrations-table-th-padding-y, 0.75rem) 1rem; }
+.boomi-integrations-table__td {
+  padding-block: var(--boomi-integrations-table-td-padding-y, 1rem);
+  font-size: var(--boomi-integrations-table-td-font-size, 0.75rem);
+  line-height: var(--boomi-integrations-table-td-line-height, 1rem);
+}
+.boomi-integrations-table__td--name,
+.boomi-integrations-table__td--description {
+  padding-inline: var(--boomi-integrations-table-td-padding-left, 1rem) 0.75rem;
+  max-width: var(--boomi-integrations-table-text-max-width, 24rem);
+  overflow-wrap: break-word;
+}
+@media (min-width: 40rem) {
+  .boomi-integrations-table__td--name,
+  .boomi-integrations-table__td--description { padding-left: var(--boomi-integrations-table-td-padding-left, 0.5rem); }
+}
+.boomi-integrations-table__td--environment { padding-inline: 1rem 0.75rem; white-space: nowrap; }
+.boomi-integrations-table__td--history { font-size: inherit; line-height: inherit; }
+.boomi-integrations-table__td--actions {
+  display: flex; justify-content: flex-end; text-align: right; position: relative; overflow: visible;
+  padding: 1rem 1rem 0; font-size: inherit; line-height: inherit;
+}
+
+/* ---------- Add Integration catalog: table view ---------- */
+.boomi-catalog-table {
+  width: 100%; table-layout: auto;
+  border-radius: var(--boomi-catalog-table-radius, 0.5rem);
+  box-shadow: var(--boomi-catalog-table-shadow, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1));
+}
+.boomi-catalog-table__th {
+  text-align: left;
+  padding: var(--boomi-catalog-table-cell-padding, 0.75rem 1rem);
+  font-size: var(--boomi-catalog-table-th-font-size, 0.875rem);
+  line-height: 1.25rem;
+  font-weight: var(--boomi-catalog-table-th-font-weight, 600);
+}
+.boomi-catalog-table__th-action { padding: var(--boomi-catalog-table-cell-padding, 0.75rem 1rem); }
+.boomi-catalog-table__td {
+  padding: var(--boomi-catalog-table-cell-padding, 0.75rem 1rem);
+  font-size: var(--boomi-catalog-table-td-font-size, 0.875rem);
+  line-height: 1.25rem;
+}
+.boomi-catalog-table__td--name { font-weight: var(--boomi-catalog-table-name-font-weight, 500); }
+.boomi-catalog-table__td--connectors { font-size: inherit; line-height: inherit; }
+.boomi-catalog-table__td--action { text-align: right; font-size: inherit; line-height: inherit; }
+
+/* Setup wizard: shown while it checks which steps have something to configure. */
+.boomi-wizard-loading { display: flex; justify-content: center; align-items: center; padding-block: var(--boomi-wizard-loading-padding, 2.5rem); }

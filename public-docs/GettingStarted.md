@@ -3,6 +3,7 @@
 **Boomi EmbedKit** is an embeddable plugin that lets you surface Boomi experiences — Integrations, Connections, Schedules, Mapping, and more — inside your own application. It works in **React**, **vanilla JavaScript (ES Modules)**, and **CommonJS** environments and is designed to be **themeable** so you can match your product's look and feel.
 
 - 📚 Full setup & API details: **[Boomi Product Documentation](https://help.boomi.com/)**
+- 🧩 New in 1.7 (integrations list, Add Integration catalog, setup wizard, environment scope, feature flags): **[Integrations Guide](./IntegrationsGuide.md)**
 
 ---
 

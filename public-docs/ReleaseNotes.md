@@ -11,9 +11,69 @@
 
 ---
 
-### Unreleased
+### Unreleased — v1.7.0 (in progress)
 
-_Nothing pending — everything below has shipped._
+![Version](https://img.shields.io/badge/version-v1.7.0-lightgrey?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-in%20progress-orange?style=for-the-badge)
+
+> Draft for the next release. It collects work merged since v1.6.1 and will grow as the remaining sprints land before release. Entries marked **(1.7 UI)** only appear on components that set `uiVersion: '1.7.0'`. Everything else applies to every embed after upgrading. The full walkthrough is in the [Integrations Guide](./IntegrationsGuide.md).
+
+<details open>
+  <summary><strong>v1.7.0 (draft)</strong> — Per-component UI versions, a new integrations list and Add Integration catalog, filtering and sorting, environment scope, and a smarter setup wizard</summary>
+
+  **Highlights**
+  - **Upgrade without surprises.** Each component keeps its 1.6.1 look until you set its `uiVersion`, so new UI is adopted one page at a time.
+  - **Find integrations faster.** Filter by environment and connector, sort the table, and see each integration's environment, with **Unattached** ones flagged.
+  - **Install from a catalog.** A searchable Add Integration catalog with platform connector icons, using the same cards as the main list.
+  - **Limit environments per session.** Send `environments` at login and every list, dropdown and filter follows it.
+  - **Shorter setup.** The setup wizard skips steps with nothing to configure, and single-install packs now go through it too.
+
+  **Upgrade notes**
+  - **Deploy order:** publish `@boomi/embedkit-sdk` (next minor) first, then embedkit-server, then the EmbedKit UI / CDN bundle. The catalog, filters and sorting need the new server routes, and the server needs the new SDK.
+  - **Opt in per component:** existing components keep the 1.6.1 UI. Set `uiVersion: '1.7.0'` on a component to adopt everything marked **(1.7 UI)**, and use individual flags to adopt or skip single features. See [UI versions](./IntegrationsGuide.md#2-ui-versions-adopting-new-ui-per-component) and the [flags reference](./IntegrationsGuide.md#7-flags-reference).
+  - **Content Security Policy:** host pages with a strict `img-src` must allow the Boomi platform host (for example `https://api.boomi.com`) for connector icons; otherwise EmbedKit falls back to its own glyphs.
+  - **Pin the CDN version:** the CDN quick start loads an unversioned URL that always serves the latest release. Pin `@boomi/embedkit-cdn@1.7.0` to control when upgrades reach you.
+
+  **Changes for every embed** (no opt-in)
+  - ✅ **Single-install packs use the setup wizard** — Installing a single-install integration continues into the setup wizard like any other integration, instead of jumping to its schedules, and its connections can be viewed and edited (they were rejected with `Code [1004]`).
+  - ✅ **The setup wizard skips empty steps** — Before it opens, the wizard leaves out **Make Connections** when there are no connections or process properties, and **Map Fields** when there are no maps. **Set Schedule / Run** is always last.
+  - ✅ **Environment scope** — Send `environments: [ids]` in the login body to limit a session to those environments across environment dropdowns, the integrations list, the catalog and the filters. Login rejects unknown ids with `422`. Omit it for every environment. See [Limiting environments](./IntegrationsGuide.md#6-limiting-environments).
+  - ✅ **Server-paged catalog** — The catalog is paged and searched on the server (`GET /integration-packs/eligible?page&pageSize&search`), connector icons resolve only for the visible page, platform lookups are chunked, and every list query follows `queryMore`.
+  - ✅ **Everything is themeable** — Every new or changed component is styled through `--boomi-*` tokens with named `.boomi-*` classes, including the integrations and catalog tables, which no longer use hardcoded Tailwind utilities. Defaults reproduce the shipped look. See [Customizing the look](./IntegrationsGuide.md#8-customizing-the-look).
+
+  **New** (1.7 UI)
+  - ✅ **Per-component UI version** — `components[key].uiVersion` picks the UI a component renders; explicit options still override it. See [UI version](./ConfigurationReference.md#ui-version-uiversion).
+  - ✅ **Add Integration catalog** — A searchable catalog with card and table views, platform connector icons and "Installed in N environments". Catalog cards are the same cards as the main list. Each card has an **Install** button (`form.addIntegration.catalog.installButton`), or, with it off, the card itself starts the install; the table always shows the button. The modal fits three cards across (`--boomi-catalog-columns`). `form.addIntegration.layout: 'form'` keeps the dropdown form. See [Add Integration Catalog](./ConfigurationReference.md#add-integration-catalog-formaddintegration).
+  - ✅ **Integration card layout** — No type row (`showType`), the actions menu at the right of the top visible row, a smaller title, connector icons (`showConnectors`), the environment in a full-width row (`showEnvironment`), and a fixed card width (`--boomi-integration-card-width`). The Edit button is off (`editButton.show`): the whole card opens Edit on click, Enter or Space, and **Edit** is the first item in the actions menu. Agent cards keep Run Agent. See [Integration cards](./ConfigurationReference.md#integration-cards-integrationsintegration).
+  - ✅ **Filter and sort** — A filter icon beside the search box filters by environment and connector on the list and in the catalog (`integrations.filter.show`). The table view adds an Environment column and sortable Name, Description and Environment headers (`integrations.table.sortable`). Both run on the server across the whole list (`sortBy`, `sortDir`, `filterEnvironmentIds`, `filterConnectorTypes`, `includeFacets`). See [List filter and sorting](./ConfigurationReference.md#list-filter-and-sorting).
+  - ✅ **Unattached integrations flagged** — An integration attached to no environment (detached in the platform, or an attach that failed during install) shows an orange **Unattached** pill on the card and in the table (`integrations.integration.unattachedLabel`). Needs embedkit-server 1.7.
+  - ✅ **Install step shows the target** — "Installing into *Environment*" in the selected card, even when the dropdown is hidden (`form.addIntegration.showTargetEnvironment`); `hideEnvironmentSelectWhenSingle` hides the dropdown when only one environment is available.
+  - ✅ **Thin scrollbars** — Scroll areas in the component use slimmer `--boomi-scrollbar-*` defaults (transparent track, pill thumb).
+
+  **Bug fixes**
+  - 🐛 **All environments listed** — Environment dropdowns set to `ALL` queried only environments classified PROD or TEST, so accounts whose environments have no classification saw just some of them (one of six in testing). `ALL` now lists every environment in scope, and `environmentSelect.environmentId` is honored with it.
+  - 🐛 **Instances attached to several environments no longer collapse to one** — The list kept only the *last* attachment per instance, so Edit Connections / Maps / Schedules could act on the wrong environment. Instances now carry every in-scope attachment in `environments`; `environmentId` is the first.
+  - 🐛 **`environmentSelect.includeEnvironments` now works** — the server expected a differently named parameter and always returned every classification.
+  - 🐛 **Single-install connection lookups** — The wizard's connection step queried per process for single-install packs and failed with `400 extensionGroupId must be id for Multi-Install or Single-Install Integration Pack`. It now sends `isSingleInstall`, which reads the environment-level settings.
+  - 🐛 **Screen titles** — Configure, Update Maps, Update Schedule(s) and Run Agent showed "undefined" for instances without an override name; they now show the pack name.
+  - 🐛 **No scroll bounce** — Scroll areas stop at their ends instead of rubber-banding (macOS) or scrolling the host page.
+
+  **Known issues**
+  - ⚠️ **Default mappings not copied for some maps** — On installing a pack whose maps use the *LDAP (Retired)* connector, two maps failed to receive the publisher's default mappings (platform 500 and 400). The install itself succeeds and the result is reported in `map.defaults.seeded`. Under investigation.
+  - ⚠️ **Single-install connection save** — Loading and editing single-install connections is verified; saving is still being tested.
+
+  **Still to come in this release**
+  - _Placeholder: work from the remaining sprints is added here as it merges._
+
+  **Included work**
+
+  | Repo | Branch | Notes |
+  |---|---|---|
+  | `embedkit` | `feat/instance-connectors` | UI versions, cards, catalog, filter and sort, wizard, tokens, docs |
+  | `embedkit-sdk` | `feat/instance-connectors` | Environment scope, sorting, filters and facets, `ALL` environments fix |
+  | `embedkit-server` | `feat/instance-connectors` | Login scope, catalog and list route parameters |
+
+</details>
 
 ---
 

@@ -23,6 +23,8 @@ import AgentActions from '../agent/AgentActions';
 import IntegrationActions from './IntegrationActions';
 import SwalNotification from '../ui/SwalNotification';
 import IntegrationItem from './IntegrationItem';
+import ConnectorStack from './ConnectorStack';
+import { uiVersionAtLeast, UI_VERSIONS } from '../../utils/ui-version';
 
 /**
  * @interface IntegrationProps
@@ -73,6 +75,53 @@ const Integration: React.FC<IntegrationProps> = ({
   const title = isSingle ? integration.integrationPackName : integration.integrationPackOverrideName;
   const isAgent = !!integration.isAgent;
   const type = isAgent ? 'Agent' : (isSingle ? 'Single Install Integration' : 'Integration');
+  // Environment chip: every in-scope attachment from the server (SDK `environments`), first name + "+N".
+  // Chip and connector icons are 1.7 UI; components on an earlier uiVersion keep the old card.
+  const catalogUi = uiVersionAtLeast(boomiConfig, componentKey, UI_VERSIONS.CATALOG);
+  const showEnvironment = boomiConfig?.components?.[componentKey]?.integrations?.integration?.showEnvironment ?? catalogUi;
+  const envRefs: Array<{ id: string; name?: string; classification?: string }> =
+    ((integration as any).environments as Array<{ id: string; name?: string; classification?: string }> | undefined) ?? [];
+  const primaryEnv = envRefs.find((e) => e.id === integration.environmentId) ?? envRefs[0];
+  const otherEnvs = envRefs.filter((e) => e !== primaryEnv);
+  // Unattached: the server reported the instance's environments and there are none
+  // (an older server sends no list, so nothing is shown rather than a false warning).
+  const unattached = Array.isArray((integration as any).environments) && envRefs.length === 0;
+  const unattachedLabel: string =
+    boomiConfig?.components?.[componentKey]?.integrations?.integration?.unattachedLabel ?? 'Unattached';
+  const unattachedChip = (
+    <span
+      className="boomi-integration-card__env boomi-integration-card__env--unattached"
+      title="Not attached to any environment. Attach it in the platform before running or editing it."
+    >
+      <span className="boomi-integration-card__env-name">{unattachedLabel}</span>
+    </span>
+  );
+  const envChip = showEnvironment && unattached ? unattachedChip : showEnvironment && primaryEnv ? (
+    <span
+      className="boomi-integration-card__env"
+      title={envRefs.map((e) => `${e.name ?? e.id}${e.classification ? ` (${e.classification})` : ''}`).join(', ')}
+      data-classification={primaryEnv.classification?.toLowerCase()}
+    >
+      <span className="boomi-integration-card__env-name">{primaryEnv.name ?? primaryEnv.id}</span>
+      {otherEnvs.length > 0 && <span className="boomi-integration-card__env-more">+{otherEnvs.length}</span>}
+    </span>
+  ) : null;
+
+  // Connector icons for the pack (server attaches connectors[] when showConnectors is on).
+  const cardCfg = boomiConfig?.components?.[componentKey]?.integrations?.integration ?? {};
+  const showConnectors: boolean = cardCfg.showConnectors ?? catalogUi;
+  const connectorIconSize: number = Number(cardCfg.connectorIconSize ?? 36) || 36;
+
+  // Card layout. On the 1.7 UI the type row is off by default, the actions menu sits at the
+  // right of the top visible row, and an integration card opens Edit when clicked instead of
+  // showing an Edit button. Agent cards keep their Run Agent button.
+  const showType: boolean = cardCfg.showType ?? !catalogUi;
+  const showEdit: boolean = cardCfg.showEdit ?? true;
+  const showControls: boolean = cardCfg.showControls ?? true;
+  const showEditButton: boolean = isAgent || (cardCfg.editButton?.show ?? !catalogUi);
+  const menuOnTop = catalogUi;
+  const cardOpensEdit = !isAgent && showEdit && !showEditButton;
+  const openEdit = () => onEditClick('ConfigureIntegration', integration);
 
   const handleDelete = () => setShowNotification(true);
   const handleRunNow = () => setShowRunNotification(true);
@@ -92,6 +141,34 @@ const Integration: React.FC<IntegrationProps> = ({
     setShowNotification(false);
     setShowRunNotification(false);
   };
+
+  // Actions menu for the top row. Clicks and keys inside it never reach the clickable card.
+  const topMenu = showControls ? (
+    <div
+      className="boomi-integration-card__menu"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      {isAgent ? (
+        <AgentActions
+          onRunNow={() => onEditClick('RunAgent', integration)}
+          onDeleteIntegration={handleDelete}
+        />
+      ) : (
+        <IntegrationActions
+          integration={integration}
+          onRunNow={handleRunNow}
+          simple={simple}
+          onEditSchedule={() => onEditClick('UpdateSchedules', integration)}
+          onEditConnections={() => onEditClick('UpdateConnections', integration)}
+          onEditMap={() => onEditClick('UpdateMaps', integration)}
+          onDeleteIntegration={handleDelete}
+          onShowHistory={() => onShowHistory(integration)}
+          {...(cardOpensEdit ? { onEdit: openEdit, editLabel: cardCfg.editButton?.label ?? 'Edit' } : {})}
+        />
+      )}
+    </div>
+  ) : null;
 
   return (
     <>
@@ -124,33 +201,56 @@ const Integration: React.FC<IntegrationProps> = ({
           key={integration.id}
           integration={integration}
           isAgent={isAgent}
+          className={catalogUi ? 'boomi-integration-card--ui-1-7' : undefined}
+          onActivate={cardOpensEdit ? openEdit : undefined}
+          activateLabel={`${cardCfg.editButton?.label ?? 'Edit'} ${title ?? ''}`.trim()}
         >
-          <div className="flex items-center pt-4">
-            <div className="flex-1 pl-4 text-sm">{type}</div>
-            <div className="flex-none justify-end pr-4"></div>
-          </div>
+          {showType && (
+            <div className="boomi-integration-card__header">
+              <div className="boomi-integration-card__type">{type}</div>
+              <div className="boomi-integration-card__header-extra">{menuOnTop && topMenu}</div>
+            </div>
+          )}
 
-          <div className="flex gap-4 p-4">
-            <div className="flex flex-col w-full">
-              <h3 className="text-xl font-semibold break-words truncate overflow-hidden pr-2">
-                {title}
-              </h3>
-              <p className="text-xs mt-1 line-clamp-2 break-words overflow-hidden">
+          <div className="boomi-integration-card__body">
+            <div className={`boomi-integration-card__content${showConnectors ? ' boomi-integration-card__content--connectors' : ''}`}>
+              <div className="boomi-integration-card__title-row">
+                <h3 className="boomi-integration-card__title">
+                  {title}
+                </h3>
+                {menuOnTop && !showType && topMenu}
+              </div>
+              <p className="boomi-integration-card__desc">
                 {integration.integrationPackDescription}
               </p>
+              {showConnectors && (
+                <ConnectorStack
+                  connectors={integration.connectors}
+                  size={connectorIconSize}
+                  className="boomi-integration-card__connectors"
+                />
+              )}
             </div>
           </div>
 
-          <div className="flex w-full">
-            <div className="flex p-2 justify-end items-center gap-x-2 w-full relative overflow-visible">
-              {(boomiConfig?.components?.[componentKey]?.integrations?.integration?.showEdit ?? true) && (
-                <>
+          {(!menuOnTop || envChip || (showEdit && showEditButton)) && (
+          <div className={`boomi-integration-card__footer${catalogUi ? ' boomi-integration-card__footer--stacked' : ''}`}>
+            {catalogUi && envChip && <div className="boomi-integration-card__env-row">{envChip}</div>}
+            {(!catalogUi || (showEdit && showEditButton)) && (
+            <div className="boomi-integration-card__actions">
+              {!catalogUi && envChip}
+              {showEdit && showEditButton && (
+                // 1.6.1 card: the wrapper is layout-neutral so the button sits exactly where it did.
+                <div
+                  className={catalogUi ? 'boomi-integration-card__edit' : undefined}
+                  style={catalogUi ? undefined : { display: 'contents' }}
+                >
                   {isAgent ? (
                     <Button
                       toggle={false}
                       primary={true}
                       showIcon={false}
-                      label={boomiConfig?.components?.[componentKey]?.integrations?.integration?.agentButton?.label ?? 'Run Agent'}
+                      label={cardCfg.agentButton?.label ?? 'Run Agent'}
                       onClick={() => onEditClick('RunAgent', integration)}
                     />
                   ) : (
@@ -158,13 +258,13 @@ const Integration: React.FC<IntegrationProps> = ({
                       toggle={false}
                       primary={true}
                       showIcon={false}
-                      label={boomiConfig?.components?.[componentKey]?.integrations?.integration?.editButton?.label ?? 'Edit'}
-                      onClick={() => onEditClick('ConfigureIntegration', integration)}
+                      label={cardCfg.editButton?.label ?? 'Edit'}
+                      onClick={openEdit}
                     />
                   )}
-                </>
+                </div>
               )}
-              {(boomiConfig?.components?.[componentKey]?.integrations?.integration?.showControls ?? true) && (
+              {!menuOnTop && showControls && (
                 <>
                   {isAgent ? (
                     <AgentActions
@@ -181,19 +281,31 @@ const Integration: React.FC<IntegrationProps> = ({
                       onEditMap={() => onEditClick('UpdateMaps', integration)}
                       onDeleteIntegration={handleDelete}
                       onShowHistory={() => onShowHistory(integration)}
+                      {...(cardOpensEdit ? { onEdit: openEdit, editLabel: cardCfg.editButton?.label ?? 'Edit' } : {})}
                     />
                   )}
                 </>
               )}
             </div>
+            )}
           </div>
+          )}
         </IntegrationItem>
 
       ) : viewType === 'on' ? (
         <tr key={integration.id} className={`boomi-table-row ${isAgent ? 'boomi-table-row--agent' : ''}`}>
-          <td className="py-4 pl-4 pr-3 text-xs sm:pl-2 max-w-sm break-words">{title}</td>
-          <td className="py-4 pl-4 pr-3 text-xs sm:pl-2 max-w-sm break-words">{integration.integrationPackDescription}</td>
-          <td className="py-4">
+          <td className="boomi-integrations-table__td boomi-integrations-table__td--name">{title}</td>
+          <td className="boomi-integrations-table__td boomi-integrations-table__td--description">{integration.integrationPackDescription}</td>
+          {showEnvironment && (
+            <td
+              className="boomi-integrations-table__td boomi-integrations-table__td--environment"
+              title={envRefs.map((e) => `${e.name ?? e.id}${e.classification ? ` (${e.classification})` : ''}`).join(', ') || undefined}
+            >
+              {unattached ? unattachedChip : primaryEnv ? (primaryEnv.name ?? primaryEnv.id) : '—'}
+              {otherEnvs.length > 0 && <span className="boomi-integration-card__env-more"> +{otherEnvs.length}</span>}
+            </td>
+          )}
+          <td className="boomi-integrations-table__td boomi-integrations-table__td--history">
             <ExecutionTimeline
               id={integration.id || ''}
               showFooter={false}
@@ -202,7 +314,7 @@ const Integration: React.FC<IntegrationProps> = ({
             />
           </td>
           {(boomiConfig?.components?.[componentKey]?.integrations?.integration?.showControls ?? true) && (
-            <td className="flex px-4 pt-4 items-right text-right justify-end relative overflow-visible">
+            <td className="boomi-integrations-table__td boomi-integrations-table__td--actions">
               {isAgent ? (
                 <AgentActions
                   onRunNow={() => onEditClick('RunAgent', integration)}
