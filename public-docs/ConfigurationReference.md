@@ -1667,6 +1667,8 @@ wrapper calling `BoomiPlugin` / `RenderComponent` / `DestroyPlugin` directly).
 > never fires them. The `agent.*` and `feedback` events fire in **both**
 > the Integration method and the CDN embed.
 
+> **Built-in components.** Events are emitted by EmbedKit's built-in components. Screens you build directly on the [data hooks](./GettingStarted.md#data-hooks-custom-ui) don't emit them, so add any notifications or logging your own screens need.
+
 ### The Event Envelope
 
 Every event follows the same shape:

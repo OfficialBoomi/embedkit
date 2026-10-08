@@ -343,6 +343,52 @@ RenderComponent({
 
 ---
 
+## Data Hooks (Custom UI)
+
+If the built-in components don't fit your design, build your own screens on the same authenticated data with EmbedKit's React hooks. They are exported from `@boomi/embedkit`, require React 19, and must be called inside `<EmbedKitProvider>`.
+
+```tsx
+import { useEffect } from 'react';
+import { EmbedKitProvider, createEmbedKit, useFetchEnvironments } from '@boomi/embedkit';
+
+function Environments() {
+  const { environments, isLoading, error, fetchEnvironments } = useFetchEnvironments();
+
+  useEffect(() => {
+    fetchEnvironments('ALL');
+  }, []);
+
+  if (isLoading) return <p>Loading…</p>;
+  if (error) return <p>{error}</p>;
+  return <ul>{environments.map((e) => <li key={e.id}>{e.name}</li>)}</ul>;
+}
+
+export default function App() {
+  return (
+    <EmbedKitProvider config={createEmbedKit()}>
+      <Environments />
+    </EmbedKitProvider>
+  );
+}
+```
+
+| Area | Hooks |
+|---|---|
+| Environments | `useFetchEnvironments` |
+| Connections | `useFetchEnvironmentExtensions`, `useUpdateEnvironmentExtensions`, `useFetchEnvironmentExtensionConnectionStatus`, `useFetchOauth2Url` |
+| Integrations | `useFetchAccountGroupIntegrationPacks`, `useFetchIntegrationPackInstances`, `useFetchIntegrationPackInstance`, `useCreateIntegrationPackInstance`, `useDeleteIntegrationPackInstance`, `useRunAllProcesses` |
+| Maps | `useFetchMapExtensions`, `useUpdateMapExtensions`, `useExecuteMapExtensions` |
+| Schedules | `useFetchProcessSchedules`, `useUpdateProcessSchedules` |
+| Execution history | `useFetchExecutionRecords` |
+| AI transformations | `useFetchAiTransformations` |
+
+Each hook's parameters and return values are described in the package's type declarations.
+
+> [!NOTE]
+> Hooks perform the data operation only. [Events](./ConfigurationReference.md#10-events--callbacks) are emitted by EmbedKit's built-in components, so screens built directly on hooks don't emit them. Add whatever notifications or logging your own screens need.
+
+---
+
 ## Styling & Theming
 
 The plugin maps CSS variables to ready-made utility classes (e.g., `.boomi-btn-primary`, `.boomi-input`, `.boomi-card`) so your overrides cascade consistently across all UI elements.
