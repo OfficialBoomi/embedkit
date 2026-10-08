@@ -201,3 +201,5 @@ jest-framework/
 # jest test config
 jest.config.ts
 jest.config.js
+
+.DS_Store
