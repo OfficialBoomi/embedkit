@@ -353,12 +353,12 @@ export default function MainChat({
                         "rounded-2xl px-3 py-2",
                         "border border-[var(--boomi-card-border)]",
                         "bg-[var(--boomi-card-bg)]/70 backdrop-blur-[1px]",
-                        "hover:shadow hover:-translate-y-[1px] transition-all",
+                        "hover:shadow hover:[transform:translateY(-1px)] transition-all",
                         "disabled:opacity-50 disabled:cursor-not-allowed",
                       ].join(' ')}
                       title={p.prompt}
                     >
-                      <span className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-0 transition will-change-transform [background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)]" />
+                      <span className="pointer-events-none absolute inset-0 [transform:translateX(-100%)] group-hover:[transform:translateX(0)] transition will-change-transform [background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)]" />
                       <span className="text-sm font-medium">{p.title}</span>
                     </button>
                   ))}
@@ -512,12 +512,12 @@ export default function MainChat({
                       "rounded-2xl px-3 py-2",
                       "border border-[var(--boomi-card-border)]",
                       "bg-[var(--boomi-card-bg)]/70 backdrop-blur-[1px]",
-                      "hover:shadow hover:-translate-y-[1px] transition-all",
+                      "hover:shadow hover:[transform:translateY(-1px)] transition-all",
                       "disabled:opacity-50 disabled:cursor-not-allowed",
                     ].join(' ')}
                     title={p.prompt}
                   >
-                    <span className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-0 transition will-change-transform [background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)]" />
+                    <span className="pointer-events-none absolute inset-0 [transform:translateX(-100%)] group-hover:[transform:translateX(0)] transition will-change-transform [background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)]" />
                     <span className="text-sm font-medium">{p.title}</span>
                   </button>
                 ))}

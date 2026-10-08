@@ -127,7 +127,7 @@ const Button: React.FC<ButtonProps> = ({
       onMouseLeave={() => setHovered(false)}
     >
       {hoverText && hovered && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded text-xs text-white bg-black whitespace-nowrap z-10 shadow">
+        <div className="absolute bottom-full left-1/2 [transform:translateX(-50%)] mb-2 px-2 py-1 rounded text-xs text-white bg-black whitespace-nowrap z-10 shadow">
           {hoverText}
         </div>
       )}
