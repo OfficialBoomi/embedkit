@@ -272,6 +272,8 @@ const cssVarOptions = [
   '--boomi-input-border-disabled',
   '--boomi-input-border-invalid',
   '--boomi-input-outline-invalid',
+  '--boomi-search-clear-fg',
+  '--boomi-search-clear-hover-fg',
   // Tables
   '--boomi-table-header-bg',
   '--boomi-table-header-fg',
@@ -368,6 +370,8 @@ const cssVarOptions = [
   '--boomi-notice-error-border',
   '--boomi-notice-shadow',
   '--boomi-notice-radius',
+  '--boomi-notice-icon-size',
+  '--boomi-notice-icon-display',
   // Update panel
   '--boomi-update-bg',
   '--boomi-update-fg',

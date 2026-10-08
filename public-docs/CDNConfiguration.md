@@ -658,6 +658,8 @@ These variables specifically control the agent chat panel.
 | `--boomi-notice-warning-fg` | Warning notice text |
 | `--boomi-notice-warning-border` | Warning notice border |
 | `--boomi-notice-shadow` | Shadow on all notice types |
+| `--boomi-notice-icon-size` | Notice icon width and height |
+| `--boomi-notice-icon-display` | Set to `none` to hide the notice icon |
 
 ---
 

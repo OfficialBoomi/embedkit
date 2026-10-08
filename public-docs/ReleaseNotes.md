@@ -13,7 +13,15 @@
 
 ### Unreleased
 
-_Nothing pending — everything below has shipped._
+**Bug fixes**
+- 🐛 **Search clear (x) is centered in search fields** — The clear button was positioned with a Tailwind translate utility that does not apply inside the Shadow DOM, so it rendered below center. It now uses plain CSS.
+- 🐛 **No focus outline on the scrollable plugin area in Chrome** — Chrome drew a default focus border around the scrollable EmbedKit container when clicked or tabbed into. The container stays focusable and keyboard-scrollable; only the outline is removed.
+- 🐛 **Schedules error notice can be dismissed** — The close (x) on the "Error Updating Schedules" notice did nothing. It now closes the notice.
+
+**New**
+- ✅ **Notice icon tokens** — `--boomi-notice-icon-size` and `--boomi-notice-icon-display` (set to `none` to hide) control the icon in notices and the modal `Dialog`. Defaults match the previous look.
+- ✅ **Search clear tokens** — `--boomi-search-clear-fg` and `--boomi-search-clear-hover-fg` color the clear (x) in search fields.
+- ✅ **Styling scope note** — `ConfigurationReference.md` now states that CSS variables are the supported way into the Shadow DOM.
 
 ---
 
