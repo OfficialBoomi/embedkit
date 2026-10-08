@@ -17,7 +17,8 @@ import {
   AiOutlineLink,
   AiOutlineApartment,
   AiOutlineDelete,
-  AiOutlineLineChart
+  AiOutlineLineChart,
+  AiOutlineEdit
 } from 'react-icons/ai';
 import DropdownMenu from '../ui/DropdownMenu';
 import { IntegrationPackInstance } from '@boomi/embedkit-sdk';
@@ -36,6 +37,8 @@ import { Menu } from '@headlessui/react';
  * @property {() => void} onEditMap - Called to edit the integration's field mappings.
  * @property {() => void} onDeleteIntegration - Called to delete the integration.
  * @property {() => void} onShowHistory - Called to show the integration's execution history.
+ * @property {() => void} [onEdit] - When set, adds Edit as the first item (used when the card has no Edit button).
+ * @property {string} [editLabel] - Text of that item (default "Edit").
  */
 interface IntegrationActionsProps {
   integration: IntegrationPackInstance;
@@ -46,6 +49,8 @@ interface IntegrationActionsProps {
   onEditMap: () => void;
   onDeleteIntegration: () => void;
   onShowHistory: () => void;
+  onEdit?: () => void;
+  editLabel?: string;
 }
 
 const IntegrationActions: React.FC<IntegrationActionsProps> = ({
@@ -57,10 +62,26 @@ const IntegrationActions: React.FC<IntegrationActionsProps> = ({
   onEditMap,
   onDeleteIntegration,
   onShowHistory,
+  onEdit,
+  editLabel = 'Edit',
 }) => {
   return (
     <DropdownMenu>
       <>
+        {onEdit && (
+          <Menu.Item>
+            {({ active }) => (
+              <button
+                onClick={onEdit}
+                className="boomi-menu-item"
+                data-headlessui-state={active ? 'active' : undefined}
+              >
+                <AiOutlineEdit className="boomi-menu-icon" />
+                {editLabel}
+              </button>
+            )}
+          </Menu.Item>
+        )}
         <Menu.Item>
           {({ active }) => (
             <button

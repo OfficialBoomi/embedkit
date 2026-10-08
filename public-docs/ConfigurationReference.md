@@ -2,6 +2,8 @@
 
 This document is the complete reference for all user-facing configuration options in Boomi EmbedKit. It covers initialization, agent configuration, component configuration, theming, form customization, and every CSS design token available for styling.
 
+> **New in 1.7:** the integrations list, Add Integration catalog, setup wizard, environment scope and their flags are explained end to end in the [Integrations Guide](./IntegrationsGuide.md).
+
 ---
 
 ## Table of Contents
@@ -43,6 +45,21 @@ BoomiPlugin({
 | `boomiConfig` | `PluginUiConfig` | No | Full UI and behavior configuration. See [Section 2](#2-boomiconfigjs--top-level-structure). |
 
 ---
+
+### Environment scope (login body `environments`)
+
+The login body your server posts to `POST /api/v1/auth/login` may carry `environments: string[]`. When present, **every** environment, instance and eligible-pack list for that tenant's sessions is limited to those environment ids: the environment dropdown shows only them, the integrations list shows only instances attached to at least one of them, and eligible packs report where they are installed within them. Omit it, or send an empty array, for all environments in the child account (the pre-1.7 behavior). Login rejects ids that are not environments of the child account with `422 Environment scope invalid: …`.
+
+```js
+const LOGIN_BODY = {
+  url, parentAccountId, childAccountId, accountGroup, apiUserName, apiToken,
+  environments: ['19f7dd46-d6e7-4ef4-a7aa-11373222ab6c'],   // optional session scope
+  ai: { … },
+  oauth2: { connections: {} },
+};
+```
+
+Instances returned to the client now carry `environments: [{ id, name, classification }]`, every in-scope attachment, in addition to the legacy single `environmentId` (the first of them).
 
 ## 2. boomi.config.js — Top-Level Structure
 
@@ -167,7 +184,7 @@ agents: {
 | `hideIcon` | `boolean` | Hides the launcher icon entirely. |
 | `shape` | `'circle' \| 'pill'` | Shape of the floating launcher button. |
 | `position` | `UIPosition` | Position of the floating launcher. See [UIPosition](#uiposition) below. |
-| `ui` | `AgentUiConfig` | All chat UI configuration. See [AgentUiConfig](#agentUiconfig) below. |
+| `ui` | `AgentUiConfig` | All chat UI configuration. See [AgentUiConfig](#agentuiconfig) below. |
 | `feedback` | `AgentFeedbackConfig` | Thumbs up / thumbs down / comment feedback on agent responses. See [Response Feedback](#response-feedback-feedback) below. |
 | `form.configureAgent` | `FormConfig` | Custom form fields shown in the agent configuration dialog. |
 
@@ -339,6 +356,7 @@ Passed as `boomiConfig.components[componentKey]`. Each key is the `componentKey`
 components: {
   myIntegrations: {
     renderType:      'integration',
+    uiVersion:       '1.7.0',
     showTitle:       true,
     title:           'My Integrations',
     showDescription: false,
@@ -350,11 +368,81 @@ components: {
 |----------|------|-------------|
 | `componentKey` | `string` | The unique key for this component instance. Must match what you pass as `props.componentKey` in `RenderComponent`. |
 | `renderType` | `'agent' \| 'integration' \| 'all'` | Filters what is rendered in this component view. |
+| `uiVersion` | `string` | The EmbedKit release whose UI this component has, e.g. `'1.7.0'`. Omit to keep the 1.6.1 UI. See [UI version](#ui-version-uiversion). |
 | `showTitle` | `boolean` | Show or hide the component title. |
 | `title` | `string` | Override text for the component title. |
 | `showDescription` | `boolean` | Show or hide the component description. |
 | `description` | `string` | Override text for the component description. |
 | `mapping.useTreeMode` | `boolean` | When `true`, the mapping canvas uses tree view instead of the default layout. |
+
+### UI version (`uiVersion`)
+
+Upgrading EmbedKit never changes how an existing component looks. Each component renders the UI of the release named by its `uiVersion`, and a component without one keeps the **1.6.1** UI. To adopt a release's UI changes, set `uiVersion` to that release on the components you want to change, and test them before shipping:
+
+```js
+components: {
+  myIntegrations: { renderType: 'integration', uiVersion: '1.7.0' },  // new UI
+  myAgents:       { renderType: 'agent' },                              // unchanged: 1.6.1 UI
+}
+```
+
+`uiVersion` only sets defaults. Any option you set explicitly wins, so you can adopt one feature without the rest (`showConnectors: true` on a 1.6.1 component), or keep one old behavior on a new one (`layout: 'form'` on a 1.7.0 component). Accepts `'1.7'`, `'1.7.0'` or `'v1.7.0'`; anything else logs a warning and uses 1.6.1. Bug fixes and new options that are off by default are not gated, so they reach every component.
+
+| `uiVersion` | What changes |
+|-------------|--------------|
+| omitted, `'1.6.1'` or lower | The 1.6.1 UI. |
+| `'1.7.0'` or higher | Add Integration opens the searchable catalog (`form.addIntegration.layout` defaults to `'catalog'`). Integration cards use the 1.7 layout (see [Integration cards](#integration-cards-integrationsintegration)): no type row, the actions menu at the top right, connector icons, a full-width environment row, and the card itself opens Edit. The list gets a filter beside the search box and sortable table columns with an Environment column (see [List filter and sorting](#list-filter-and-sorting)). Every scroll area uses thin scrollbars (see [Scrollbars](#scrollbars)). |
+
+### Integration cards (`integrations.integration`)
+
+Options for the cards on the main integrations list, under `components[componentKey].integrations.integration`. Defaults depend on the component's [`uiVersion`](#ui-version-uiversion).
+
+```js
+components: {
+  myIntegrations: {
+    renderType: 'integration',
+    uiVersion: '1.7.0',
+    integrations: {
+      integration: {
+        showType: false,                 // "Integration" / "Single Install Integration" row
+        editButton: { show: false },     // false: clicking the card opens Edit instead
+        showEnvironment: true,
+        showConnectors: true,
+      },
+    },
+  },
+}
+```
+
+| Property | Type | Default before 1.7.0 | Default at 1.7.0+ | Description |
+|----------|------|----------------------|-------------------|-------------|
+| `showType` | `boolean` | `true` | `false` | Show the type row ("Integration" / "Single Install Integration") at the top of the card. |
+| `editButton.show` | `boolean` | `true` | `false` | Show the **Edit** button on integration cards. When it is off, the whole card opens Edit on click, Enter or Space, and **Edit** becomes the first item in the actions menu; the menu itself never triggers the card. Agent cards always keep their **Run Agent** button. |
+| `editButton.label` | `string` | `'Edit'` | `'Edit'` | Edit button text; also the start of the clickable card's accessible name ("Edit *Pack name*"). |
+| `agentButton.label` | `string` | `'Run Agent'` | `'Run Agent'` | Run Agent button text on agent cards. |
+| `showEdit` | `boolean` | `true` | `true` | `false` turns off editing from the card entirely: no Edit or Run Agent button, and the card is not clickable. |
+| `showControls` | `boolean` | `true` | `true` | Show the actions (⋮) menu. |
+| `showEnvironment` | `boolean` | `false` | `true` | Show the environment the instance is attached to (first in-scope environment, `+N` for more). An instance attached to no environment shows an orange **Unattached** pill instead, on the card and in the table. |
+| `unattachedLabel` | `string` | `'Unattached'` | `'Unattached'` | Text of that pill. |
+| `showConnectors` | `boolean` | `false` | `true` | Show the pack's connector icons under the description. The list asks the server for them only when this is on. |
+| `connectorIconSize` | `number` | `36` | `36` | Connector icon art size in px. |
+
+### List filter and sorting
+
+At [`uiVersion`](#ui-version-uiversion) `'1.7.0'` or higher, a filter icon sits to the right of the search box on the integrations list and in the Add Integration catalog. It opens a panel of checkboxes: **Environment** (only when there are environments to choose from) and **Connector** (the connector types the packs use, with their icons). Picking several options in one group matches any of them; picking in both groups must match both. The icon shows how many filters are active, and **Clear filters** removes them. In the catalog, the environment filter keeps packs that are already installed in that environment.
+
+The table view adds an **Environment** column (the first in-scope environment, `+N` for more) and sortable **Name**, **Description** and **Environment** headers: click once for ascending, again for descending, a third time for the default order. Filtering and sorting run on the server across the whole list before it is paged, and filter or sort changes return to page 1.
+
+| Property | Type | Default before 1.7.0 | Default at 1.7.0+ | Description |
+|----------|------|----------------------|-------------------|-------------|
+| `integrations.filter.show` | `boolean` | `false` | `true` | Filter icon beside the list's search box. Also the catalog's default. |
+| `form.addIntegration.catalog.filter.show` | `boolean` | follows `integrations.filter.show` | follows `integrations.filter.show` | Filter icon in the Add Integration catalog. |
+| `integrations.table.sortable` | `boolean` | `false` | `true` | Sortable table headers. |
+| `integrations.integration.showEnvironment` | `boolean` | `false` | `true` | Also controls the table's Environment column. |
+
+Filter options are loaded the first time the panel opens (and again after the search changes). Tokens are listed under [List filter, sorting and tables](#list-filter-sorting-and-tables).
+
+**Layout at 1.7.0+.** The actions menu moves to the right end of the top visible row: the type row when `showType` is on, otherwise the title row. The environment is a full-width row above the button, and the Edit or Run Agent button spans the full width. Before 1.7.0 the card keeps its original layout (menu and button at the bottom right, environment chip inline at the bottom left) whatever you set here.
 
 ### Update Maps (`updateMaps`)
 
@@ -382,6 +470,51 @@ components: {
 | `convertFunctionsToScript` | `boolean` | `false` | Let customers edit **platform-defined** functions (CurrentDate, TrimWhitespace, user-defined functions, …) by compiling them to a Custom Scripting function first. Off: those functions render with their connections, can be wired and deleted, and have no Edit action. On: convertible types gain Edit; choosing it compiles deterministically (no LLM), opens the Transformation Editor and emits `map.function.converted`; saving replaces the partner's function with the customer's script. Requires `embedkit-server` on `@boomi/embedkit-sdk` 1.4.0. See [Transformation Editor § 11](./TransformationEditor.md#11-editing-platform-defined-functions-convert-to-script). |
 
 > **Default mappings arrive at install.** Since `@boomi/embedkit-sdk` 1.4.0 the server copies the publisher's default mappings and functions into a new instance's map extensions during install, so **Edit Map(s)** opens with them already drawn. The result is reported through the `map.defaults.seeded` event.
+
+### Add Integration Catalog (`form.addIntegration`)
+
+With [`uiVersion`](#ui-version-uiversion) `'1.7.0'` or higher, the Add Integration modal is a **catalog**: a search box over pack names, descriptions and connectors, a card or table view, and one card per eligible pack. Catalog cards use the same markup, width and title size as the main Integrations cards: the type on top when shown (**Integration** or **Single Install Integration**; `catalog.showType`), the pack name and description, a left-aligned stack of connector icons, a full-width "Installed in N environments" bar (when installed), and a full-width **Install** button (`catalog.installButton`). With the button off, clicking the card starts the install; the table view always shows the button. Installing opens the install step. The modal fits `--boomi-catalog-columns` cards across (default 3); on a narrower screen the cards shrink rather than drop a column, and on phones they stack. The environment list is the session's scoped list (see [Environment scope](#environment-scope-login-body-environments)); for **single-install** packs it also excludes environments that already hold the pack, preselects when exactly one remains, and disables install when none do.
+
+```js
+components: {
+  myIntegrations: {
+    renderType: 'integration',
+    form: {
+      addIntegration: {
+        layout: 'catalog',                     // default at uiVersion 1.7.0+; 'form' (default before) is the dropdown form.
+        catalog: { defaultView: 'grid', showViewToggle: true, searchPlaceholder: 'Search integrations or connectors' },
+        showEnvironmentSelect: true,           // false: install into defaultEnvironmentId without asking
+        defaultEnvironmentId: '…',
+        allowDuplicateIntegrationNames: false,
+        integrationPackName: { label: 'Integration Name', editable: true },
+      },
+    },
+  },
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `layout` | `'catalog' \| 'form'` | `'catalog'` at `uiVersion` 1.7.0+, else `'form'` | Which Add Integration experience to render. |
+| `catalog.defaultView` | `'grid' \| 'table'` | `'grid'` | Initial catalog layout. |
+| `catalog.showViewToggle` | `boolean` | `true` | Show the card/table switch. |
+| `catalog.installButton.show` | `boolean` | `true` | Show the **Install** button on catalog cards. When `false`, clicking the card (or Enter / Space) starts the install. The table view always shows the button. |
+| `catalog.installButton.label` | `string` | `'Install'` | Button text, in both card and table views. |
+| `catalog.showType` | `boolean` | `integrations.integration.showType` | Show the type line ("Integration" / "Single Install Integration") on catalog cards. Follows the main cards' setting unless set here, so it is off by default at `uiVersion` 1.7.0+. |
+| `catalog.searchPlaceholder` | `string` | built-in | Search box placeholder. Search runs on the server when the user presses Enter. |
+| `catalog.pageSize` | `number` | `12` | Packs per page (max 100). The catalog is paged on the server; connector icons are resolved only for the visible page. |
+| `showTargetEnvironment` | `boolean` | `true` | Show "Installing into *Environment*" inside the selected card on the install step, including when the environment dropdown is hidden. Label text: `targetEnvironmentLabel` (default `'Installing into'`). |
+| `hideEnvironmentSelectWhenSingle` | `boolean` | `false` | In the install step, hide the environment dropdown when exactly one environment is available (after the session scope and, for single-install packs, excluding environments that already hold the pack). That environment is used automatically. |
+
+The remaining `form.addIntegration` keys below apply to both layouts.
+
+**Connector icons** are the platform's own connector images, loaded from `https://<platform host>/connector/{connectorType}/icon/SVG` (the host is taken from the tenant's API URL; no authentication). For connector types where the platform only has a generic placeholder (Disk, FTP, SFTP, Database, LDAP, Mail and a few others) EmbedKit draws its own monochrome glyph instead, and any image that fails to load falls back to the glyph too. Tooltips show the connection name and the platform's connector label, which search also matches.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `catalog.connectorIconSize` | `number` | `36` | Size of the icon art in px. Each icon sits in a rounded-square tile 16px larger (52px by default), centered. Cards show one centered, overlapping stack of up to four tiles (each tucked slightly under the next, left to right) at the same position on every card; with more connectors the fourth tile shows `+N`. |
+
+> **Content Security Policy.** Host pages that restrict `img-src` must allow the platform host (for example `https://api.boomi.com`), or the icons fall back to glyphs. Tile tokens: `--boomi-connector-icon-tile` (tile size), `--boomi-connector-icon-radius` (default `0.5rem`), `--boomi-connector-icon-border`, `--boomi-connector-icon-bg`, `--boomi-connector-icon-image-bg` (behind platform images), `--boomi-connector-icon-fg` (glyph color), `--boomi-connector-icon-overlap` (how far tiles overlap, default `0.625rem`; `0` for side by side), `--boomi-connector-icon-ring` (separator ring, defaults to the card background) and `--boomi-connector-icon-solid-bg` (opaque tile base).
 
 ### Add Integration Form (`form.addIntegration`)
 
@@ -945,6 +1078,87 @@ cssVars: {
 | `--boomi-card-hover-scale` | Scale transform on hover |
 | `--boomi-card-hover-shadow` | Shadow on hover |
 
+These shared tokens are the defaults for both card types below. Each card type also has its **own class and tokens**, so a host can restyle one without touching the other.
+
+#### Integrations card (main list) — `.boomi-integration-card`
+
+Keeps `.boomi-card` for its frame and hover. Parts: `__header`, `__type`, `__header-extra`, `__body`, `__content`, `__title-row`, `__title`, `__menu`, `__desc`, `__footer`, `__env-row`, `__actions`, `__edit`; modifiers `.boomi-integration-card--agent`, `--clickable` (card opens Edit) and `__footer--stacked` (1.7 layout). On a component before `uiVersion` 1.7.0 the defaults reproduce the 1.6.1 look exactly.
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-integration-card-bg` / `-fg` / `-border` / `-radius` / `-shadow` / `-hover-shadow` | shared `--boomi-card-*` | Frame of the main card only |
+| `--boomi-integration-card-padding-x` | `1rem` | Horizontal padding of the type line |
+| `--boomi-integration-card-header-padding` | `1rem 0 0 0` | Type row padding |
+| `--boomi-integration-card-body-padding` | `1rem` | Title/description block padding |
+| `--boomi-integration-card-type-fg` / `-font-size` / `-font-weight` | inherit / `0.875rem` / `400` | "Integration" / "Single Install Integration" line |
+| `--boomi-integration-card-title-fg` / `-font-size` / `-font-weight` / `-line-height` | inherit / `1.25rem` (`1rem` at 1.7.0+) / `600` / `1.75rem` (`1.5rem` at 1.7.0+) | Title (single line, ellipsis) |
+| `--boomi-integration-card-width` | `16rem` | 1.7.0+: card width, shared by the main list (`.boomi-integration-grid`, as many cards per row as fit) and the Add Integration catalog. Before 1.7.0 the list uses 1–4 stretched columns by screen width. |
+| `--boomi-integration-grid-column-gap` / `-row-gap` | `1.5rem` / `2rem` | 1.7.0+: space between cards. |
+| `--boomi-integration-card-desc-fg` / `-font-size` / `-line-height` / `-lines` | inherit / `0.75rem` / `1rem` / `2` | Description (clamped) |
+| `--boomi-integration-card-actions-justify` / `-gap` / `-padding` | `flex-end` / `0.5rem` / `0.5rem` | Button row |
+| `--boomi-integration-card-env-bg` / `-fg` / `-border` / `-radius` / `-padding` / `-font-size` / `-font-weight` | subtle tint / inherit / `0.375rem` / `0.1875rem 0.5rem` / `0.75rem` / `500` | Environment chip (`.boomi-integration-card__env`): a full-width row above the button at `uiVersion` 1.7.0+ (`__env-row`; `--boomi-integration-card-env-justify`, default `center`, and `--boomi-integration-card-env-row-padding`), otherwise at the bottom left of the button row; `data-classification="prod"\|"test"`, with `--boomi-integration-card-env-prod-bg` / `-test-bg`). Shows the first in-scope environment and `+N` for more; on by default at `uiVersion` 1.7.0+; set `integrations.integration.showEnvironment` to override. |
+| `--boomi-integration-card-focus-ring` | accent | Focus outline of a clickable card (`--clickable`). |
+| `--boomi-integration-card-title-row-gap` | `0.5rem` | Space between the title and the actions menu in the title row. |
+| `--boomi-integration-card-env-justify` / `-env-row-padding` / `-env-row-chip-padding` | `center` / `0 0.5rem 0.5rem` / `0.3rem 0.5rem` | Full-width environment row (1.7 UI). |
+| `--boomi-integration-card-env-unattached-bg` / `-fg` / `-border` | orange tint / `#c2410c` (`#fdba74` dark) / orange | **Unattached** pill (`.boomi-integration-card__env--unattached`) for instances attached to no environment. |
+| `--boomi-integration-card-connectors-margin` / `-justify` | `0.75rem 0 0 0` / `flex-start` | Connector icon stack under the description (`.boomi-integration-card__connectors`, a `.boomi-connector-stack`). The description keeps a fixed height while icons are shown, so the stack sits at the same level on every card. On by default at `uiVersion` 1.7.0+; set `integrations.integration.showConnectors` to override. Icon size via `integrations.integration.connectorIconSize` (default `36`). |
+
+#### Catalog card (Add Integration) — `.boomi-catalog-item` and `.boomi-catalog-card`
+
+Cards in the catalog grid are Integrations cards (`.boomi-card.boomi-integration-card`, all `--boomi-integration-card-*` tokens apply) with the hook class `.boomi-catalog-item` and modifiers `--single`, `--multi`, `--installed`; the Install button is `.boomi-catalog-card__select` and the installed bar `.boomi-catalog-installed`. `.boomi-catalog-card` (tokens below) styles the selected pack on the install step (`--selected`), the Install button and the installed bar.
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-catalog-card-bg` / `-fg` / `-border` / `-border-width` / `-radius` / `-shadow` | shared `--boomi-card-*`, `1px` | Frame |
+| `--boomi-catalog-card-padding` / `-gap` | `1rem` / `0.5rem` | Inner spacing |
+| `--boomi-catalog-card-hover-transform` / `-hover-shadow` / `-hover-border` | `none` / frame values | Hover |
+| `--boomi-catalog-card-selected-border` / `-selected-bg` | accent / frame bg | Selected card in the install step |
+| `--boomi-catalog-card-type-fg` / `-font-size` / `-font-weight` / `-letter-spacing` | inherit / `0.875rem` / `400` / `normal` | Type line |
+| `--boomi-catalog-card-title-fg` / `-font-size` / `-font-weight` / `-line-height` / `-lines` | inherit / `1rem` / `600` / `1.5` / `2` | Title (fixed height = lines × line height) |
+| `--boomi-catalog-card-desc-fg` / `-font-size` / `-line-height` / `-lines` / `-opacity` | muted / `0.8rem` / `1.4` / `3` / `0.9` | Description (fixed height) |
+| `--boomi-catalog-card-foot-gap` | `0.5rem` | Space between installed bar and button |
+| `--boomi-catalog-target-env-bg` / `-fg` / `-border` / `-radius` / `-padding` / `-font-size` / `-name-weight` / `-label-opacity` | accent tint / inherit / accent border / `0.5rem` / `0.5rem 0.75rem` / `0.8125rem` / `600` / `0.75` | "Installing into" panel on the install step (`.boomi-catalog-card__target-env`, `__target-env-label`, `-name`, `-class`) |
+| `--boomi-catalog-installed-bg` / `-fg` / `-border` / `-radius` / `-padding` / `-font-size` / `-font-weight` | success notice tokens / `0.375rem` / `0.3rem 0.5rem` / `0.75rem` / `500` | "Installed in N environments" bar |
+| `--boomi-catalog-select-bg` / `-bg-hover` / `-fg` / `-border` / `-radius` / `-font-weight` / `-height` | primary button tokens / `600` / `2.25rem` | Full-width Select button |
+| `--boomi-catalog-columns` | `3` | Cards per row; the modal is sized to fit them at `--boomi-integration-card-width`. |
+| `--boomi-catalog-grid-gap` / `-padding` / `-max-height` | main grid gaps / `0.25rem` / `60vh` | Grid layout. Gaps fall back to `--boomi-integration-grid-column-gap` / `-row-gap`. |
+| `--boomi-catalog-card-connectors-justify` | `flex-start` | Alignment of the connector icons on catalog cards (left, as on the main cards). |
+| `--boomi-catalog-row-bg` / `-row-bg-hover`, `--boomi-catalog-table-icon-art` | inherit / `24px` | Table view rows (`.boomi-catalog-table__row`) and icon size |
+
+Connector tiles use the `--boomi-connector-icon-*` tokens described under [Add Integration Catalog](#add-integration-catalog-formaddintegration).
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-catalog-search-min-width` | `12rem` | Minimum width of the catalog search box. |
+| `--boomi-catalog-toolbar-gap` | `0.5rem` | Space between search, filter and the view toggle. |
+| `--boomi-catalog-table-radius` / `-shadow` | `0.5rem` / small shadow | Catalog table frame. |
+| `--boomi-catalog-table-cell-padding` | `0.75rem 1rem` | Header and cell padding in the catalog table. |
+| `--boomi-catalog-table-th-font-size` / `-th-font-weight` / `-td-font-size` / `-name-font-weight` | `0.875rem` / `600` / `0.875rem` / `500` | Catalog table text. |
+
+#### List filter, sorting and tables
+
+The filter icon, sortable headers and tables on the integrations list (1.7 UI), plus the toolbar around the search box.
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-filter-size` / `-radius` | `2.5rem` / `0.5rem` | Filter icon button size and corners. |
+| `--boomi-filter-bg` / `-fg` / `-border` / `-border-hover` | input tokens / inherit / input border / accent | Filter button colors. |
+| `--boomi-filter-active-fg` | accent | Button color while filters are active. |
+| `--boomi-filter-badge-bg` / `-badge-fg` | accent / primary button text | Active-filter count badge. |
+| `--boomi-filter-panel-width` / `-panel-max-height` / `-panel-padding` | `16rem` / `22rem` / `0.625rem 0.75rem` | Filter panel (also uses the `--boomi-menu-*` colors). |
+| `--boomi-filter-legend-font-size` / `-legend-opacity` / `-legend-fg` | `0.6875rem` / `0.7` / inherit | "Environment" and "Connector" group labels. |
+| `--boomi-filter-option-font-size` / `-option-fg` | `0.8125rem` / inherit | Checkbox rows. |
+| `--boomi-sort-icon-size` / `-icon-opacity` / `-active-fg` | `0.875em` / `0.35` / accent | Sort arrows on table headers; the active column's arrow uses `-active-fg`. |
+| `--boomi-list-toolbar-gap` / `-toolbar-padding` | `0.5rem` / `1rem 0.5rem 1rem 0` | Search box, filter and add button row (`.boomi-list-search`). |
+| `--boomi-list-search-padding` | `1rem 1.5rem 1rem 0` | Search box without the filter (1.6.1 layout). |
+| `--boomi-integrations-table-radius` / `-shadow` | `0.5rem` / small shadow | Integrations table frame (`.boomi-integrations-table`). |
+| `--boomi-integrations-table-th-padding-y` / `-th-font-size` / `-th-line-height` / `-th-font-weight` | `0.75rem` / `0.875rem` / `1.25rem` / `600` | Header cells. |
+| `--boomi-integrations-table-td-padding-y` / `-td-font-size` / `-td-line-height` | `1rem` / `0.75rem` / `1rem` | Body cells. |
+| `--boomi-integrations-table-td-padding-left` | `1rem`, `0.5rem` from 40rem wide | Left padding of the name and description cells. |
+| `--boomi-integrations-table-text-max-width` | `24rem` | Maximum width of the name and description cells. |
+| `--boomi-integrations-table-name-width` / `-description-width` / `-history-width` | `16.67%` / `100%` / `16.67%` | Column widths. |
+| `--boomi-wizard-loading-padding` | `2.5rem` | Space around the loader while the setup wizard checks which steps to show. |
+
 ---
 
 ### Header
@@ -1285,6 +1499,13 @@ Each falls back to its built-in color when unset.
 | `--boomi-scrollbar-thumb-active` | Scrollbar thumb active color |
 | `--boomi-scrollbar-corner` | Scrollbar corner color |
 | `--boomi-scrollbar-radius` | Scrollbar thumb border radius |
+| `--boomi-scrollbar-thumb-inset` | Transparent padding around the thumb (`3px` on the 1.6.1 UI, `2px` at `uiVersion` 1.7.0+; visible thumb = width − 2 × inset) |
+| `--boomi-scrollbar-thumb-inset-hover` | Inset on hover (`2px` on the 1.6.1 UI, `1px` at 1.7.0+, so the thumb grows slightly) |
+| `--boomi-scrollbar-firefox-width` | Firefox `scrollbar-width` at 1.7.0+ (`thin` default, `auto`, `none`) |
+
+#### Scrollbars
+
+On the 1.6.1 UI these tokens style elements with `.boomi-scroll` (`10px` track, tinted background). At [`uiVersion`](#ui-version-uiversion) `'1.7.0'` or higher, **every scroll area in the component** uses them, with thinner defaults: `8px` track, transparent background, a 4px pill thumb that grows to 6px and takes the accent tint on hover. The rules stay inside the component's shadow root, so they never affect the host page, and tokens you set in `cssVars` override these defaults. `.boomi-scroll`, `.is-slim` and `.is-ultraslim` still work for per-element tuning.
 
 ---
 
