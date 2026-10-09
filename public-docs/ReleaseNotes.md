@@ -6,20 +6,17 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.6.1-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.7.0-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
 
-### Unreleased — v1.7.0 (in progress)
-
-![Version](https://img.shields.io/badge/version-v1.7.0-lightgrey?style=for-the-badge)
-![Status](https://img.shields.io/badge/status-in%20progress-orange?style=for-the-badge)
-
-> Draft for the next release. It collects work merged since v1.6.1 and will grow as the remaining sprints land before release. Entries marked **(1.7 UI)** only appear on components that set `uiVersion: '1.7.0'`. Everything else applies to every embed after upgrading. The full walkthrough is in the [Integrations Guide](./IntegrationsGuide.md).
+### All Releases
 
 <details open>
-  <summary><strong>v1.7.0 (draft)</strong> — Per-component UI versions, a new integrations list and Add Integration catalog, filtering and sorting, environment scope, and a smarter setup wizard</summary>
+  <summary><strong>v1.7.0</strong> — Per-component UI versions, a new integrations list and Add Integration catalog, filtering and sorting, environment scope, and a smarter setup wizard</summary>
+
+> Entries marked **(1.7 UI)** only appear on components that set `uiVersion: '1.7.0'`. Everything else applies to every embed after upgrading. The full walkthrough is in the [Integrations Guide](./IntegrationsGuide.md).
 
   **Highlights**
   - **Upgrade without surprises.** Each component keeps its 1.6.1 look until you set its `uiVersion`, so new UI is adopted one page at a time.
@@ -29,7 +26,7 @@
   - **Shorter setup.** The setup wizard skips steps with nothing to configure, and single-install packs now go through it too.
 
   **Upgrade notes**
-  - **Deploy order:** publish `@boomi/embedkit-sdk` (next minor) first, then embedkit-server, then the EmbedKit UI / CDN bundle. The catalog, filters and sorting need the new server routes, and the server needs the new SDK.
+  - **Deploy order:** deploy `embedkit-server` 1.4.0 (built on `@boomi/embedkit-sdk` 1.5.0) before upgrading the EmbedKit UI / CDN bundle. The catalog, filters and sorting need the new server routes.
   - **Opt in per component:** existing components keep the 1.6.1 UI. Set `uiVersion: '1.7.0'` on a component to adopt everything marked **(1.7 UI)**, and use individual flags to adopt or skip single features. See [UI versions](./IntegrationsGuide.md#2-ui-versions-adopting-new-ui-per-component) and the [flags reference](./IntegrationsGuide.md#7-flags-reference).
   - **Content Security Policy:** host pages with a strict `img-src` must allow the Boomi platform host (for example `https://api.boomi.com`) for connector icons; otherwise EmbedKit falls back to its own glyphs.
   - **Pin the CDN version:** the CDN quick start loads an unversioned URL that always serves the latest release. Pin `@boomi/embedkit-cdn@1.7.0` to control when upgrades reach you.
@@ -40,6 +37,9 @@
   - ✅ **Environment scope** — Send `environments: [ids]` in the login body to limit a session to those environments across environment dropdowns, the integrations list, the catalog and the filters. Login rejects unknown ids with `422`. Omit it for every environment. See [Limiting environments](./IntegrationsGuide.md#6-limiting-environments).
   - ✅ **Server-paged catalog** — The catalog is paged and searched on the server (`GET /integration-packs/eligible?page&pageSize&search`), connector icons resolve only for the visible page, platform lookups are chunked, and every list query follows `queryMore`.
   - ✅ **Everything is themeable** — Every new or changed component is styled through `--boomi-*` tokens with named `.boomi-*` classes, including the integrations and catalog tables, which no longer use hardcoded Tailwind utilities. Defaults reproduce the shipped look. See [Customizing the look](./IntegrationsGuide.md#8-customizing-the-look).
+  - ✅ **Notice icon tokens** — `--boomi-notice-icon-size` and `--boomi-notice-icon-display` (set to `none` to hide) control the icon in notices and the modal `Dialog`. Defaults match the previous look.
+  - ✅ **Search clear tokens** — `--boomi-search-clear-fg` and `--boomi-search-clear-hover-fg` color the clear (x) in search fields.
+  - ✅ **Styling scope note** — `ConfigurationReference.md` now states that CSS variables are the supported way into the Shadow DOM.
 
   **New** (1.7 UI)
   - ✅ **Per-component UI version** — `components[key].uiVersion` picks the UI a component renders; explicit options still override it. See [UI version](./ConfigurationReference.md#ui-version-uiversion).
@@ -57,27 +57,18 @@
   - 🐛 **Single-install connection lookups** — The wizard's connection step queried per process for single-install packs and failed with `400 extensionGroupId must be id for Multi-Install or Single-Install Integration Pack`. It now sends `isSingleInstall`, which reads the environment-level settings.
   - 🐛 **Screen titles** — Configure, Update Maps, Update Schedule(s) and Run Agent showed "undefined" for instances without an override name; they now show the pack name.
   - 🐛 **No scroll bounce** — Scroll areas stop at their ends instead of rubber-banding (macOS) or scrolling the host page.
+  - 🐛 **Data hooks are importable** — The React data hooks (such as `useFetchEnvironments`) were described in the type declarations but missing from the published JavaScript, so importing one failed when bundling. All of them are now exported from `@boomi/embedkit`, including `useFetchEnvironmentExtensionConnectionStatus`, `useFetchOauth2Url`, `useFetchIntegrationPackInstance` and `useExecuteMapExtensions`. They must run inside `<EmbedKitProvider>`. See [Data Hooks](./GettingStarted.md#data-hooks-custom-ui).
+  - 🐛 **Search clear (x) is centered in search fields** — The clear button was positioned with a Tailwind translate utility that does not apply inside the Shadow DOM, so it rendered below center. It now uses plain CSS.
+  - 🐛 **No focus outline on the scrollable plugin area in Chrome** — Chrome drew a default focus border around the scrollable EmbedKit container when clicked or tabbed into. The container stays focusable and keyboard-scrollable; only the outline is removed.
+  - 🐛 **Schedules error notice can be dismissed** — The close (x) on the "Error Updating Schedules" notice did nothing. It now closes the notice.
 
   **Known issues**
   - ⚠️ **Default mappings not copied for some maps** — On installing a pack whose maps use the *LDAP (Retired)* connector, two maps failed to receive the publisher's default mappings (platform 500 and 400). The install itself succeeds and the result is reported in `map.defaults.seeded`. Under investigation.
   - ⚠️ **Single-install connection save** — Loading and editing single-install connections is verified; saving is still being tested.
 
-  **Still to come in this release**
-  - _Placeholder: work from the remaining sprints is added here as it merges._
-
-  **Included work**
-
-  | Repo | Branch | Notes |
-  |---|---|---|
-  | `embedkit` | `feat/instance-connectors` | UI versions, cards, catalog, filter and sort, wizard, tokens, docs |
-  | `embedkit-sdk` | `feat/instance-connectors` | Environment scope, sorting, filters and facets, `ALL` environments fix |
-  | `embedkit-server` | `feat/instance-connectors` | Login scope, catalog and list route parameters |
-
 </details>
 
 ---
-
-### All Releases
 
 <details open>
   <summary><strong>v1.6.1</strong> — Partner default mappings on install, platform-function round-trip, opt-in convert-to-script</summary>
@@ -102,7 +93,6 @@
 <details>
   <summary><strong>v1.6.0</strong> — Callback dialog &amp; toast theming</summary>
 
-
   **Bug fixes**
   - 🐛 **Six documented `--boomi-swal-*` tokens now actually work** — `--boomi-swal-title-fg`, `-desc-fg`, `-overlay-bg`, `-icon-success`, `-icon-warning`, and `-icon-error` were documented and offered in the Admin Console theme builder, but the dialog CSS read different (undocumented) legacy variable names instead, so setting them had no effect. They're now wired directly, falling back to those legacy names so existing configs that were already using them are unaffected.
   - 🐛 **Removed a hardcoded dialog background override** — `--boomi-swal-bg` had a hardcoded `rgba(0,0,0,0.9)` override that could silently beat your theme's configured value depending on style load order. This is now driven entirely by the theme, like every other dialog token. **This may be visibly different** if you were relying on the previous accidental value — see [SweetAlert Dialogs](./ConfigurationReference.md#sweetalert-dialogs).
@@ -115,7 +105,6 @@
   - ✅ **New toast typography/layout tokens** — `--boomi-toast-font`, `-font-size`, `-font-weight`, `-line-height`, `-padding`, `-min-height`, `-icon-size`, and `-progress-display` (set to `none` to hide the timer progress bar). See [Toast Notifications](./ConfigurationReference.md#toast-notifications).
   - ✅ **`boomiConfig.dialogs` structural options** — `buttonOrder` (`'cancel-first'` default | `'confirm-first'`), `showIcon`, and `destructiveVariant` (renders the confirm button with a new `--boomi-btn-danger-*` token family for `warning`-type dialogs). None of these change functional behavior (button actions, callback payloads, dismiss/confirm logic) — see [Dialog Structural Options](./ConfigurationReference.md#dialog-structural-options).
 
-
 </details>
 
 ---
@@ -125,14 +114,12 @@
 
   > v1.5.2 and v1.5.3 were published on the same day; v1.5.3 is the one to use.
 
-
   **Highlights**
   - ✅ **Every embed action is now an event** — Installing or deleting an integration pack, running processes, saving connections, resolving OAuth, editing maps, saving schedules, generating an AI transformation, and agent session/message activity all emit a typed event on the existing event bus (`onEvent` / `BoomiEvents.on` / `boomi:event`). This lets a **non-React, vanilla-JS host** (an Angular wrapper calling `BoomiPlugin` / `RenderComponent` / `DestroyPlugin` directly, for example) build an audit trail without any EmbedKit hooks.
   - ✅ **Credential-safe payloads** — Connection/environment-extension events report which field *keys* changed, never the values — those fields commonly carry connector credentials. Map events report counts and names, not full mapping data.
   - ✅ **`outcome` on the envelope** — Every event now carries `outcome: 'success' | 'error'` (currently always `'success'`; reserved for a future failure-emission pass).
   - ✅ **Documentation** — [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks) now documents every event type, when it fires, and its payload shape; [Getting Started](./GettingStarted.md#audit-logging-from-vanilla-js) adds a vanilla-JS audit-logging walkthrough.
   - ℹ️ Integration-management events (`integration.*`, `connection.*`, `map.*`, `schedules.*`, `ai.*`) require the **Integration method** (npm) — the CDN embed only mounts Agent components, so only `feedback` and `agent.*` events fire there.
-
 
 </details>
 

@@ -1,6 +1,6 @@
 /**
- * @file useUpdateMapExtensions.tsx
- * @function useUpdateMapExtensions
+ * @file useExecuteMapExtensions.tsx
+ * @function useExecuteMapExtensions
  * @license BSD-2-Clause
  * @support https://bitbucket.org/officialboomi/embedkit
  */

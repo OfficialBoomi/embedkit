@@ -716,6 +716,8 @@ Configured in the EmbedKit Admin Console per project:
 
 All EmbedKit UI uses CSS custom properties (variables). Override them globally in `cssVars`, per-theme in `cssVarsByTheme`, or per-component-key in `cssVarsByKey`.
 
+> **Styling scope.** EmbedKit renders inside a Shadow DOM, so CSS on the host page does not reach it. CSS variables are the supported way to customize appearance. EmbedKit does not currently expose `::part()` selectors or slots for host-page styling. Where a visual aspect (for example icon size or visibility) is not yet themeable, it is added as a token on request.
+
 ```js
 cssVarsByTheme: {
   'my-theme': {
@@ -812,6 +814,8 @@ cssVarsByTheme: {
 | `--boomi-input-border-disabled` | Disabled border |
 | `--boomi-input-border-invalid` | Invalid/error border |
 | `--boomi-input-outline-invalid` | Invalid/error outline |
+| `--boomi-search-clear-fg` | Clear (x) button icon color in search fields (defaults to the current text color) |
+| `--boomi-search-clear-hover-fg` | Clear (x) button icon color on hover (defaults to `--boomi-search-clear-fg`) |
 
 ### Selects / Dropdowns
 
@@ -1245,6 +1249,8 @@ per-state tokens to theme a single state, or the generic tokens to affect all of
 | `--boomi-notice-radius` | Notice border radius |
 | `--boomi-notice-shadow` | Notice shadow |
 | `--boomi-notice-icon-opacity` | Notice icon opacity |
+| `--boomi-notice-icon-size` | Notice icon width and height (default `1.25rem` for inline notices, `32px` for the modal `Dialog`) |
+| `--boomi-notice-icon-display` | Set to `none` to hide the notice icon (default `inline`) |
 
 #### Per-state tokens (`info` · `success` · `warning` · `error`)
 
@@ -1660,6 +1666,8 @@ wrapper calling `BoomiPlugin` / `RenderComponent` / `DestroyPlugin` directly).
 > build only ever mounts `Agent` / `AgentTiles` / `AgentListLauncher`, so it
 > never fires them. The `agent.*` and `feedback` events fire in **both**
 > the Integration method and the CDN embed.
+
+> **Built-in components.** Events are emitted by EmbedKit's built-in components. Screens you build directly on the [data hooks](./GettingStarted.md#data-hooks-custom-ui) don't emit them, so add any notifications or logging your own screens need.
 
 ### The Event Envelope
 

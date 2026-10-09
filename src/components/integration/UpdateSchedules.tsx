@@ -207,7 +207,7 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
                 header: "Error Updating Schedules",
                 message: apiError,
                 errorType: "error",
-                onClose: () => {},
+                onClose: () => setApiError(null),
               }}
             />
           )}

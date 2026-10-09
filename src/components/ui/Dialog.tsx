@@ -41,23 +41,24 @@ import { UIError } from '../../types/ui';
 // Map each type to its icon + notice state. Colors are driven by the
 // --boomi-notice-* token family (themeable via boomi.config.js) rather than
 // hardcoded Tailwind classes. The icon color comes from --boomi-notice-icon,
-// which the per-state modifier classes set.
+// which the per-state modifier classes set. Size and visibility come from the
+// --boomi-notice-icon-size / --boomi-notice-icon-display tokens (see main.css).
 const iconStyle = { color: 'var(--boomi-notice-icon)' };
 const iconMap = {
   info: {
-    icon: <AiOutlineInfoCircle style={iconStyle} size={32} />,
+    icon: <AiOutlineInfoCircle style={iconStyle} className="boomi-dialog-notice__icon" />,
     state: 'info',
   },
   success: {
-    icon: <AiOutlineCheckCircle style={iconStyle} size={32} />,
+    icon: <AiOutlineCheckCircle style={iconStyle} className="boomi-dialog-notice__icon" />,
     state: 'success',
   },
   warning: {
-    icon: <AiOutlineWarning style={iconStyle} size={32} />,
+    icon: <AiOutlineWarning style={iconStyle} className="boomi-dialog-notice__icon" />,
     state: 'warning',
   },
   error: {
-    icon: <MdErrorOutline style={iconStyle} size={32} />,
+    icon: <MdErrorOutline style={iconStyle} className="boomi-dialog-notice__icon" />,
     state: 'error',
   },
 };

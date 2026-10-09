@@ -130,7 +130,7 @@ const ExecutionTimeline: React.FC<ExecutionTimelineProps> = ({
                   aria-label={hasRecord ? `Run ${idx + 1} (newest on right)` : 'Empty slot'}
                   title={tooltip}
                 />
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-black text-white text-xs px-2 py-1 rounded shadow-md z-10 whitespace-nowrap max-w-xs break-words text-center">
+                <div className="absolute bottom-full left-1/2 [transform:translateX(-50%)] mb-2 hidden group-hover:block bg-black text-white text-xs px-2 py-1 rounded shadow-md z-10 whitespace-nowrap max-w-xs break-words text-center">
                   {tooltip}
                 </div>
               </div>

@@ -11,6 +11,13 @@
     background-repeat: no-repeat, repeat, repeat;
   }
 
+  /* Chrome makes this overflow-auto wrapper keyboard-focusable and draws its
+     default focus ring on it. It stays focusable and scrollable; only the ring
+     is suppressed. Inner controls keep their own focus styles. */
+  .boomi-plugin-root:focus-visible {
+    outline: none;
+  }
+
   /* Global cursor: pointer for interactive elements */
   .boomi-plugin-root a,
   .boomi-plugin-root button,
@@ -119,6 +126,30 @@
   }
   .boomi-input::placeholder {
     color: var(--boomi-input-placeholder);
+  }
+
+  /* Search clear (x). Plain positioning, no Tailwind translate/ring utilities:
+     those rely on @property variables that do not register inside a shadow root. */
+  .boomi-search-clear {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.125rem;
+    border: 0;
+    border-radius: 9999px;
+    background: none;
+    cursor: pointer;
+    color: var(--boomi-search-clear-fg, currentColor);
+  }
+  .boomi-search-clear:hover {
+    color: var(--boomi-search-clear-hover-fg, var(--boomi-search-clear-fg, currentColor));
+  }
+  .boomi-search-clear:focus-visible {
+    outline: 2px solid var(--boomi-input-outline-focus, var(--boomi-input-border-focus, currentColor));
+    outline-offset: 1px;
   }
   .boomi-input:focus {
     outline: none;
@@ -886,10 +917,18 @@
     box-shadow: var(--boomi-notice-shadow, none);
   }
   .boomi-notice__icon {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: var(--boomi-notice-icon-size, 1.25rem);
+    height: var(--boomi-notice-icon-size, 1.25rem);
+    display: var(--boomi-notice-icon-display, inline);
     color: var(--boomi-notice-icon, currentColor);
     opacity: var(--boomi-notice-icon-opacity, .95);
+  }
+  /* Icon in the modal error/info Dialog. Larger default than the inline notice
+     icon; same size/display tokens apply to both. */
+  .boomi-dialog-notice__icon {
+    width: var(--boomi-notice-icon-size, 32px);
+    height: var(--boomi-notice-icon-size, 32px);
+    display: var(--boomi-notice-icon-display, inline);
   }
   .boomi-notice__text {
     font-size: .875rem;
