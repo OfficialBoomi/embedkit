@@ -598,6 +598,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
             )}
             {useTreeMap ? (
               <FieldMappingCanvasTree
+                key={currentMapKey}
                 sourceFields={sourceFields}
                 targetFields={targetFields}
                 functions={canvasFunctions}
@@ -614,6 +615,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
               />
             ) : (
               <FieldMappingCanvas
+                key={currentMapKey}
                 sourceFields={sourceFields}
                 targetFields={targetFields}
                 functions={canvasFunctions}
