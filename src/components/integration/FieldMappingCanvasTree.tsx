@@ -12,7 +12,7 @@ import {
   useMemo,
   forwardRef,
 } from 'react';
-import { AiOutlinePlus, AiOutlineRight, AiOutlineDown } from 'react-icons/ai';
+import { AiOutlineRight, AiOutlineDown } from 'react-icons/ai';
 import { sanitize } from '../../utils/ui-utils';
 import FunctionStack from './FunctionStack';
 import { MapExtensionsMapping, MapExtensionsNode } from '@boomi/embedkit-sdk';
@@ -746,32 +746,6 @@ const FieldMappingCanvasTree = forwardRef((
 
         {/* Transformations */}
         <div className="boomi-map-col boomi-map-col--functions">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="boomi-map-heading w-full text-center">Transformations</h3>
-            <div className="flex-1 text-right">
-              <Button
-                toggle={false}
-                primary={false}
-                viewLoc="field-mapping-add-transformation"
-                buttonClass="ml-2"
-                onClass="boomi-map-add-btn"
-                showIcon={true}
-                label="Add"
-                icon={<AiOutlinePlus className="w-4 h-4" />}
-                onClick={() => {
-                  const newFn: PositionedFunction = {
-                    id: `temp-${Date.now()}`,
-                    name: 'New Function',
-                    type: 'custom',
-                    inputs: [],
-                    outputs: [],
-                  };
-                  onAddTransformation?.(newFn);
-                }}
-              />
-            </div>
-          </div>
-
           <FunctionStack
             functions={functions}
             mappings={mappings}
@@ -801,6 +775,15 @@ const FieldMappingCanvasTree = forwardRef((
             onReorder={(updated) => onTransformationUpdate?.(updated)}
             onEditTransformation={onEditTransformation}
             onDeleteTransformation={handleDeleteTransformation}
+            onAddTransformation={() =>
+              onAddTransformation?.({
+                id: `temp-${Date.now()}`,
+                name: 'New Function',
+                type: 'custom',
+                inputs: [],
+                outputs: [],
+              })
+            }
             onLayoutChange={() => requestAnimationFrame(drawLines)}
           />
         </div>

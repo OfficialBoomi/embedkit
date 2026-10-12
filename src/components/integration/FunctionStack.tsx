@@ -27,11 +27,13 @@ import {
   AiOutlineArrowUp,
   AiOutlineDown,
   AiOutlineHolder,
+  AiOutlinePlus,
   AiOutlineRight,
 } from 'react-icons/ai';
 import { MapExtensionsMapping } from '@boomi/embedkit-sdk';
 import { PositionedFunction } from '../../types/positioned-function';
 import { embedYInId, parseYFromId, stripYFromId } from '../../utils/ui-utils';
+import Button from '../ui/Button';
 import TranformationActions from './TransformationActions';
 
 type PinRefs = MutableRefObject<Map<string, HTMLDivElement>>;
@@ -53,6 +55,8 @@ export interface FunctionStackProps {
   onReorder: (functions: PositionedFunction[]) => void;
   onEditTransformation?: (fn: PositionedFunction) => void;
   onDeleteTransformation: (fn: PositionedFunction) => void;
+  /** Shows the Add button in the column header. */
+  onAddTransformation?: () => void;
   /** Called whenever cards move or change height, so the canvas can redraw its lines. */
   onLayoutChange: () => void;
 }
@@ -78,7 +82,7 @@ const pinRef = (refs: PinRefs, keys: string[]) => (el: HTMLDivElement | null) =>
 };
 
 const FunctionStack: React.FC<FunctionStackProps> = (props) => {
-  const { functions, onReorder, onLayoutChange } = props;
+  const { functions, onReorder, onLayoutChange, onAddTransformation } = props;
   const sorted = useMemo(() => sortByPosition(functions), [functions]);
   const byId = useMemo(() => new Map(functions.map((f) => [f.id, f])), [functions]);
   const [order, setOrder] = useState<string[]>(() => sorted.map((f) => f.id));
@@ -119,21 +123,44 @@ const FunctionStack: React.FC<FunctionStackProps> = (props) => {
       return next;
     });
 
-  const allCollapsed = order.length > 0 && order.every(isCollapsed);
 
   return (
     <div className="boomi-map-fn-stack">
-      {order.length > 1 && (
+      <div className="boomi-map-fn-stack-header">
+        <h3 className="boomi-map-heading">Transformations</h3>
         <div className="boomi-map-fn-stack-tools">
-          <button
-            type="button"
-            className="boomi-btn-xs px-2 py-1 rounded border"
-            onClick={() => setExpanded(allCollapsed ? new Set(order.map(stripYFromId)) : new Set())}
-          >
-            {allCollapsed ? 'Expand All' : 'Collapse All'}
-          </button>
+          {order.length > 0 && (
+            <>
+              <Button
+                toggle={false}
+                primary={false}
+                showIcon={false}
+                label="Expand All"
+                onClick={() => setExpanded(new Set(order.map(stripYFromId)))}
+              />
+              <Button
+                toggle={false}
+                primary={false}
+                showIcon={false}
+                label="Collapse All"
+                onClick={() => setExpanded(new Set())}
+              />
+            </>
+          )}
+          {onAddTransformation && (
+            <Button
+              toggle={false}
+              primary={false}
+              viewLoc="field-mapping-add-transformation"
+              onClass="boomi-map-add-btn"
+              showIcon={true}
+              label="Add"
+              icon={<AiOutlinePlus className="w-4 h-4" />}
+              onClick={onAddTransformation}
+            />
+          )}
         </div>
-      )}
+      </div>
       <Reorder.Group as="div" axis="y" values={order} onReorder={setOrder} className="boomi-map-fn-list">
         {order.map((id, index) => {
           const fn = byId.get(id);
