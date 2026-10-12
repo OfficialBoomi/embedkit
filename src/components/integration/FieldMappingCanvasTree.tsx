@@ -6,7 +6,6 @@
  */
 
 import {
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -14,18 +13,15 @@ import {
   forwardRef,
 } from 'react';
 import { AiOutlinePlus, AiOutlineRight, AiOutlineDown } from 'react-icons/ai';
-import { motion } from 'framer-motion';
-import { stripYFromId, embedYInId, parseYFromId, sanitize } from '../../utils/ui-utils';
+import { sanitize } from '../../utils/ui-utils';
+import FunctionStack from './FunctionStack';
 import { MapExtensionsMapping, MapExtensionsNode } from '@boomi/embedkit-sdk';
 import { PositionedFunction } from '../../types/positioned-function';
 import Button from '../ui/Button';
 import SwalNotification from '../ui/SwalNotification';
-import TranformationActions from './TransformationActions';
 import SearchBar from '../ui/SearchBar'; // <-- NEW (adjust path if needed)
 import logger from '../../logger.service';
 
-const ROW_HEIGHT = 140;
-const FIXED_X = 0;
 
 const normalize = (p?: string) => (p || '').replace(/^\/+|\/+$/g, '');
 
@@ -167,8 +163,6 @@ const FieldMappingCanvasTree = forwardRef((
   const targetRefs = useRef(new Map<string, HTMLDivElement>());
   const funcInputRefs = useRef(new Map<string, HTMLDivElement>());
   const funcOutputRefs = useRef(new Map<string, HTMLDivElement>());
-  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const functionsAreaRef = useRef<HTMLDivElement>(null);
 
   // notifications
   const [showNotification, setShowNotification] = useState(false);
@@ -179,9 +173,6 @@ const FieldMappingCanvasTree = forwardRef((
   // tree state
   const [collapsedSources, setCollapsedSources] = useState<Set<string>>(new Set());
   const [collapsedTargets, setCollapsedTargets] = useState<Set<string>>(new Set());
-
-  // positions
-  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
 
   // trees & indices
   const sourceTree = useMemo(() => buildTree(sourceFields), [sourceFields]);
@@ -222,7 +213,6 @@ const FieldMappingCanvasTree = forwardRef((
     setSelectedOutput(null);
   };
 
-  const setCardRef = (el: HTMLDivElement | null, id: string) => { if (el) cardRefs.current[id] = el; };
   const setRef = (map: Map<string, HTMLDivElement>, key: string) => (el: HTMLDivElement | null) => {
     if (el) map.set(key, el); else map.delete(key);
   };
@@ -305,17 +295,6 @@ const FieldMappingCanvasTree = forwardRef((
     setSelectedSource(null);
     setSelectedFunction(null);
   };
-
-  useEffect(() => {
-    const initial: Record<string, { x: number; y: number }> = {};
-    let nextY = 0;
-    functions.forEach((fn) => {
-      const y = typeof fn.y === 'number' ? fn.y : (parseYFromId(fn.id) ?? nextY);
-      initial[fn.id] = { x: fn.x ?? FIXED_X, y };
-      if (typeof fn.y !== 'number') nextY += ROW_HEIGHT;
-    });
-    setPositions(initial);
-  }, [functions]);
 
   /** ───────────────────────── Search logic ───────────────────────── */
   const runSearch = (side: 'source' | 'target', query: string) => {
@@ -656,7 +635,6 @@ const FieldMappingCanvasTree = forwardRef((
     functions,
     sourceFields,
     targetFields,
-    positions,
     selectedSource,
     selectedTarget,
     selectedFunction,
@@ -794,140 +772,37 @@ const FieldMappingCanvasTree = forwardRef((
             </div>
           </div>
 
-          <div
-            ref={functionsAreaRef}
-            className="relative w-full max-w-md h-full"
-            style={{ minHeight: 500, paddingTop: 15, paddingBottom: 15 }}
-          >
-            {functions.map((fn) => {
-              logger.debug('Rendering function:', fn);
-              const pos = positions[fn.id] || { x: FIXED_X, y: 15 };
-              const outMappingsByKey = (key: number) =>
-                mappings.filter((m) => m.fromFunction === fn.id && m.fromXPath === String(key));
-
-              return (
-                <motion.div
-                  key={fn.id}
-                  ref={(el) => setCardRef(el, fn.id)}
-                  drag="y"
-                  dragMomentum={false}
-                  dragElastic={0}
-                  dragSnapToOrigin={false}
-                  dragConstraints={functionsAreaRef}
-                  className={`boomi-map-card boomi-map-card--function absolute w-full ${selectedFunction === fn.id ? 'is-selected' : ''}`}
-                  style={{ left: pos.x, y: Math.max(15, pos.y), cursor: 'grab' }}
-                  onDrag={(_, info) => {
-                    setPositions((prev) => ({ ...prev, [fn.id]: { ...prev[fn.id], y: info.delta.y } }));
-                  }}
-                  onDragEnd={() => {
-                    const baseId = stripYFromId(fn.id);
-                    const card = cardRefs.current[fn.id];
-                    if (card) {
-                      const containerTop = card.parentElement?.getBoundingClientRect().top ?? 0;
-                      const cardTop = card.getBoundingClientRect().top;
-                      const relativeY = Math.round(cardTop - containerTop);
-                      const clampedY = Math.max(15, relativeY);
-                      const newId = embedYInId(baseId, clampedY);
-
-                      const updatedFunctions = functions.map((f) =>
-                        f.id === fn.id && f.id !== newId ? { ...f, newId, x: f.x ?? FIXED_X, y: clampedY } : f
-                      );
-                      onTransformationUpdate?.(updatedFunctions);
-                      requestAnimationFrame(drawLines);
-                    }
-                  }}
-                  onClick={() => {
-                    setSelectedFunction(fn.id);
-                    setSelectedSource(null);
-                    setSelectedTarget(null);
-                  }}
-                >
-                  <div className="flex justify-between items-center py-1">
-                    <div className="boomi-map-card-title">Transformation</div>
-                    <TranformationActions
-                      onEditTransformation={fn.editable === false ? undefined : () => onEditTransformation?.(fn)}
-                      onDeleteTransformation={() => handleDeleteTransformation(fn)}
-                    />
-                  </div>
-                  <div className="boomi-map-card-subtitle text-xs">{fn.type}</div>
-
-                  <div className="flex justify-between mt-4">
-                    {/* Inputs */}
-                    <div className="flex flex-col gap-1">
-                      {fn.inputs.map((input) => {
-                        const inputKey = `${fn.id}.in.${input.key}`;
-                        const isMapped = mappings.some((m) => m.toFunction === fn.id && m.toXPath === `${input.key}`);
-                        const mapping = mappings.find((m) => m.toFunction === fn.id && m.toXPath === `${input.key}`);
-
-                        return (
-                          <div key={input.key} className="relative z-50">
-                            <div className="text-xs pl-2 pb-2">{input.name}</div>
-                            <div
-                              ref={setRef(funcInputRefs.current, inputKey)}
-                              className={`boomi-map-pin --input is-selectable ${selectedSource && !isMapped ? 'is-mappable' : ''}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (selectedSource && !isMapped) {
-                                  addMapping(selectedSource, input.key.toString(), fn.id);
-                                  setSelectedSource(null);
-                                }
-                              }}
-                            >
-                              {isMapped && mapping && (
-                                <div
-                                  className="boomi-map-pin-badge"
-                                  onClick={(e) => { e.stopPropagation(); removeMapping(mapping.fromXPath ?? '', mapping.toXPath ?? ''); }}
-                                  title="Disconnect"
-                                >
-                                  ×
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Outputs — badge with count + bulk disconnect */}
-                    <div className="flex flex-col gap-1 items-end">
-                      {fn.outputs.map((output) => {
-                        const outputKey = `${fn.id}.out.${output.key}`;
-                        const isActiveOutput = selectedOutput?.fnId === fn.id && selectedOutput.outputKey === output.key;
-                        const outMappings = outMappingsByKey(output.key);
-
-                        return (
-                          <div key={output.key} className="relative">
-                            <div className="text-xs pr-2 pb-2">{output.name}</div>
-                            <div
-                              ref={setRef(funcOutputRefs.current, outputKey)}
-                              className={`boomi-map-pin --output is-selectable ${isActiveOutput ? 'is-active-output' : ''}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedOutput({ fnId: fn.id, outputKey: output.key });
-                                setSelectedFunction(fn.id);
-                                setSelectedSource(null);
-                                setSelectedTarget(null);
-                              }}
-                            >
-                              {outMappings.length > 0 && (
-                                <div
-                                  className="boomi-map-pin-badge"
-                                  onClick={(e) => { e.stopPropagation(); removeMappingsFromOutput(fn.id, output.key); }}
-                                  title={outMappings.length > 1 ? `Disconnect ${outMappings.length} targets` : 'Disconnect'}
-                                >
-                                  ×{outMappings.length > 1 ? ` ${outMappings.length}` : ''}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+          <FunctionStack
+            functions={functions}
+            mappings={mappings}
+            selectedFunction={selectedFunction}
+            selectedSource={selectedSource}
+            selectedOutput={selectedOutput}
+            inputRefs={funcInputRefs}
+            outputRefs={funcOutputRefs}
+            onSelectFunction={(fnId) => {
+              setSelectedFunction(fnId);
+              setSelectedSource(null);
+              setSelectedTarget(null);
+            }}
+            onSelectOutput={(fnId, outputKey) => {
+              setSelectedOutput({ fnId, outputKey });
+              setSelectedFunction(fnId);
+              setSelectedSource(null);
+              setSelectedTarget(null);
+            }}
+            onConnectInput={(fnId, inputKey) => {
+              if (!selectedSource) return;
+              addMapping(selectedSource, String(inputKey), fnId);
+              setSelectedSource(null);
+            }}
+            onRemoveMapping={removeMapping}
+            onRemoveOutputMappings={removeMappingsFromOutput}
+            onReorder={(updated) => onTransformationUpdate?.(updated)}
+            onEditTransformation={onEditTransformation}
+            onDeleteTransformation={handleDeleteTransformation}
+            onLayoutChange={() => requestAnimationFrame(drawLines)}
+          />
         </div>
 
         {/* Targets (tree) */}

@@ -1132,6 +1132,29 @@
     font-size: .75rem;
   }
 
+  /* Transformations: an ordered, collapsible stack */
+  .boomi-map-fn-stack { width: 100%; max-width: 28rem; display: flex; flex-direction: column; gap: .5rem; }
+  .boomi-map-fn-stack-tools { display: flex; justify-content: flex-end; }
+  .boomi-map-fn-list { display: flex; flex-direction: column; gap: .5rem; list-style: none; margin: 0; padding: 0; }
+  .boomi-map-card--function { position: relative; width: 100%; transition: box-shadow .15s ease, background-color .15s ease; }
+  .boomi-map-fn-header { display: flex; align-items: center; gap: .375rem; min-height: 1.75rem; }
+  .boomi-map-fn-grip {
+    cursor: grab; touch-action: none; display: flex; align-items: center;
+    color: var(--boomi-map-func-subtle-fg, var(--boomi-muted));
+  }
+  .boomi-map-fn-grip:active { cursor: grabbing; }
+  .boomi-map-fn-toggle { display: flex; align-items: center; padding: .125rem; border-radius: .25rem; }
+  .boomi-map-fn-name { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: .5rem; overflow: hidden; white-space: nowrap; }
+  .boomi-map-fn-name .boomi-map-card-title { overflow: hidden; text-overflow: ellipsis; }
+  .boomi-map-fn-order { display: flex; gap: .125rem; }
+  .boomi-map-fn-order button { display: flex; align-items: center; padding: .125rem; border-radius: .25rem; }
+  .boomi-map-fn-order button:disabled { opacity: .35; cursor: default; }
+  .boomi-map-card--function.is-collapsed { padding-top: .375rem; padding-bottom: .375rem; }
+
+  /* Map picker (replaces one tab per map) */
+  .boomi-map-picker { padding: 1rem 1rem 0; max-width: 32rem; }
+  .boomi-map-picker .mb-4 { margin-bottom: .75rem; }
+
   /* Pins / endpoints */
   .boomi-map-pin {
     position: absolute;

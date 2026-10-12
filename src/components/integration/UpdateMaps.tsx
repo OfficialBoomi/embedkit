@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import classNames from 'classnames';
+import Dropdown, { Option } from '../ui/Dropdown';
 import { usePlugin } from '../../context/pluginContext';
 import { IntegrationPackInstance } from '@boomi/embedkit-sdk';
 import { PositionedFunction } from '../../types/positioned-function';
@@ -121,6 +121,16 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
     currentMap?.Map?.SourceProfile?.Node?.filter((n) => n.xpath) ?? [];
   const targetFields =
     currentMap?.Map?.DestinationProfile?.Node?.filter((n) => n.xpath) ?? [];
+  // One entry per map extension for the map picker. Names are the object definitions'
+  // "source - destination" pair, which can repeat, so repeats get a counter.
+  const mapOptions: Option[] = (() => {
+    const seen: Record<string, number> = {};
+    return maps.map((map, index) => {
+      const base = map.name || `Map ${index + 1}`;
+      seen[base] = (seen[base] ?? 0) + 1;
+      return { id: String(index), name: seen[base] > 1 ? `${base} (${seen[base]})` : base };
+    });
+  })();
   // feature flag for mapping tree
   const useTreeMap = boomiConfig?.components?.[componentKey]?.mapping?.useTreeMode ?? false;
 
@@ -568,22 +578,15 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
                 'Pre-configured mappings were copied in when this integration was installed. Removing one restores the original default for that field.'}
             </div>
           )}
-          <div className="boomi-tabs">
-            <nav className="boomi-tablist">
-              {maps.map((map, index) => {
-                const active = activeMapIndex === index;
-                return (
-                  <button
-                    key={map.id ?? map.mapId}
-                    onClick={() => setActiveMapIndex(index)}
-                    className={classNames('boomi-tab', active && 'boomi-tab--active')}
-                    type="button"
-                  >
-                    {map.name || `Map ${index + 1}`}
-                  </button>
-                );
-              })}
-            </nav>
+          <div className="boomi-map-picker">
+            <Dropdown
+              formName="update-maps"
+              label={`Map (${maps.length})`}
+              inputName="map"
+              options={mapOptions}
+              selected={mapOptions[activeMapIndex]}
+              onChange={(opt) => setActiveMapIndex(Number(opt.id))}
+            />
           </div>
           <div className="boomi-update-content">
             {apiError && (
