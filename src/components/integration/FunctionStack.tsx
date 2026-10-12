@@ -82,12 +82,13 @@ const FunctionStack: React.FC<FunctionStackProps> = (props) => {
   const sorted = useMemo(() => sortByPosition(functions), [functions]);
   const byId = useMemo(() => new Map(functions.map((f) => [f.id, f])), [functions]);
   const [order, setOrder] = useState<string[]>(() => sorted.map((f) => f.id));
-  // Keyed by the id without its position, so a function stays collapsed after a reorder re-keys it.
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const isCollapsed = (id: string) => collapsed.has(stripYFromId(id));
+  // Functions start collapsed; this holds the expanded ones, keyed by the id without its
+  // position so a function stays expanded after a reorder re-keys it.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const isCollapsed = (id: string) => !expanded.has(stripYFromId(id));
 
   useEffect(() => { setOrder(sorted.map((f) => f.id)); }, [sorted]);
-  useLayoutEffect(() => { onLayoutChange(); }, [order, collapsed]);
+  useLayoutEffect(() => { onLayoutChange(); }, [order, expanded]);
 
   const commit = (ids: string[]) => {
     if (ids.join('|') === sorted.map((f) => f.id).join('|')) return;
@@ -111,7 +112,7 @@ const FunctionStack: React.FC<FunctionStackProps> = (props) => {
   };
 
   const toggle = (id: string) =>
-    setCollapsed((prev) => {
+    setExpanded((prev) => {
       const next = new Set(prev);
       const base = stripYFromId(id);
       if (next.has(base)) next.delete(base); else next.add(base);
@@ -127,7 +128,7 @@ const FunctionStack: React.FC<FunctionStackProps> = (props) => {
           <button
             type="button"
             className="boomi-btn-xs px-2 py-1 rounded border"
-            onClick={() => setCollapsed(allCollapsed ? new Set() : new Set(order.map(stripYFromId)))}
+            onClick={() => setExpanded(allCollapsed ? new Set(order.map(stripYFromId)) : new Set())}
           >
             {allCollapsed ? 'Expand All' : 'Collapse All'}
           </button>
@@ -202,6 +203,7 @@ const FunctionCard: React.FC<FunctionCardProps> = ({
     <Reorder.Item
       as="div"
       value={fn.id}
+      layout="position"
       dragListener={false}
       dragControls={dragControls}
       onDrag={onLayoutChange}
