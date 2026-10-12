@@ -1152,8 +1152,13 @@
   .boomi-map-card--function.is-collapsed { padding-top: .375rem; padding-bottom: .375rem; }
 
   /* Map picker (replaces one tab per map) */
-  .boomi-map-picker { padding: 1rem 1rem 0; max-width: 32rem; }
+  .boomi-map-picker { padding-top: 1rem; max-width: 32rem; }
   .boomi-map-picker .mb-4 { margin-bottom: .75rem; }
+  /* The content card was drawn to hang under a tab row; standing alone it needs its full border. */
+  .boomi-map-picker + .boomi-update-content {
+    border-top: 1px solid var(--boomi-update-border);
+    border-radius: var(--boomi-update-radius, .2rem);
+  }
 
   /* Pins / endpoints */
   .boomi-map-pin {
@@ -1255,10 +1260,10 @@
     border-color: var(--boomi-map-add-border-hover, var(--boomi-map-add-border));
     box-shadow: var(--boomi-map-add-shadow-hover, var(--boomi-map-add-shadow));
   }
-  /* 1) Functions must be absolutely positioned (no layout reflow) */
+  /* 1) Functions stack in order inside the column; pins are positioned against each card */
   .boomi-map-col--functions { position: relative; } 
   .boomi-map-card.boomi-map-card--function {
-    position: absolute !important;          
+    position: relative;
     transition: box-shadow .15s ease, background-color .15s ease !important;
   }
 
