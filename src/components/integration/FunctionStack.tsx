@@ -86,8 +86,8 @@ const FunctionStack: React.FC<FunctionStackProps> = (props) => {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const isCollapsed = (id: string) => collapsed.has(stripYFromId(id));
 
-  useEffect(() => setOrder(sorted.map((f) => f.id)), [sorted]);
-  useLayoutEffect(() => onLayoutChange(), [order, collapsed]);
+  useEffect(() => { setOrder(sorted.map((f) => f.id)); }, [sorted]);
+  useLayoutEffect(() => { onLayoutChange(); }, [order, collapsed]);
 
   const commit = (ids: string[]) => {
     if (ids.join('|') === sorted.map((f) => f.id).join('|')) return;
