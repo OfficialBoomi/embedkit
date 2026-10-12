@@ -95,6 +95,9 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
   const [activeMapIndex, setActiveMapIndex] = useState(0);
   const currentMap = maps[activeMapIndex];
   const currentMapId = currentMap?.mapId as string;
+  // Map extensions that share a source/destination profile pair share a mapId, even
+  // across processes, so per-map UI state is keyed by the extension's own id.
+  const currentMapKey = (currentMap?.id ?? currentMapId) as string;
   const [functionsByMapId, setFunctionsByMapId] =
     useState<Record<string, PositionedFunction[]>>({});
   const [mappingsByMapId, setMappingsByMapId] =
@@ -219,7 +222,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         containerId: undefined,
       };
       if (!currentMapId || !currentMap) return;
-      const functions = functionsByMapId[currentMapId] || [];
+      const functions = functionsByMapId[currentMapKey] || [];
 
       const { functions: updatedFunctions } = toMapExtensionsFunctions(functions);
       const updatedExtension: EnvironmentMapExtension = {
@@ -254,9 +257,9 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
           updatedCount: newMappings.length,
         }
       );
-      setMappingsByMapId((prev) => ({ ...prev, [currentMapId]: newMappings }));
+      setMappingsByMapId((prev) => ({ ...prev, [currentMapKey]: newMappings }));
       const updatedMaps = maps.map((m) =>
-        m.mapId === updatedExtension.mapId ? updatedExtension : m
+        m.id === updatedExtension.id ? updatedExtension : m
       );
 
     }).catch((err: any) => setApiError(err?.message || 'Failed to update functions'));
@@ -279,7 +282,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         containerId: undefined,
       };
       if (!currentMapId || !currentMap) return;
-      const baseMappings = opts?.mappingsOverride ?? (mappingsByMapId[currentMapId] || []);
+      const baseMappings = opts?.mappingsOverride ?? (mappingsByMapId[currentMapKey] || []);
       const { functions: newFunctions, idMap } = toMapExtensionsFunctions(updatedFunctions);
 
       const getFnId = (f: any) =>
@@ -340,19 +343,19 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
       );
       setFunctionsByMapId((prev) => ({
         ...prev,
-        [currentMapId]: fromMapExtensionsFunctions(newFunctions),
+        [currentMapKey]: fromMapExtensionsFunctions(newFunctions),
       }));
       setMappingsByMapId((prev) => ({
         ...prev,
-        [currentMapId]: updatedMappings,
+        [currentMapKey]: updatedMappings,
       }));
     }).catch((err: any) => setApiError(err?.message || 'Failed to update functions'));
   };
 
   const handleCanvasFunctionDelete = async (fn: PositionedFunction) => {
     await runWithLoading(async () => {
-      const currentFunctions = functionsByMapId[currentMapId] || [];
-      const currentMappings = mappingsByMapId[currentMapId] || [];
+      const currentFunctions = functionsByMapId[currentMapKey] || [];
+      const currentMappings = mappingsByMapId[currentMapKey] || [];
 
       const updatedFunctions = currentFunctions.filter((f) => f.id !== fn.id);
       const updatedMappings = currentMappings.filter(
@@ -427,8 +430,8 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
     };
 
     const updated = editFunction
-      ? (functionsByMapId[currentMapId] || []).map((f) => (f.id === editFunction.id ? fn : f))
-      : [...(functionsByMapId[currentMapId] || []), fn];
+      ? (functionsByMapId[currentMapKey] || []).map((f) => (f.id === editFunction.id ? fn : f))
+      : [...(functionsByMapId[currentMapKey] || []), fn];
 
     try {
       await handleCanvasFunctionChange(updated, {
@@ -461,13 +464,13 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
     if (currentMap && currentMap?.Map && currentMapId) {
       setFunctionsByMapId((prev) => ({
         ...prev,
-        [currentMapId]: fromMapExtensionsFunctions(
+        [currentMapKey]: fromMapExtensionsFunctions(
           currentMap.Map?.ExtendedFunctions?.Function ?? []
         ),
       }));
       setMappingsByMapId((prev) => ({
         ...prev,
-        [currentMapId]: currentMap.Map?.ExtendedMappings?.Mapping ?? [],
+        [currentMapKey]: currentMap.Map?.ExtendedMappings?.Mapping ?? [],
       }));
     }
   }, [active, currentMap, currentMapId]);
@@ -482,7 +485,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
     if (hasCandidates) setIsCandidateModalOpen(true);
   }, [hasCandidates]);
 
-  const canvasFunctions: PositionedFunction[] = (functionsByMapId[currentMapId] || []).map((f) =>
+  const canvasFunctions: PositionedFunction[] = (functionsByMapId[currentMapKey] || []).map((f) =>
     f.editable === false && convertFunctionsToScript && isConvertibleFunctionType(f.raw?.type)
       ? { ...f, editable: true, convertible: true }
       : f
@@ -571,7 +574,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
                 const active = activeMapIndex === index;
                 return (
                   <button
-                    key={map.mapId}
+                    key={map.id ?? map.mapId}
                     onClick={() => setActiveMapIndex(index)}
                     className={classNames('boomi-tab', active && 'boomi-tab--active')}
                     type="button"
@@ -598,7 +601,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
                 sourceFields={sourceFields}
                 targetFields={targetFields}
                 functions={canvasFunctions}
-                mappings={mappingsByMapId[currentMapId] || []}
+                mappings={mappingsByMapId[currentMapKey] || []}
                 onMappingChange={handleCanvasMappingChange}
                 onTransformationUpdate={handleCanvasFunctionChange}
                 onDeleteTransformation={handleCanvasFunctionDelete}
@@ -614,7 +617,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
                 sourceFields={sourceFields}
                 targetFields={targetFields}
                 functions={canvasFunctions}
-                mappings={mappingsByMapId[currentMapId] || []}
+                mappings={mappingsByMapId[currentMapKey] || []}
                 onMappingChange={handleCanvasMappingChange}
                 onTransformationUpdate={handleCanvasFunctionChange}
                 onDeleteTransformation={handleCanvasFunctionDelete}
