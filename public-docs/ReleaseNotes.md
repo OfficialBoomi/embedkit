@@ -6,21 +6,18 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.7.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.7.1-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
 
-### Unreleased — v1.7.1
-
-![Version](https://img.shields.io/badge/version-v1.7.1-lightgrey?style=for-the-badge)
-![Status](https://img.shields.io/badge/status-in%20progress-orange?style=for-the-badge)
+### All Releases
 
 <details open>
-  <summary><strong>v1.7.1 (draft)</strong> — Map Fields: a map picker, an ordered function stack and search; integrations list fix for large account groups</summary>
+  <summary><strong>v1.7.1</strong> — Map Fields: a map picker, an ordered function stack and search; integrations list fix for large account groups</summary>
 
   **Upgrade notes**
-  - **Server first for the list fix:** the large-account-group fix ships in `@boomi/embedkit-sdk` **1.5.1**. Update `embedkit-server`'s `@boomi/embedkit-sdk` to 1.5.1 (`package.json` **and** `package-lock.json`) and redeploy; the UI needs no change for it.
+  - **Server first for the list fix:** deploy `embedkit-server` **1.4.1** (built on `@boomi/embedkit-sdk` **1.5.1**). The large-account-group fix is entirely on the server; the UI needs no change for it.
   - The Map Fields changes apply to every embed after upgrading the UI / CDN bundle; they need no server change.
 
   **Changes for every embed** (no opt-in)
@@ -35,10 +32,6 @@
   - 🐛 **Switching maps left the old canvas** — Selecting another map now starts a fresh canvas for it instead of keeping the previous selection and lines.
 
 </details>
-
----
-
-### All Releases
 
 <details open>
   <summary><strong>v1.7.0</strong> — Per-component UI versions, a new integrations list and Add Integration catalog, filtering and sorting, environment scope, and a smarter setup wizard</summary>
@@ -97,7 +90,7 @@
 
 ---
 
-<details open>
+<details>
   <summary><strong>v1.6.1</strong> — Partner default mappings on install, platform-function round-trip, opt-in convert-to-script</summary>
 
   **Bug fixes**
