@@ -38,7 +38,7 @@ import { MapExtensionsMapping } from '@boomi/embedkit-sdk';
 import { PositionedFunction } from '../../types/positioned-function';
 import { embedYInId, parseYFromId, stripYFromId } from '../../utils/ui-utils';
 import Button from '../ui/Button';
-import SearchBar from '../ui/SearchBar';
+import MapSearchRow from './MapSearchRow';
 import TranformationActions from './TransformationActions';
 
 type PinRefs = MutableRefObject<Map<string, HTMLDivElement>>;
@@ -222,32 +222,12 @@ const FunctionStack: React.FC<FunctionStackProps> = (props) => {
       </div>
 
       {/* Search + nav */}
-      <div className="mt-2 flex items-center gap-2">
-        <SearchBar searchCallback={runSearch} />
-        <div className="flex items-center gap-1 text-xs">
-          <button
-            type="button"
-            className="px-2 py-1 rounded border boomi-btn-xs"
-            onClick={() => gotoHit(-1)}
-            disabled={hits.length === 0}
-            title="Previous result"
-          >
-            Prev
-          </button>
-          <span className="min-w-[56px] text-center">
-            {hits.length ? `${Math.min(hitIdx, hits.length - 1) + 1} / ${hits.length}` : '0 / 0'}
-          </span>
-          <button
-            type="button"
-            className="px-2 py-1 rounded border boomi-btn-xs"
-            onClick={() => gotoHit(+1)}
-            disabled={hits.length === 0}
-            title="Next result"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+      <MapSearchRow
+        onSearch={runSearch}
+        hitCount={hits.length}
+        hitIndex={Math.min(hitIdx, hits.length - 1)}
+        onStep={gotoHit}
+      />
 
       <Reorder.Group ref={listRef} as="div" axis="y" values={order} onReorder={setOrder} className="boomi-map-fn-list">
         {order.map((id, index) => {

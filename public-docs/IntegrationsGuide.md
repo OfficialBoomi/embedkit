@@ -257,6 +257,8 @@ cssVarsByKey: {
 | Connector icons | `--boomi-connector-icon-*` | `.boomi-connector-icon`, `.boomi-connector-stack` |
 | Scrollbars (1.7) | `--boomi-scrollbar-*` | — |
 | Setup wizard | `--boomi-wizard-loading-padding` | `.boomi-wizard-loading` |
+| Map Fields search | `--boomi-map-search-*` (row, Prev / Next, count, hit outline and ring) | `.boomi-map-search`, `.boomi-map-search-nav`, `.boomi-map-search-btn`, `.boomi-map-search-count`; cards get `.is-search-hit` / `.is-current-hit` |
+| Searchable dropdown | `--boomi-options-search-*`, `--boomi-options-searchable-max-height` | `.boomi-options--searchable`, `.boomi-options-search`, `.boomi-options-search-input` |
 
 Every token, with its default, is listed in [ConfigurationReference.md → CSS Design Tokens](./ConfigurationReference.md#9-css-design-tokens). Defaults reproduce the shipped look, so you only set what you want to change.
 

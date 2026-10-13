@@ -19,7 +19,7 @@ import { MapExtensionsMapping, MapExtensionsNode } from '@boomi/embedkit-sdk';
 import { PositionedFunction } from '../../types/positioned-function';
 import Button from '../ui/Button';
 import SwalNotification from '../ui/SwalNotification';
-import SearchBar from '../ui/SearchBar'; // <-- NEW (adjust path if needed)
+import MapSearchRow from './MapSearchRow';
 import logger from '../../logger.service';
 
 
@@ -702,32 +702,12 @@ const FieldMappingCanvasTree = forwardRef((
           </div>
 
           {/* Search + nav */}
-          <div className="mt-2 flex items-center gap-2">
-            <SearchBar searchCallback={(q) => runSearch('source', q)} />
-            <div className="flex items-center gap-1 text-xs">
-              <button
-                type="button"
-                className="px-2 py-1 rounded border boomi-btn-xs"
-                onClick={() => gotoHit('source', -1)}
-                disabled={sourceHits.length === 0}
-                title="Previous result"
-              >
-                Prev
-              </button>
-              <span className="min-w-[56px] text-center">
-                {sourceHits.length ? `${sourceHitIdx + 1} / ${sourceHits.length}` : '0 / 0'}
-              </span>
-              <button
-                type="button"
-                className="px-2 py-1 rounded border boomi-btn-xs"
-                onClick={() => gotoHit('source', +1)}
-                disabled={sourceHits.length === 0}
-                title="Next result"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+          <MapSearchRow
+            onSearch={(q) => runSearch('source', q)}
+            hitCount={sourceHits.length}
+            hitIndex={sourceHitIdx}
+            onStep={(delta) => gotoHit('source', delta)}
+          />
 
           <Tree
             side="source"
@@ -811,32 +791,12 @@ const FieldMappingCanvasTree = forwardRef((
           </div>
 
           {/* Search + nav */}
-          <div className="mt-2 flex items-center gap-2">
-            <SearchBar searchCallback={(q) => runSearch('target', q)} />
-            <div className="flex items-center gap-1 text-xs">
-              <button
-                type="button"
-                className="px-2 py-1 rounded border boomi-btn-xs"
-                onClick={() => gotoHit('target', -1)}
-                disabled={targetHits.length === 0}
-                title="Previous result"
-              >
-                Prev
-              </button>
-              <span className="min-w-[56px] text-center">
-                {targetHits.length ? `${targetHitIdx + 1} / ${targetHits.length}` : '0 / 0'}
-              </span>
-              <button
-                type="button"
-                className="px-2 py-1 rounded border boomi-btn-xs"
-                onClick={() => gotoHit('target', +1)}
-                disabled={targetHits.length === 0}
-                title="Next result"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+          <MapSearchRow
+            onSearch={(q) => runSearch('target', q)}
+            hitCount={targetHits.length}
+            hitIndex={targetHitIdx}
+            onStep={(delta) => gotoHit('target', delta)}
+          />
 
           <Tree
             side="target"

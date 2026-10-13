@@ -100,7 +100,7 @@ const OptionsSearch: React.FC<{
   }, []);
 
   return (
-    <div className="boomi-options-search sticky top-0 z-10">
+    <div className="boomi-options-search">
       <input
         ref={inputRef}
         type="text"
@@ -108,7 +108,7 @@ const OptionsSearch: React.FC<{
         placeholder={placeholder}
         aria-label="Search options"
         autoComplete="off"
-        className="block w-full rounded-md py-1 px-2 text-sm boomi-input"
+        className="boomi-input boomi-options-search-input"
         onChange={(e) => onChange(e.currentTarget.value)}
         onKeyDown={(e) => {
           if (!['ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Tab'].includes(e.key)) e.stopPropagation();
@@ -194,7 +194,7 @@ const Dropdown: React.FC<DropdownProps> = ({
           </ListboxButton>
 
           {!disabled && (
-            <ListboxOptions className="boomi-options absolute w-full">
+            <ListboxOptions className={`boomi-options absolute w-full ${searchable ? 'boomi-options--searchable' : ''}`}>
               {searchable && (
                 <OptionsSearch value={search} onChange={setSearch} placeholder={searchPlaceholder} />
               )}
