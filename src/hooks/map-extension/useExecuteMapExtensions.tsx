@@ -44,7 +44,11 @@ export const useExecuteMapExtensions = () => {
    * @throws {Error} If the extension is missing an ID or if the HTTP request fails.
    */
   const executeMapExtensions = useCallback(
-    async (candidates: BrowseCandidate[]) => {
+    async (
+      candidates: BrowseCandidate[],
+      /** Called with the server's report when browsing also copied partner default mappings. */
+      opts: { onDefaultsSeeded?: (report: any) => void } = {}
+    ) => {
       if (!candidates || candidates.length === 0) {
         const msg = 'Code [4002] - executeMapExtensions must have candidates.';
         logger.error(msg);
@@ -58,6 +62,12 @@ export const useExecuteMapExtensions = () => {
 
         const response = await dynamicBrowseMapExtensions({candidates});
         const failedCandidates = response.failedCandidates || [];
+        // Maps that needed a browse session are seeded with the partner's defaults right after browsing.
+        const seed = (response as any)?.mapDefaultsSeed;
+        if (seed) {
+          if (seed.failed?.length) logger.warn('Default mappings were not seeded for some browsed maps', seed.failed);
+          try { opts.onDefaultsSeeded?.(seed); } catch (e) { logger.warn('onDefaultsSeeded handler failed', e); }
+        }
         const successfulCandidates = response.successCandidates || [];
         setUpdatedCandidates(failedCandidates);
 

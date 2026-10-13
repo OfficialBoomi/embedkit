@@ -1171,6 +1171,36 @@
     font-size: .75rem;
   }
 
+  /* Transformations: an ordered, collapsible stack */
+  .boomi-map-fn-stack { width: 100%; display: flex; flex-direction: column; gap: .5rem; }
+  .boomi-map-fn-stack-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+  .boomi-map-fn-stack-header .boomi-map-heading { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .boomi-map-fn-stack-tools { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+  .boomi-map-fn-list { display: flex; flex-direction: column; gap: .5rem; list-style: none; margin: 0; padding: 0; }
+  .boomi-map-card--function { position: relative; width: 100%; transition: box-shadow .15s ease, background-color .15s ease; }
+  .boomi-map-fn-header { display: flex; align-items: center; gap: .375rem; min-height: 1.75rem; }
+  .boomi-map-fn-grip {
+    cursor: grab; touch-action: none; display: flex; align-items: center;
+    color: var(--boomi-map-func-subtle-fg, var(--boomi-muted));
+  }
+  .boomi-map-fn-grip:active { cursor: grabbing; }
+  .boomi-map-fn-toggle { display: flex; align-items: center; padding: .125rem; border-radius: .25rem; }
+  .boomi-map-fn-name { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: .5rem; overflow: hidden; white-space: nowrap; }
+  .boomi-map-fn-name .boomi-map-card-title { overflow: hidden; text-overflow: ellipsis; }
+  .boomi-map-fn-order { display: flex; gap: .125rem; }
+  .boomi-map-fn-order button { display: flex; align-items: center; padding: .125rem; border-radius: .25rem; }
+  .boomi-map-fn-order button:disabled { opacity: .35; cursor: default; }
+  .boomi-map-card--function.is-collapsed { padding-top: .375rem; padding-bottom: .375rem; }
+
+  /* Map picker (replaces one tab per map) */
+  .boomi-map-picker { padding-top: 1rem; max-width: 32rem; }
+  .boomi-map-picker .mb-4 { margin-bottom: .75rem; }
+  /* The content card was drawn to hang under a tab row; standing alone it needs its full border. */
+  .boomi-map-picker + .boomi-update-content {
+    border-top: 1px solid var(--boomi-update-border);
+    border-radius: var(--boomi-update-radius, .2rem);
+  }
+
   /* Pins / endpoints */
   .boomi-map-pin {
     position: absolute;
@@ -1271,10 +1301,10 @@
     border-color: var(--boomi-map-add-border-hover, var(--boomi-map-add-border));
     box-shadow: var(--boomi-map-add-shadow-hover, var(--boomi-map-add-shadow));
   }
-  /* 1) Functions must be absolutely positioned (no layout reflow) */
+  /* 1) Functions stack in order inside the column; pins are positioned against each card */
   .boomi-map-col--functions { position: relative; } 
   .boomi-map-card.boomi-map-card--function {
-    position: absolute !important;          
+    position: relative;
     transition: box-shadow .15s ease, background-color .15s ease !important;
   }
 
@@ -1305,19 +1335,19 @@
 
   /* hit highlighting */
   .boomi-map-card.is-search-hit {
-    outline: 2px solid var(--hit-outline, #ff9800);
+    outline: 2px solid var(--boomi-map-search-hit-outline, var(--hit-outline, #ff9800));
     outline-offset: 2px;
   }
   .boomi-map-card.is-current-hit {
-    box-shadow: 0 0 0 3px var(--hit-current, #ffb74d);
+    box-shadow: 0 0 0 3px var(--boomi-map-search-hit-current, var(--hit-current, #ffb74d));
   }
 
   /* dark-mode overrides (adjust to your theme) */
   .dark .boomi-map-card.is-search-hit {
-    outline-color: #ffd400; /* bright yellow */
+    outline-color: var(--boomi-map-search-hit-outline-dark, #ffd400); /* bright yellow */
   }
   .dark .boomi-map-card.is-current-hit {
-    box-shadow: 0 0 0 3px #ffe266;
+    box-shadow: 0 0 0 3px var(--boomi-map-search-hit-current-dark, #ffe266);
   }
 
   /* tiny nav buttons */
@@ -4177,3 +4207,40 @@ td > .boomi-integration-card__env--unattached { max-width: none; margin-right: 0
 
 /* Setup wizard: shown while it checks which steps have something to configure. */
 .boomi-wizard-loading { display: flex; justify-content: center; align-items: center; padding-block: var(--boomi-wizard-loading-padding, 2.5rem); }
+
+/* ---------- Searchable dropdown (Dropdown `searchable`, e.g. the Map Fields map picker) ---------- */
+.boomi-options--searchable { max-height: var(--boomi-options-searchable-max-height, 15rem); }
+/* The search stays at the top of the list while the options scroll under it. */
+.boomi-options-search { position: sticky; top: 0; z-index: 1; }
+.boomi-options-search-input {
+  display: block; width: 100%;
+  padding: var(--boomi-options-search-input-padding, 0.25rem 0.5rem);
+  border-radius: var(--boomi-options-search-input-radius, 0.375rem);
+  font-size: var(--boomi-options-search-input-font-size, 0.875rem);
+  line-height: 1.25rem;
+}
+
+/* ---------- Mapping canvas: search rows above Sources, Transformations and Targets ---------- */
+.boomi-map-search {
+  display: flex; align-items: center;
+  gap: var(--boomi-map-search-gap, 0.5rem);
+  margin-top: var(--boomi-map-search-margin-top, 0.5rem);
+}
+.boomi-map-search-nav {
+  display: flex; align-items: center;
+  gap: var(--boomi-map-search-nav-gap, 0.25rem);
+  font-size: var(--boomi-map-search-nav-font-size, 0.75rem);
+  line-height: 1rem;
+  color: var(--boomi-map-search-nav-fg, inherit);
+}
+.boomi-map-search-btn {
+  padding: var(--boomi-map-search-btn-padding, 2px 6px);
+  font-size: var(--boomi-map-search-btn-font-size, 11px);
+  line-height: 1;
+  color: var(--boomi-map-search-btn-fg, inherit);
+  background: var(--boomi-map-search-btn-bg, transparent);
+  border: 1px solid var(--boomi-map-search-btn-border, currentColor);
+  border-radius: var(--boomi-map-search-btn-radius, 0.25rem);
+}
+.boomi-map-search-btn:disabled { opacity: var(--boomi-map-search-btn-disabled-opacity, 1); cursor: default; }
+.boomi-map-search-count { min-width: var(--boomi-map-search-count-min-width, 56px); text-align: center; }

@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import classNames from 'classnames';
+import Dropdown, { Option } from '../ui/Dropdown';
 import { usePlugin } from '../../context/pluginContext';
 import { IntegrationPackInstance } from '@boomi/embedkit-sdk';
 import { PositionedFunction } from '../../types/positioned-function';
@@ -95,6 +95,9 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
   const [activeMapIndex, setActiveMapIndex] = useState(0);
   const currentMap = maps[activeMapIndex];
   const currentMapId = currentMap?.mapId as string;
+  // Map extensions that share a source/destination profile pair share a mapId, even
+  // across processes, so per-map UI state is keyed by the extension's own id.
+  const currentMapKey = (currentMap?.id ?? currentMapId) as string;
   const [functionsByMapId, setFunctionsByMapId] =
     useState<Record<string, PositionedFunction[]>>({});
   const [mappingsByMapId, setMappingsByMapId] =
@@ -118,6 +121,16 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
     currentMap?.Map?.SourceProfile?.Node?.filter((n) => n.xpath) ?? [];
   const targetFields =
     currentMap?.Map?.DestinationProfile?.Node?.filter((n) => n.xpath) ?? [];
+  // One entry per map extension for the map picker. Names are the object definitions'
+  // "source - destination" pair, which can repeat, so repeats get a counter.
+  const mapOptions: Option[] = (() => {
+    const seen: Record<string, number> = {};
+    return maps.map((map, index) => {
+      const base = map.name || `Map ${index + 1}`;
+      seen[base] = (seen[base] ?? 0) + 1;
+      return { id: String(index), name: seen[base] > 1 ? `${base} (${seen[base]})` : base };
+    });
+  })();
   // feature flag for mapping tree
   const useTreeMap = boomiConfig?.components?.[componentKey]?.mapping?.useTreeMode ?? false;
 
@@ -153,7 +166,25 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
     if (!result) return false;
 
     try {
-      const failed = await executeMapExtensions(result.candidates);
+      const failed = await executeMapExtensions(result.candidates, {
+        onDefaultsSeeded: (seed) => emitEmbedKitEvent(
+          'map.defaults.seeded',
+          {
+            integrationPackInstanceId: integration.id,
+            integrationPackId: integration.integrationPackId,
+            environmentId: integration.environmentId,
+            componentKey,
+          },
+          {
+            integrationPackInstanceId: integration.id || '',
+            environmentId: integration.environmentId,
+            summariesFound: seed.summariesFound,
+            seeded: seed.seeded,
+            skipped: seed.skipped,
+            failed: seed.failed,
+          }
+        ),
+      });
       if (Array.isArray(failed) && failed.length > 0) {
         editCandidateFormRef.current?.applyErrorsFromCandidates(
           failed,
@@ -201,7 +232,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         containerId: undefined,
       };
       if (!currentMapId || !currentMap) return;
-      const functions = functionsByMapId[currentMapId] || [];
+      const functions = functionsByMapId[currentMapKey] || [];
 
       const { functions: updatedFunctions } = toMapExtensionsFunctions(functions);
       const updatedExtension: EnvironmentMapExtension = {
@@ -236,9 +267,9 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
           updatedCount: newMappings.length,
         }
       );
-      setMappingsByMapId((prev) => ({ ...prev, [currentMapId]: newMappings }));
+      setMappingsByMapId((prev) => ({ ...prev, [currentMapKey]: newMappings }));
       const updatedMaps = maps.map((m) =>
-        m.mapId === updatedExtension.mapId ? updatedExtension : m
+        m.id === updatedExtension.id ? updatedExtension : m
       );
 
     }).catch((err: any) => setApiError(err?.message || 'Failed to update functions'));
@@ -261,7 +292,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         containerId: undefined,
       };
       if (!currentMapId || !currentMap) return;
-      const baseMappings = opts?.mappingsOverride ?? (mappingsByMapId[currentMapId] || []);
+      const baseMappings = opts?.mappingsOverride ?? (mappingsByMapId[currentMapKey] || []);
       const { functions: newFunctions, idMap } = toMapExtensionsFunctions(updatedFunctions);
 
       const getFnId = (f: any) =>
@@ -322,19 +353,19 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
       );
       setFunctionsByMapId((prev) => ({
         ...prev,
-        [currentMapId]: fromMapExtensionsFunctions(newFunctions),
+        [currentMapKey]: fromMapExtensionsFunctions(newFunctions),
       }));
       setMappingsByMapId((prev) => ({
         ...prev,
-        [currentMapId]: updatedMappings,
+        [currentMapKey]: updatedMappings,
       }));
     }).catch((err: any) => setApiError(err?.message || 'Failed to update functions'));
   };
 
   const handleCanvasFunctionDelete = async (fn: PositionedFunction) => {
     await runWithLoading(async () => {
-      const currentFunctions = functionsByMapId[currentMapId] || [];
-      const currentMappings = mappingsByMapId[currentMapId] || [];
+      const currentFunctions = functionsByMapId[currentMapKey] || [];
+      const currentMappings = mappingsByMapId[currentMapKey] || [];
 
       const updatedFunctions = currentFunctions.filter((f) => f.id !== fn.id);
       const updatedMappings = currentMappings.filter(
@@ -409,8 +440,8 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
     };
 
     const updated = editFunction
-      ? (functionsByMapId[currentMapId] || []).map((f) => (f.id === editFunction.id ? fn : f))
-      : [...(functionsByMapId[currentMapId] || []), fn];
+      ? (functionsByMapId[currentMapKey] || []).map((f) => (f.id === editFunction.id ? fn : f))
+      : [...(functionsByMapId[currentMapKey] || []), fn];
 
     try {
       await handleCanvasFunctionChange(updated, {
@@ -443,13 +474,13 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
     if (currentMap && currentMap?.Map && currentMapId) {
       setFunctionsByMapId((prev) => ({
         ...prev,
-        [currentMapId]: fromMapExtensionsFunctions(
+        [currentMapKey]: fromMapExtensionsFunctions(
           currentMap.Map?.ExtendedFunctions?.Function ?? []
         ),
       }));
       setMappingsByMapId((prev) => ({
         ...prev,
-        [currentMapId]: currentMap.Map?.ExtendedMappings?.Mapping ?? [],
+        [currentMapKey]: currentMap.Map?.ExtendedMappings?.Mapping ?? [],
       }));
     }
   }, [active, currentMap, currentMapId]);
@@ -464,7 +495,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
     if (hasCandidates) setIsCandidateModalOpen(true);
   }, [hasCandidates]);
 
-  const canvasFunctions: PositionedFunction[] = (functionsByMapId[currentMapId] || []).map((f) =>
+  const canvasFunctions: PositionedFunction[] = (functionsByMapId[currentMapKey] || []).map((f) =>
     f.editable === false && convertFunctionsToScript && isConvertibleFunctionType(f.raw?.type)
       ? { ...f, editable: true, convertible: true }
       : f
@@ -547,22 +578,17 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
                 'Pre-configured mappings were copied in when this integration was installed. Removing one restores the original default for that field.'}
             </div>
           )}
-          <div className="boomi-tabs">
-            <nav className="boomi-tablist">
-              {maps.map((map, index) => {
-                const active = activeMapIndex === index;
-                return (
-                  <button
-                    key={map.mapId}
-                    onClick={() => setActiveMapIndex(index)}
-                    className={classNames('boomi-tab', active && 'boomi-tab--active')}
-                    type="button"
-                  >
-                    {map.name || `Map ${index + 1}`}
-                  </button>
-                );
-              })}
-            </nav>
+          <div className="boomi-map-picker">
+            <Dropdown
+              formName="update-maps"
+              label={`Map (${maps.length})`}
+              inputName="map"
+              options={mapOptions}
+              selected={mapOptions[activeMapIndex]}
+              onChange={(opt) => setActiveMapIndex(Number(opt.id))}
+              searchable
+              searchPlaceholder="Search maps..."
+            />
           </div>
           <div className="boomi-update-content">
             {apiError && (
@@ -577,10 +603,11 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
             )}
             {useTreeMap ? (
               <FieldMappingCanvasTree
+                key={currentMapKey}
                 sourceFields={sourceFields}
                 targetFields={targetFields}
                 functions={canvasFunctions}
-                mappings={mappingsByMapId[currentMapId] || []}
+                mappings={mappingsByMapId[currentMapKey] || []}
                 onMappingChange={handleCanvasMappingChange}
                 onTransformationUpdate={handleCanvasFunctionChange}
                 onDeleteTransformation={handleCanvasFunctionDelete}
@@ -593,10 +620,11 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
               />
             ) : (
               <FieldMappingCanvas
+                key={currentMapKey}
                 sourceFields={sourceFields}
                 targetFields={targetFields}
                 functions={canvasFunctions}
-                mappings={mappingsByMapId[currentMapId] || []}
+                mappings={mappingsByMapId[currentMapKey] || []}
                 onMappingChange={handleCanvasMappingChange}
                 onTransformationUpdate={handleCanvasFunctionChange}
                 onDeleteTransformation={handleCanvasFunctionDelete}

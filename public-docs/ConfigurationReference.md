@@ -1384,6 +1384,30 @@ Each falls back to its built-in color when unset.
 | `--boomi-map-add-border-hover` | Add button hover border |
 | `--boomi-map-add-shadow-hover` | Add button hover shadow |
 
+#### Mapping canvas search — `.boomi-map-search`
+
+The search row above **Sources**, **Transformations** and **Targets** (`.boomi-map-search`, `.boomi-map-search-nav`, `.boomi-map-search-btn`, `.boomi-map-search-count`). Matching cards get `.is-search-hit`; the current one also gets `.is-current-hit`.
+
+| Token | Description |
+|-------|-------------|
+| `--boomi-map-search-gap` | Gap between the search box and Prev / Next (default `0.5rem`) |
+| `--boomi-map-search-margin-top` | Space above the row (default `0.5rem`) |
+| `--boomi-map-search-nav-gap` | Gap between Prev, the count and Next (default `0.25rem`) |
+| `--boomi-map-search-nav-font-size` | Count text size (default `0.75rem`) |
+| `--boomi-map-search-nav-fg` | Count text color |
+| `--boomi-map-search-btn-padding` | Prev / Next padding (default `2px 6px`) |
+| `--boomi-map-search-btn-font-size` | Prev / Next text size (default `11px`) |
+| `--boomi-map-search-btn-fg` | Prev / Next text color |
+| `--boomi-map-search-btn-bg` | Prev / Next background (default transparent) |
+| `--boomi-map-search-btn-border` | Prev / Next border color (default `currentColor`) |
+| `--boomi-map-search-btn-radius` | Prev / Next corner radius (default `0.25rem`) |
+| `--boomi-map-search-btn-disabled-opacity` | Prev / Next opacity with no results (default `1`) |
+| `--boomi-map-search-count-min-width` | Width reserved for "1 / 3" (default `56px`) |
+| `--boomi-map-search-hit-outline` | Outline of matching cards (default `#ff9800`; falls back to `--hit-outline`) |
+| `--boomi-map-search-hit-current` | Ring around the current match (default `#ffb74d`; falls back to `--hit-current`) |
+| `--boomi-map-search-hit-outline-dark` | Matching-card outline under `.dark` (default `#ffd400`) |
+| `--boomi-map-search-hit-current-dark` | Current-match ring under `.dark` (default `#ffe266`) |
+
 ---
 
 ### Schedules
@@ -1454,6 +1478,10 @@ Each falls back to its built-in color when unset.
 | `--boomi-options-border` | Options dropdown border |
 | `--boomi-options-shadow` | Options dropdown shadow |
 | `--boomi-options-search-bg` | Search input background within dropdown |
+| `--boomi-options-searchable-max-height` | List height when the dropdown has a search box (default `15rem`) |
+| `--boomi-options-search-input-padding` | Search input padding (default `0.25rem 0.5rem`) |
+| `--boomi-options-search-input-radius` | Search input corner radius (default `0.375rem`) |
+| `--boomi-options-search-input-font-size` | Search input text size (default `0.875rem`) |
 | `--boomi-option-bg` | Individual option background |
 | `--boomi-option-fg` | Individual option text |
 | `--boomi-option-bg-active` | Keyboard-active option background |

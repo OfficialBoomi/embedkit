@@ -145,7 +145,12 @@ Single-install packs keep their connection settings at the environment level rat
 
 ### Default mappings
 
-During install the server copies the publisher's default mappings into the new instance's maps, so **Map Fields** opens with them drawn. The result is reported through the `map.defaults.seeded` event (`seeded`, `skipped`, `failed`). A failed map simply opens undrawn; check `failed[].error` for the platform's reason.
+During install the server copies the publisher's default mappings into the new instance's maps, so **Map Fields** opens with them drawn. The result is reported through the `map.defaults.seeded` event (`seeded`, `skipped`, `failed`).
+
+- **Maps that need a browse session.** Some maps use profiles the platform must browse with connection credentials (for example an LDAP password). They can't be saved until the connection is configured, so the install skips them (`skipped[].reason: 'needs-browse-session'`). When the user opens **Map Fields** and authenticates the browse, the defaults are copied right away and `map.defaults.seeded` fires again for those maps.
+- **Qualified paths.** A default mapping that addresses a qualified element, such as `Address[Name='Work']/City`, has no matching node in the extension profile. It is left out and listed in `seeded[].omitted`; the user maps it by hand. A map whose defaults are all qualified is skipped (`only-qualified-paths`).
+- **Never overwritten.** A map that already has customer mappings is left alone (`already-extended`).
+- **Failures.** A failed map simply opens undrawn; `failed[].error` carries the platform's reason. The install itself never fails because of the copy.
 
 ---
 
@@ -252,6 +257,8 @@ cssVarsByKey: {
 | Connector icons | `--boomi-connector-icon-*` | `.boomi-connector-icon`, `.boomi-connector-stack` |
 | Scrollbars (1.7) | `--boomi-scrollbar-*` | — |
 | Setup wizard | `--boomi-wizard-loading-padding` | `.boomi-wizard-loading` |
+| Map Fields search | `--boomi-map-search-*` (row, Prev / Next, count, hit outline and ring) | `.boomi-map-search`, `.boomi-map-search-nav`, `.boomi-map-search-btn`, `.boomi-map-search-count`; cards get `.is-search-hit` / `.is-current-hit` |
+| Searchable dropdown | `--boomi-options-search-*`, `--boomi-options-searchable-max-height` | `.boomi-options--searchable`, `.boomi-options-search`, `.boomi-options-search-input` |
 
 Every token, with its default, is listed in [ConfigurationReference.md → CSS Design Tokens](./ConfigurationReference.md#9-css-design-tokens). Defaults reproduce the shipped look, so you only set what you want to change.
 
