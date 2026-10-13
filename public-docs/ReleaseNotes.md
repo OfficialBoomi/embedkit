@@ -11,6 +11,33 @@
 
 ---
 
+### Unreleased — v1.7.1
+
+![Version](https://img.shields.io/badge/version-v1.7.1-lightgrey?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-in%20progress-orange?style=for-the-badge)
+
+<details open>
+  <summary><strong>v1.7.1 (draft)</strong> — Map Fields: a map picker, an ordered function stack and search; integrations list fix for large account groups</summary>
+
+  **Upgrade notes**
+  - **Server first for the list fix:** the large-account-group fix ships in `@boomi/embedkit-sdk` **1.5.1**. Update `embedkit-server`'s `@boomi/embedkit-sdk` to 1.5.1 (`package.json` **and** `package-lock.json`) and redeploy; the UI needs no change for it.
+  - The Map Fields changes apply to every embed after upgrading the UI / CDN bundle; they need no server change.
+
+  **Changes for every embed** (no opt-in)
+  - ✅ **Map picker** — **Map Fields** shows one dropdown of the integration's maps instead of a tab per map, with a search box that filters the list as you type (arrow keys and Enter pick a map).
+  - ✅ **Ordered function stack** — The Transformations column lists the map's functions top to bottom in their saved order. Reorder them by dragging the grip or with the up / down buttons; each one collapses to a single row (they start collapsed), with **Expand All** / **Collapse All** next to **Add**.
+  - ✅ **Search functions** — The Transformations column has the same search bar, **Prev** / **Next** and count as Sources and Targets. Enter highlights every function whose name, type or input / output names match, and expands and scrolls to the current match.
+  - ✅ **Themeable search** — The search rows and the dropdown's search box are styled through `.boomi-map-search*` / `.boomi-options-search*` classes and `--boomi-map-search-*` / `--boomi-options-search-*` tokens. Defaults reproduce the shipped look. Dropdowns elsewhere are unchanged; search is opt-in per dropdown (`searchable`). See [Mapping canvas search](./ConfigurationReference.md#mapping-canvas-search--boomi-map-search).
+
+  **Bug fixes**
+  - 🐛 **Integrations list failed for account groups with more than 100 packs** — Since embedkit-server 1.4.0 (SDK 1.5.0), `GET /api/v1/integration-packs` and the Add Integration catalog returned `400 Bad Request` for such groups: the platform rejects paging (`queryMore`) for account-group pack links. SDK 1.5.1 keeps the first page, as before 1.4.0, and logs a warning. Fetching links past the first 100 is tracked separately.
+  - 🐛 **Maps on the same objects mixed up their state** — Two maps whose source and destination object types matched shared one entry in Map Fields, so React reported duplicate keys and edits on one tab could show on the other. Each map is now keyed by its own extension id.
+  - 🐛 **Switching maps left the old canvas** — Selecting another map now starts a fresh canvas for it instead of keeping the previous selection and lines.
+
+</details>
+
+---
+
 ### All Releases
 
 <details open>
@@ -55,9 +82,6 @@
   - 🐛 **Instances attached to several environments no longer collapse to one** — The list kept only the *last* attachment per instance, so Edit Connections / Maps / Schedules could act on the wrong environment. Instances now carry every in-scope attachment in `environments`; `environmentId` is the first.
   - 🐛 **`environmentSelect.includeEnvironments` now works** — the server expected a differently named parameter and always returned every classification.
   - 🐛 **Single-install connection lookups** — The wizard's connection step queried per process for single-install packs and failed with `400 extensionGroupId must be id for Multi-Install or Single-Install Integration Pack`. It now sends `isSingleInstall`, which reads the environment-level settings.
-  - 🐛 **Default mappings for browsed maps** — Maps whose profiles must be browsed with connection credentials (for example an LDAP password) can't be saved until the connection is set up, so copying the publisher's default mappings at install failed for them (platform 500). They are now skipped at install (`map.defaults.seeded` reports `needs-browse-session`) and copied in **Map Fields** right after the user authenticates the browse, which emits `map.defaults.seeded` again.
-  - 🐛 **Default mappings with cross-reference functions** — Publisher functions containing a Cross Reference Lookup were recreated with the wrong body and rejected (400 "Unable to read message body"). They are now translated to the API's `CrossReferenceLookup` shape with their column bindings.
-  - 🐛 **Qualified default mappings no longer block a map** — Default mappings that address a qualified element (for example `Address[Name='Work']/City`) have no counterpart in the extension profile. They are now left out and listed as `omitted` in `map.defaults.seeded`, and the rest of the map's defaults are copied; previously the whole map failed.
   - 🐛 **Screen titles** — Configure, Update Maps, Update Schedule(s) and Run Agent showed "undefined" for instances without an override name; they now show the pack name.
   - 🐛 **No scroll bounce** — Scroll areas stop at their ends instead of rubber-banding (macOS) or scrolling the host page.
   - 🐛 **Data hooks are importable** — The React data hooks (such as `useFetchEnvironments`) were described in the type declarations but missing from the published JavaScript, so importing one failed when bundling. All of them are now exported from `@boomi/embedkit`, including `useFetchEnvironmentExtensionConnectionStatus`, `useFetchOauth2Url`, `useFetchIntegrationPackInstance` and `useExecuteMapExtensions`. They must run inside `<EmbedKitProvider>`. See [Data Hooks](./GettingStarted.md#data-hooks-custom-ui).
@@ -66,6 +90,7 @@
   - 🐛 **Schedules error notice can be dismissed** — The close (x) on the "Error Updating Schedules" notice did nothing. It now closes the notice.
 
   **Known issues**
+  - ⚠️ **Default mappings not copied for some maps** — On installing a pack whose maps use the *LDAP (Retired)* connector, two maps failed to receive the publisher's default mappings (platform 500 and 400). The install itself succeeds and the result is reported in `map.defaults.seeded`. Under investigation.
   - ⚠️ **Single-install connection save** — Loading and editing single-install connections is verified; saving is still being tested.
 
 </details>
