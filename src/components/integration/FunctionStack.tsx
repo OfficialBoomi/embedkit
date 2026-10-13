@@ -17,10 +17,14 @@
  * collapsed function registers every input key on its left pin and every output
  * key on its right pin, so its lines still end on the row.
  *
+ * The search bar above the stack works like the Sources and Targets searches: Enter
+ * highlights every function whose label, name, type or input/output names contain
+ * the query, and Prev / Next expand and scroll to each match in turn.
+ *
  * @return {JSX.Element} The ordered, collapsible list of transformation functions.
  */
 
-import { useEffect, useLayoutEffect, useMemo, useState, type MutableRefObject } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import {
   AiOutlineArrowDown,
@@ -34,6 +38,7 @@ import { MapExtensionsMapping } from '@boomi/embedkit-sdk';
 import { PositionedFunction } from '../../types/positioned-function';
 import { embedYInId, parseYFromId, stripYFromId } from '../../utils/ui-utils';
 import Button from '../ui/Button';
+import SearchBar from '../ui/SearchBar';
 import TranformationActions from './TransformationActions';
 
 type PinRefs = MutableRefObject<Map<string, HTMLDivElement>>;
@@ -69,6 +74,20 @@ const functionLabel = (fn: PositionedFunction): string => {
   return type.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').trim() || 'Transformation';
 };
 
+/** Everything a function search matches against, lowercased. */
+const searchText = (fn: PositionedFunction): string =>
+  [
+    functionLabel(fn),
+    fn.name,
+    fn.type,
+    fn.raw?.type,
+    ...fn.inputs.map((i) => i.name),
+    ...fn.outputs.map((o) => o.name),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
 /** Saved order: by the position embedded in the id, then by list order. */
 const sortByPosition = (functions: PositionedFunction[]): PositionedFunction[] =>
   functions
@@ -93,6 +112,46 @@ const FunctionStack: React.FC<FunctionStackProps> = (props) => {
 
   useEffect(() => { setOrder(sorted.map((f) => f.id)); }, [sorted]);
   useLayoutEffect(() => { onLayoutChange(); }, [order, expanded]);
+
+  // Search: hits are ids without their position, in stack order, so a reorder keeps them.
+  const listRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState('');
+  const [hitIdx, setHitIdx] = useState(0);
+  const hits = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [] as string[];
+    return order
+      .filter((id) => {
+        const fn = byId.get(id);
+        return fn ? searchText(fn).includes(q) : false;
+      })
+      .map(stripYFromId);
+  }, [query, order, byId]);
+  const hitSet = useMemo(() => new Set(hits), [hits]);
+  const currentHit = hits.length ? hits[Math.min(hitIdx, hits.length - 1)] : null;
+
+  const showHit = (base: string) => {
+    setExpanded((prev) => (prev.has(base) ? prev : new Set(prev).add(base)));
+    requestAnimationFrame(() => {
+      const el = listRef.current?.querySelector(`[data-fn-key="${CSS.escape(base)}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    });
+  };
+
+  const runSearch = (value: string) => {
+    setQuery(value);
+    setHitIdx(0);
+    const q = value.trim().toLowerCase();
+    const first = q ? order.find((id) => { const fn = byId.get(id); return fn && searchText(fn).includes(q); }) : undefined;
+    if (first) showHit(stripYFromId(first));
+  };
+
+  const gotoHit = (delta: number) => {
+    if (!hits.length) return;
+    const next = (Math.min(hitIdx, hits.length - 1) + delta + hits.length) % hits.length;
+    setHitIdx(next);
+    showHit(hits[next]);
+  };
 
   const commit = (ids: string[]) => {
     if (ids.join('|') === sorted.map((f) => f.id).join('|')) return;
@@ -161,7 +220,36 @@ const FunctionStack: React.FC<FunctionStackProps> = (props) => {
           )}
         </div>
       </div>
-      <Reorder.Group as="div" axis="y" values={order} onReorder={setOrder} className="boomi-map-fn-list">
+
+      {/* Search + nav */}
+      <div className="mt-2 flex items-center gap-2">
+        <SearchBar searchCallback={runSearch} />
+        <div className="flex items-center gap-1 text-xs">
+          <button
+            type="button"
+            className="px-2 py-1 rounded border boomi-btn-xs"
+            onClick={() => gotoHit(-1)}
+            disabled={hits.length === 0}
+            title="Previous result"
+          >
+            Prev
+          </button>
+          <span className="min-w-[56px] text-center">
+            {hits.length ? `${Math.min(hitIdx, hits.length - 1) + 1} / ${hits.length}` : '0 / 0'}
+          </span>
+          <button
+            type="button"
+            className="px-2 py-1 rounded border boomi-btn-xs"
+            onClick={() => gotoHit(+1)}
+            disabled={hits.length === 0}
+            title="Next result"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
+      <Reorder.Group ref={listRef} as="div" axis="y" values={order} onReorder={setOrder} className="boomi-map-fn-list">
         {order.map((id, index) => {
           const fn = byId.get(id);
           if (!fn) return null;
@@ -173,6 +261,8 @@ const FunctionStack: React.FC<FunctionStackProps> = (props) => {
               index={index}
               count={order.length}
               isCollapsed={isCollapsed(id)}
+              isSearchHit={hitSet.has(stripYFromId(id))}
+              isCurrentHit={currentHit === stripYFromId(id)}
               onToggle={() => toggle(id)}
               onMove={(delta) => move(id, delta)}
               onDragEnd={() => commit(order)}
@@ -189,6 +279,8 @@ interface FunctionCardProps extends FunctionStackProps {
   index: number;
   count: number;
   isCollapsed: boolean;
+  isSearchHit: boolean;
+  isCurrentHit: boolean;
   onToggle: () => void;
   onMove: (delta: number) => void;
   onDragEnd: () => void;
@@ -199,6 +291,8 @@ const FunctionCard: React.FC<FunctionCardProps> = ({
   index,
   count,
   isCollapsed,
+  isSearchHit,
+  isCurrentHit,
   onToggle,
   onMove,
   onDragEnd,
@@ -236,7 +330,14 @@ const FunctionCard: React.FC<FunctionCardProps> = ({
       onDrag={onLayoutChange}
       onDragEnd={onDragEnd}
       onLayoutAnimationComplete={onLayoutChange}
-      className={`boomi-map-card boomi-map-card--function ${isCollapsed ? 'is-collapsed' : ''} ${selectedFunction === fn.id ? 'is-selected' : ''}`}
+      data-fn-key={stripYFromId(fn.id)}
+      className={[
+        'boomi-map-card boomi-map-card--function',
+        isCollapsed ? 'is-collapsed' : '',
+        selectedFunction === fn.id ? 'is-selected' : '',
+        isSearchHit ? 'is-search-hit' : '',
+        isCurrentHit ? 'is-current-hit' : '',
+      ].join(' ')}
       onClick={() => onSelectFunction(fn.id)}
     >
       <div className="boomi-map-fn-header">

@@ -12,7 +12,7 @@
  * @return {JSX.Element} The rendered dropdown component.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Listbox,
   ListboxButton,
@@ -58,6 +58,8 @@ const placeholderOption: Option = { id: 'placeholder', name: 'Please select' };
  * @property {(value: Option) => void} onChange - Callback fired when a new option is selected.
  * @property {(selected?: Option) => void} [onBlur] - Optional callback fired when the dropdown loses focus.
  * @property {string} [placeholder='Please select'] - Placeholder text displayed when no option is selected.
+ * @property {boolean} [searchable=false] - Shows a search input at the top of the open list that filters the options.
+ * @property {string} [searchPlaceholder='Type to search...'] - Placeholder text for the search input.
  */
 interface DropdownProps {
   formName: string;
@@ -71,7 +73,50 @@ interface DropdownProps {
   onChange: (value: Option) => void;
   onBlur?: (selected?: Option) => void;
   placeholder?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
+
+/**
+ * Search input rendered inside the open options panel. It mounts when the list
+ * opens, takes focus, and clears the query when the list closes. Arrow keys, Enter,
+ * Escape and Tab reach the Listbox so the user can pick a filtered option from the
+ * keyboard; every other key stays in the input (Space and letters would otherwise
+ * select or jump to an option).
+ */
+const OptionsSearch: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}> = ({ value, onChange, placeholder }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    // The Listbox focuses its options panel when it opens; take focus after it.
+    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => {
+      cancelAnimationFrame(frame);
+      onChange('');
+    };
+  }, []);
+
+  return (
+    <div className="boomi-options-search sticky top-0 z-10">
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        aria-label="Search options"
+        autoComplete="off"
+        className="block w-full rounded-md py-1 px-2 text-sm boomi-input"
+        onChange={(e) => onChange(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if (!['ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Tab'].includes(e.key)) e.stopPropagation();
+        }}
+      />
+    </div>
+  );
+};
 
 const Dropdown: React.FC<DropdownProps> = ({
   formName,
@@ -85,6 +130,8 @@ const Dropdown: React.FC<DropdownProps> = ({
   onChange,
   onBlur,
   placeholder = 'Please select',
+  searchable = false,
+  searchPlaceholder = 'Type to search...',
 }) => {
   const [search, setSearch] = useState('');
 
@@ -148,6 +195,9 @@ const Dropdown: React.FC<DropdownProps> = ({
 
           {!disabled && (
             <ListboxOptions className="boomi-options absolute w-full">
+              {searchable && (
+                <OptionsSearch value={search} onChange={setSearch} placeholder={searchPlaceholder} />
+              )}
               {filteredOptions.length === 0 && (
                 <div className="px-3 py-2 text-sm z-0">No options found</div>
               )}

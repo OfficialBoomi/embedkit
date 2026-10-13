@@ -586,6 +586,8 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
               options={mapOptions}
               selected={mapOptions[activeMapIndex]}
               onChange={(opt) => setActiveMapIndex(Number(opt.id))}
+              searchable
+              searchPlaceholder="Search maps..."
             />
           </div>
           <div className="boomi-update-content">
