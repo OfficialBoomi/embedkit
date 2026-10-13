@@ -6,12 +6,19 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.7.1-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.7.2-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
 
 ### All Releases
+
+<details open>
+  <summary><strong>v1.7.2</strong> — Republish of 1.7.1 with its build output</summary>
+
+  - 🐛 **1.7.1 was published without `dist/`** — The npm package for 1.7.1 contained no build output, so importing `@boomi/embedkit` (or `@boomi/embedkit/index.css`) failed. 1.7.2 is the same code as 1.7.1 with the full build. Upgrade from 1.7.1 to 1.7.2; everything in the 1.7.1 notes below applies. The CDN bundle (`@boomi/embedkit-cdn`, `cdn.boomi.space`) goes straight from 1.7.0 to 1.7.2.
+
+</details>
 
 <details open>
   <summary><strong>v1.7.1</strong> — Map Fields: a map picker, an ordered function stack and search; integrations list fix for large account groups</summary>
