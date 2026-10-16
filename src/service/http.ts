@@ -54,6 +54,7 @@ export function useHttp(): HttpClient {
           if (issueMsg) msg = issueMsg;
         }
       } catch {} // not JSON — use raw text as-is
+      // `body.code` carries server codes such as MAP_DEFAULTS_PENDING.
       throw new HttpError(msg, res.status, body);
     }
     try { return txt ? JSON.parse(txt) : null; }

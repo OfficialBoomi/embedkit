@@ -48,7 +48,10 @@ export const useUpdateMapExtensions = () => {
    * @throws {Error} If the extension is missing an ID or if the HTTP request fails.
    */
   const updateMapExtensions = useCallback(
-    async (envMapExtension: EnvironmentMapExtension): Promise<EnvironmentMapExtension> => {
+    async (
+      envMapExtension: EnvironmentMapExtension,
+      integrationPackInstanceId?: string
+    ): Promise<EnvironmentMapExtension> => {
       const id = envMapExtension.id;
       if (!id) {
         const msg = 'Code [4002] - EnvironmentMapExtension must have an ID.';
@@ -66,7 +69,7 @@ export const useUpdateMapExtensions = () => {
         const patched = BrowseSessionStore.patchExtensionWithSessions(envMapExtension);
         logger.debug("patched:", patched);
 
-        const updated = await updateMapExtension(patched);
+        const updated = await updateMapExtension(patched, integrationPackInstanceId);
 
         setUpdatedExtensions([updated]);
         logger.debug('MapExtension updated successfully:', updated);

@@ -46,28 +46,57 @@ export type CompiledFunctionScript = {
 export function useMapExtensionsService() {
   const http = useHttp();
 
+  /**
+   * Runs a request again while the server reports that the install's default
+   * mappings are still being copied (409 MAP_DEFAULTS_PENDING). Gives up after
+   * the last attempt and rethrows the error.
+   */
+  async function retryWhileDefaultsPending<T>(request: () => Promise<T>): Promise<T> {
+    const maxAttempts = 6;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await request();
+      } catch (err: any) {
+        const pending = err?.body?.code === 'MAP_DEFAULTS_PENDING';
+        if (!pending || attempt >= maxAttempts) throw err;
+        logger.debug(`Default mappings still copying; retrying (attempt ${attempt})`);
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+  }
+
   async function getMapExtensions(
     args: GetMapExtensionArgs
   ): Promise<EnvironmentMapExtensionCandidate[]> {
     const { integrationPackInstanceId, environmentId, isSingleInstall, signal } = args;
     logger.debug('Fetching map extensions via service', args);
-    return http.get('/map-extensions', {
-      signal,
-      params: {
-        integrationPackInstanceId,
-        environmentId,
-        isSingleInstall,
-      },
-    });
+    return retryWhileDefaultsPending(() =>
+      http.get('/map-extensions', {
+        signal,
+        params: {
+          integrationPackInstanceId,
+          environmentId,
+          isSingleInstall,
+        },
+      })
+    );
   }
 
+  /**
+   * @param integrationPackInstanceId - Lets the server wait for the install's default
+   *   mappings before saving, so the save is not skipped by the seed.
+   */
   async function updateMapExtension (
-    mapExtension: EnvironmentMapExtension
+    mapExtension: EnvironmentMapExtension,
+    integrationPackInstanceId?: string
   ): Promise<EnvironmentMapExtension> {
     logger.debug('updating map extension via service', mapExtension);
-    return http.post('/map-extensions/update', {
-      mapExtension
-    });
+    return retryWhileDefaultsPending(() =>
+      http.post('/map-extensions/update', {
+        mapExtension,
+        ...(integrationPackInstanceId ? { integrationPackInstanceId } : {}),
+      })
+    );
   }
 
   async function dynamicBrowseMapExtensions(

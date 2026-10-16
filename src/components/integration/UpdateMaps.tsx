@@ -269,7 +269,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
           ExtendedMappings: { Mapping: newMappings },
         },
       };
-      await updateMapExtensions(updatedExtension);
+      await updateMapExtensions(updatedExtension, integration.id);
       emitEmbedKitEvent(
         'map.extensions.updated',
         {
@@ -351,7 +351,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         },
       };
 
-      await updateMapExtensions(updatedExtension);
+      await updateMapExtensions(updatedExtension, integration.id);
       emitEmbedKitEvent(
         'map.extensions.updated',
         {
