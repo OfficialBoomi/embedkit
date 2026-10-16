@@ -6,12 +6,22 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.7.3-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.7.4-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
 
 ### All Releases
+
+<details open>
+  <summary><strong>v1.7.4</strong>: Republish of 1.7.3 so the CDN package carries the correct bundle</summary>
+
+  **Upgrade notes**
+  - **Same UI code as 1.7.3.** `@boomi/embedkit` 1.7.4 contains no code changes from 1.7.3. Nothing changes for apps that install the npm package.
+  - **CDN users: move to `@boomi/embedkit-cdn` 1.7.4.** `@boomi/embedkit-cdn` 1.7.3 was published with older bundle files (without the dialog handlers or the 1.7.2 and 1.7.3 Map Fields changes) and should not be used. If you load the CDN through jsDelivr or unpkg without a version, you receive the correct files once 1.7.4 is the `latest` release. If you pin a version, change it to 1.7.4.
+  - The 1.7.3 changes below are all in 1.7.4.
+
+</details>
 
 <details open>
   <summary><strong>v1.7.3</strong>: Dialog handlers for your own confirm, alert and toast dialogs; Map Fields shows errors when a credential check fails</summary>
