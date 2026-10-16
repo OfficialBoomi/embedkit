@@ -14,17 +14,11 @@
 ### All Releases
 
 <details open>
-  <summary><strong>v1.7.2</strong> — Republish of 1.7.1 with its build output</summary>
-
-  - 🐛 **1.7.1 was published without `dist/`** — The npm package for 1.7.1 contained no build output, so importing `@boomi/embedkit` (or `@boomi/embedkit/index.css`) failed. 1.7.2 is the same code as 1.7.1 with the full build. Upgrade from 1.7.1 to 1.7.2; everything in the 1.7.1 notes below applies. The CDN bundle (`@boomi/embedkit-cdn`, `cdn.boomi.space`) goes straight from 1.7.0 to 1.7.2.
-
-</details>
-
-<details open>
-  <summary><strong>v1.7.1</strong> — Map Fields: a map picker, an ordered function stack and search; integrations list fix for large account groups</summary>
+  <summary><strong>v1.7.2</strong> — Map Fields: a map picker, an ordered function stack and search; integrations list fix for large account groups; default mappings for multi-install packs</summary>
 
   **Upgrade notes**
-  - **Server first for the list fix:** deploy `embedkit-server` **1.4.1** (built on `@boomi/embedkit-sdk` **1.5.1**). The large-account-group fix is entirely on the server; the UI needs no change for it.
+  - **Republished from 1.7.1:** the npm package for 1.7.1 contained no build output, so importing `@boomi/embedkit` (or `@boomi/embedkit/index.css`) failed. 1.7.2 is the same UI code as 1.7.1 with the full build. Upgrade from 1.7.1 to 1.7.2. The CDN bundle (`@boomi/embedkit-cdn`, `cdn.boomi.space`) goes straight from 1.7.0 to 1.7.2.
+  - **Server first for the server fixes:** deploy `embedkit-server` **1.4.2** (built on `@boomi/embedkit-sdk` **1.5.2**). The large-account-group fix and the default-mapping fixes below are entirely on the server; the UI needs no change for them. This release does not change the EmbedKit UI's own `@boomi/embedkit-sdk` dependency.
   - The Map Fields changes apply to every embed after upgrading the UI / CDN bundle; they need no server change.
 
   **Changes for every embed** (no opt-in)
@@ -37,6 +31,13 @@
   - 🐛 **Integrations list failed for account groups with more than 100 packs** — Since embedkit-server 1.4.0 (SDK 1.5.0), `GET /api/v1/integration-packs` and the Add Integration catalog returned `400 Bad Request` for such groups: the platform rejects paging (`queryMore`) for account-group pack links. SDK 1.5.1 keeps the first page, as before 1.4.0, and logs a warning. Fetching links past the first 100 is tracked separately.
   - 🐛 **Maps on the same objects mixed up their state** — Two maps whose source and destination object types matched shared one entry in Map Fields, so React reported duplicate keys and edits on one tab could show on the other. Each map is now keyed by its own extension id.
   - 🐛 **Switching maps left the old canvas** — Selecting another map now starts a fresh canvas for it instead of keeping the previous selection and lines.
+
+  **Server and SDK changes** (`embedkit-server` 1.4.2, `@boomi/embedkit-sdk` 1.5.2)
+  - 🐛 **Default mappings on multi-install packs** — The install-time seed failed with `ComponentId ... is invalid` for maps with a user-defined default, because each instance's process id matched no publisher component. The id is now mapped back to the publisher's process, and installed process names (`<pack> - <process>`) are matched correctly.
+  - 🐛 **Maps in sub-processes got the wrong defaults** — A map was paired with the wrong map when its process had several maps or when it lived in a sub-process, so its defaults silently failed to seed. Each map is now matched to its own profile and user-defined functions; if no match is found, the seed reports it instead of guessing.
+  - 🐛 **Cross Reference Lookup defaults rejected by the platform** — Default lookup steps were sent in the component-XML shape and failed with `400 Unable to read message body`. They are now sent in the platform's shape.
+  - 🐛 **Maps that need a browse session no longer fail the install** — Maps whose profiles must be browsed (for example an LDAP password) are skipped at install with a clear reason instead of a platform `500`. Their defaults are copied in when the user browses the map (`mapDefaultsSeed` on the browse response). The browse itself never fails because of the seed.
+  - 🐛 **Qualified default mappings no longer fail a map** — Defaults on qualified paths (such as `Address[Name='Work']/City`) have no node in the extension profile, so they are left out and reported as omitted. The rest of the map's defaults are still seeded.
 
 </details>
 
@@ -90,7 +91,7 @@
   - 🐛 **Schedules error notice can be dismissed** — The close (x) on the "Error Updating Schedules" notice did nothing. It now closes the notice.
 
   **Known issues**
-  - ⚠️ **Default mappings not copied for some maps** — On installing a pack whose maps use the *LDAP (Retired)* connector, two maps failed to receive the publisher's default mappings (platform 500 and 400). The install itself succeeds and the result is reported in `map.defaults.seeded`. Under investigation.
+  - ⚠️ **Default mappings not copied for some maps** — On installing a pack whose maps use the *LDAP (Retired)* connector, two maps failed to receive the publisher's default mappings (platform 500 and 400). The install itself succeeds and the result is reported in `map.defaults.seeded`. 1.7.2's server fixes target this case; confirm on a fresh install of that pack before treating it as resolved.
   - ⚠️ **Single-install connection save** — Loading and editing single-install connections is verified; saving is still being tested.
 
 </details>
