@@ -20,7 +20,7 @@ import Sidebar from './SideBar';
 import MainChat from './MainChat';
 import ConfigureAgent from './ConfigureAgent';
 import ToastNotification from '../ui/ToastNotification';
-import SwalNotification from '../ui/SwalNotification';
+import { useDialogs } from '../../hooks/useDialogs';
 import { usePlugin } from '../../context/pluginContext';
 import { FiSettings as Settings } from 'react-icons/fi';
 
@@ -38,7 +38,6 @@ function createMountSessionId(): string {
 
 const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, onHeaderActionsChange }) => {
   const { boomiConfig } = usePlugin();
-  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [isConfigureSettings, setIsConfigureSettings] = useState(false);
   const [showUpdateToast, setShowUpdateToast] = useState(false);
 
@@ -111,6 +110,36 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
   const showConfigure = !isBoomiDirect && (mustConfigure || isConfigureSettings);
   const ranRef = useRef(false);
   const deletingRef = useRef(false);
+  const { confirm } = useDialogs('Agent');
+  // One confirmation at a time: ignores a second delete click while a dialog is open.
+  const confirmingRef = useRef(false);
+  // A host dialog can stay open while the user switches chats, so delete with the
+  // latest session handlers when the answer arrives, not the ones from the click.
+  const latestRef = useRef({ deleteSession });
+  latestRef.current = { deleteSession };
+
+  const requestDelete = async (sessionId: string) => {
+    if (confirmingRef.current || deletingRef.current) return;
+    confirmingRef.current = true;
+    try {
+      const confirmed = await confirm({
+        title: 'Are you sure?',
+        description: 'This action cannot be undone.',
+        confirmLabel: 'Yes, delete it!',
+        cancelLabel: 'No, cancel',
+        destructive: true,
+      });
+      if (!confirmed) return;
+      deletingRef.current = true;
+      try {
+        await latestRef.current.deleteSession(sessionId);
+      } finally {
+        deletingRef.current = false;
+      }
+    } finally {
+      confirmingRef.current = false;
+    }
+  };
 
 
   const onUpdateCompleted = async () => {
@@ -183,30 +212,6 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
 
   return (
     <>
-      {confirmingDelete && (
-        <SwalNotification
-          key={confirmingDelete}
-          type="warning"
-          title="Are you sure?"
-          description="This action cannot be undone."
-          showCancel
-          confirmButtonText="Yes, delete it!"
-          cancelButtonText="No, cancel"
-          onConfirm={async () => {
-            if (deletingRef.current) return;
-            deletingRef.current = true;
-            const deleted = confirmingDelete!;
-            try {
-              setConfirmingDelete(null);
-              await deleteSession(deleted);
-            } finally {
-              deletingRef.current = false;
-            }
-          }}
-          onCancel={() => setConfirmingDelete(null)}
-        />
-      )}
-
       <div
         className="boomi-agent-workspace w-full h-full min-h-0 overflow-hidden grid"
         style={{
@@ -237,7 +242,7 @@ const AgentChatGPTLayout: React.FC<AgentChatGPTLayoutProps> = ({ integration, on
               }
             }}
             onDelete={(sid) => {
-              if (!mustConfigure) setConfirmingDelete(sid);
+              if (!mustConfigure) void requestDelete(sid);
             }}
           />
         )}

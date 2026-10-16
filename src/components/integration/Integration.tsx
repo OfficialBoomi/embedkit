@@ -12,7 +12,7 @@
  * @return {JSX.Element} The rendered integration pack component with controls and execution timeline.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { usePlugin } from '../../context/pluginContext';
 import { componentMap } from '../../main';
 import { ExecutionRecord } from '@boomi/embedkit-sdk';
@@ -21,7 +21,7 @@ import Button from '../ui/Button';
 import ExecutionTimeline from './ExecutionTimeline';
 import AgentActions from '../agent/AgentActions';
 import IntegrationActions from './IntegrationActions';
-import SwalNotification from '../ui/SwalNotification';
+import { useDialogs } from '../../hooks/useDialogs';
 import IntegrationItem from './IntegrationItem';
 import ConnectorStack from './ConnectorStack';
 import { uiVersionAtLeast, UI_VERSIONS } from '../../utils/ui-version';
@@ -69,8 +69,13 @@ const Integration: React.FC<IntegrationProps> = ({
   onViewDetails
 }) => {
   const { setPageIsLoading, boomiConfig } = usePlugin();
-  const [showNotification, setShowNotification] = useState(false);
-  const [showRunNotification, setShowRunNotification] = useState(false);
+  const { confirm } = useDialogs('Integrations');
+  // One confirmation at a time: ignores a second click while a dialog is open.
+  const confirmingRef = useRef(false);
+  // A host dialog can stay open for a while, so act with the latest callbacks when the
+  // answer arrives rather than the ones from the click.
+  const latestRef = useRef({ onDeleteClick, onRunClick, setPageIsLoading });
+  latestRef.current = { onDeleteClick, onRunClick, setPageIsLoading };
   const isSingle = !!integration.installationType && integration.installationType === 'SINGLE';
   const title = isSingle ? integration.integrationPackName : integration.integrationPackOverrideName;
   const isAgent = !!integration.isAgent;
@@ -123,23 +128,41 @@ const Integration: React.FC<IntegrationProps> = ({
   const cardOpensEdit = !isAgent && showEdit && !showEditButton;
   const openEdit = () => onEditClick('ConfigureIntegration', integration);
 
-  const handleDelete = () => setShowNotification(true);
-  const handleRunNow = () => setShowRunNotification(true);
-
-  const handleConfirmDelete = () => {
-    setShowNotification(false);
-    onDeleteClick(integration);
+  const handleDelete = async () => {
+    if (confirmingRef.current) return;
+    confirmingRef.current = true;
+    try {
+      const confirmed = await confirm({
+        title: 'Are you sure?',
+        description: 'This action cannot be undone.',
+        confirmLabel: 'Yes, delete it!',
+        cancelLabel: 'No, cancel',
+        destructive: true,
+      });
+      if (confirmed) latestRef.current.onDeleteClick(integration);
+    } finally {
+      confirmingRef.current = false;
+    }
   };
 
-  const handleConfirmRun = () => {
-    setPageIsLoading(true);
-    setShowRunNotification(false);
-    onRunClick(integration);
-  };
-
-  const handleCancel = () => {
-    setShowNotification(false);
-    setShowRunNotification(false);
+  const handleRunNow = async () => {
+    if (confirmingRef.current) return;
+    confirmingRef.current = true;
+    try {
+      const confirmed = await confirm({
+        title: 'Are you sure?',
+        description: 'This action will start all processes associated with this integration.',
+        confirmLabel: 'Yes, run now!',
+        cancelLabel: 'No, cancel',
+        destructive: false,
+      });
+      if (confirmed) {
+        latestRef.current.setPageIsLoading(true);
+        latestRef.current.onRunClick(integration);
+      }
+    } finally {
+      confirmingRef.current = false;
+    }
   };
 
   // Actions menu for the top row. Clicks and keys inside it never reach the clickable card.
@@ -172,30 +195,6 @@ const Integration: React.FC<IntegrationProps> = ({
 
   return (
     <>
-      {showNotification && (
-        <SwalNotification
-          type="warning"
-          title="Are you sure?"
-          description="This action cannot be undone."
-          showCancel
-          confirmButtonText="Yes, delete it!"
-          cancelButtonText="No, cancel"
-          onConfirm={handleConfirmDelete}
-          onCancel={handleCancel}
-        />
-      )}
-      {showRunNotification && (
-        <SwalNotification
-          type="warning"
-          title="Are you sure?"
-          description="This action will start all processes associated with this integration."
-          showCancel
-          confirmButtonText="Yes, run now!"
-          cancelButtonText="No, cancel"
-          onConfirm={handleConfirmRun}
-          onCancel={handleCancel}
-        />
-      )}
       {viewType === 'off' ? (
         <IntegrationItem
           key={integration.id}

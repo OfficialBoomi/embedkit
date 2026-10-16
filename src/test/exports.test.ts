@@ -30,7 +30,7 @@ describe('package entry point', () => {
   });
 
   it('keeps the core exports', () => {
-    for (const name of ['useEmbedKit', 'EmbedKitProvider', 'BoomiPlugin', 'RenderComponent', 'BoomiEvents']) {
+    for (const name of ['useEmbedKit', 'EmbedKitProvider', 'BoomiPlugin', 'RenderComponent', 'BoomiEvents', 'DialogHandlerRegistry']) {
       expect(typeof (embedkit as Record<string, unknown>)[name]).not.toBe('undefined');
     }
   });

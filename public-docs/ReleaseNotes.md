@@ -14,6 +14,36 @@
 ### All Releases
 
 <details open>
+  <summary><strong>v1.7.3</strong>: Dialog handlers for your own confirm, alert and toast dialogs; Map Fields shows errors when a credential check fails</summary>
+
+  **Upgrade notes**
+  - Dialog handlers are opt-in and UI only: nothing changes until you register a handler, and the built-in dialogs behave exactly as before. No server or SDK change is needed for them.
+  - The Map Fields error messages are UI only: they apply after upgrading the UI / CDN bundle and need no server change.
+  - **Server, recommended:** pair it with the matching `embedkit-server` release (built on the updated `@boomi/embedkit-sdk`). It answers a credential check for an offline runtime after 25 seconds instead of leaving the request to time out, and it no longer returns the typed password in the response. Optional setting: `MAP_BROWSE_TIMEOUT_MS` (default `25000`, `0` turns the limit off).
+
+  **New (opt-in)**
+  - ✅ **Dialog handlers:** Pass `dialogHandlers` to `BoomiPlugin` (or `window.BoomiEmbed` in the CDN embed) with a `confirm`, `alert` and/or `toast` function. EmbedKit calls your function instead of showing its own SweetAlert dialog or toast, so you can use your own component, for example Angular Material's `MatDialog`. For a confirm, EmbedKit waits for your answer and proceeds only when it is strictly `true`; `false`, `undefined`, an error or no answer cancels, and the built-in dialog is never shown as a fallback once a handler is registered.
+  - ✅ **Close your dialog when EmbedKit gives up:** Every confirm and alert request carries an `AbortSignal`. EmbedKit stops waiting after `timeoutMs` (default 120 seconds) and aborts the signal so your dialog can close.
+  - ✅ **`DialogHandlerRegistry`:** `set()`, `get()` and `clear()` register or remove handlers at any time without a reload. Exported from `@boomi/embedkit` and available as `BoomiEmbedKitCdn.DialogHandlerRegistry` in the CDN build.
+  - ✅ **Which actions ask for confirmation:** Delete integration, Run Now, disconnect all mappings, delete transformation and delete agent chat. Each request says whether the action is `destructive`.
+
+  **Changes for every embed** (no opt-in)
+  - ✅ **Map Fields shows credential-check errors:** When checking a connection's password fails (the runtime is offline, the check times out, or a network or server error occurs), the "Credentials required" popup shows a message and keeps what you typed. Save is disabled while a check is running, and nothing is retried automatically. If the maps fail to load, Map Fields shows "Could not load maps" with a **Try again** button instead of "No Maps Found", and a failed map save shows a readable error.
+  - ✅ **`errorDetail` from `useFetchMapExtensions`:** The hook also returns the underlying error, which can carry an HTTP `status` (`0` means no response arrived). Existing fields are unchanged.
+  - ✅ **Confirmations open from the click:** Delete, Run Now, disconnect and delete-transformation confirmations are now opened by the click itself, so only one is open at a time and a second click while one is open is ignored. Confirmations in the mapping canvases act on the map as it is when you answer, not as it was when the dialog opened. The dialog looks and behaves the same.
+
+  **Bug fixes**
+  - 🐛 **Typed credentials were exposed after a failed check:** The values entered in the credentials popup were written to the browser console (production builds too) and, with an older server, returned in the check's response. The UI now logs only how many checks failed; the matching server stops returning them.
+
+  **Server and SDK changes** (`embedkit-server`, `@boomi/embedkit-sdk`)
+  - 🐛 **Execution History now shows the newest runs:** For integrations with many runs, the history could stop at an old date and showed at most 30 runs per pack. It now returns the newest 500 runs per integration pack, newest first, with no gaps or duplicates when runs share the same second. Hosted embeds get this when the server is updated; no UI upgrade is needed. If you run your own server, update `embedkit-server` and `@boomi/embedkit-sdk`. Optional settings: `EXECUTION_HISTORY_MAX_RUNS` (default `500`) and `EXECUTION_HISTORY_CACHE_SECONDS` (default `10`, `0` turns the cache off).
+  - ✅ **SDK response fields:** `ExecutionSummaryRecordService` results can include the optional fields `totalFound`, `capped`, `maxRuns` and `partial`. Existing fields are unchanged. The default `maxRuns` for direct SDK callers changes from 30 to 500.
+
+  See [Dialog Handlers](./ConfigurationReference.md#11-dialog-handlers) for the request fields, the failure rules and examples.
+
+</details>
+
+<details open>
   <summary><strong>v1.7.2</strong> — Map Fields: a map picker, an ordered function stack and search; integrations list fix for large account groups; default mappings for multi-install packs</summary>
 
   **Upgrade notes**

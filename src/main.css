@@ -1521,7 +1521,7 @@
     padding: 0.75rem;
   }
 
-  /* ===== SweetAlert2 (SwalNotification) ===== */
+  /* ===== SweetAlert2 (confirm and alert dialogs) ===== */
   /* Toast notifications — themeable via --boomi-toast-* custom properties.
      Swal renders toasts on document.body, so these rules + the resolved vars
      are extracted into document scope at runtime (see ToastNotification.tsx). */
@@ -1635,7 +1635,7 @@
   }
 
   /* destructiveVariant (boomiConfig.dialogs) — confirm button swaps to the
-     danger token family instead of primary. See SwalNotification.tsx. */
+     danger token family instead of primary. See swalConfirm.ts. */
   .boomi-swal .swal2-confirm--danger {
     background-color: var(--boomi-btn-danger-bg);
     color: var(--boomi-btn-danger-fg);
@@ -2498,7 +2498,7 @@
                   "Segoe UI Symbol", "Noto Color Emoji";
     --default-font-family: var(--boomi-font);
     /* Callback dialogs/toasts render outside the Shadow DOM (see the
-       SwalNotification/ToastNotification style bridge) and SweetAlert2's own
+       swalConfirm/ToastNotification style bridge) and SweetAlert2's own
        CSS is font-family: inherit, so without this bridged token they picked
        up the HOST PAGE's font instead of --boomi-font. */
     --boomi-dialog-font: var(--boomi-font);
