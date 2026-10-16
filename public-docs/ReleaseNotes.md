@@ -30,10 +30,14 @@
   **Changes for every embed** (no opt-in)
   - ✅ **Map Fields shows credential-check errors:** When checking a connection's password fails (the runtime is offline, the check times out, or a network or server error occurs), the "Credentials required" popup shows a message and keeps what you typed. Save is disabled while a check is running, and nothing is retried automatically. If the maps fail to load, Map Fields shows "Could not load maps" with a **Try again** button instead of "No Maps Found", and a failed map save shows a readable error.
   - ✅ **`errorDetail` from `useFetchMapExtensions`:** The hook also returns the underlying error, which can carry an HTTP `status` (`0` means no response arrived). Existing fields are unchanged.
-  - ✅ **Confirmations open from the click:** Delete, Run Now, disconnect and delete-transformation confirmations are now opened by the click itself, so only one is open at a time and a second click while one is open is ignored. The dialog looks and behaves the same.
+  - ✅ **Confirmations open from the click:** Delete, Run Now, disconnect and delete-transformation confirmations are now opened by the click itself, so only one is open at a time and a second click while one is open is ignored. Confirmations in the mapping canvases act on the map as it is when you answer, not as it was when the dialog opened. The dialog looks and behaves the same.
 
   **Bug fixes**
   - 🐛 **Typed credentials were exposed after a failed check:** The values entered in the credentials popup were written to the browser console (production builds too) and, with an older server, returned in the check's response. The UI now logs only how many checks failed; the matching server stops returning them.
+
+  **Server and SDK changes** (`embedkit-server`, `@boomi/embedkit-sdk`)
+  - 🐛 **Execution History now shows the newest runs:** For integrations with many runs, the history could stop at an old date and showed at most 30 runs per pack. It now returns the newest 500 runs per integration pack, newest first, with no gaps or duplicates when runs share the same second. Hosted embeds get this when the server is updated; no UI upgrade is needed. If you run your own server, update `embedkit-server` and `@boomi/embedkit-sdk`. Optional settings: `EXECUTION_HISTORY_MAX_RUNS` (default `500`) and `EXECUTION_HISTORY_CACHE_SECONDS` (default `10`, `0` turns the cache off).
+  - ✅ **SDK response fields:** `ExecutionSummaryRecordService` results can include the optional fields `totalFound`, `capped`, `maxRuns` and `partial`. Existing fields are unchanged. The default `maxRuns` for direct SDK callers changes from 30 to 500.
 
   See [Dialog Handlers](./ConfigurationReference.md#11-dialog-handlers) for the request fields, the failure rules and examples.
 

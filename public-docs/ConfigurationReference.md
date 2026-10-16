@@ -1976,7 +1976,7 @@ Toasts are short, non-blocking messages such as "Integration deleted successfull
 | `id` | `string` | Unique per request. |
 | `intent` | `'error' \| 'warning' \| 'success' \| 'info' \| 'question'` | The kind of toast. |
 | `message` | `string` | The text to show. |
-| `timerMs` | `number` | How long the built-in toast would stay open, in milliseconds (the `--boomi-toast-timer` value). `0` means it would stay until dismissed, and is also reported when that value is missing or not a positive number. |
+| `timerMs` | `number` | How long the built-in toast would stay open, in milliseconds (the `--boomi-toast-timer` value). When the variable is not set, this is `2000`. `0` is reported when the variable is set to `0` or to something that is not a positive number, and means the built-in toast would stay until dismissed. |
 | `source` | `{ hostId: string; componentKey: string; tenantId?: string }` | Which embed raised the toast. |
 
 ### Timeout and abort
@@ -2085,7 +2085,7 @@ Two Angular details: EmbedKit may call your function from outside Angular's zone
 
 ### Types
 
-These are exported from `@boomi/embedkit` (and, in the CDN build, from the `BoomiEmbedKitCdn` global): `DialogHandlers`, `ConfirmRequest`, `AlertRequest`, `ToastRequest`, `DialogIntent`, `DialogSource` and the `DialogHandlerRegistry` object.
+The types `DialogHandlers`, `ConfirmRequest`, `AlertRequest`, `ToastRequest`, `DialogIntent` and `DialogSource` are exported from `@boomi/embedkit` for TypeScript. The `DialogHandlerRegistry` object is exported from `@boomi/embedkit` too, and in the CDN build it is on the `BoomiEmbedKitCdn` global. The CDN build has no types, so only the registry is available there.
 
 ---
 
