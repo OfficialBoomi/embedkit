@@ -27,7 +27,8 @@ import logger from '../../logger.service';
  *   hasMaps: boolean,
  *   fetchMapExtensions: () => Promise<void>,
  *   isLoading: boolean,
- *   error: string | null
+ *   error: string | null,
+ *   errorDetail: unknown
  * }}
  *   Hook API including fetched maps (when not short-circuited), a boolean indicating if any maps exist,
  *   a refetch method, and request state flags.
@@ -42,6 +43,8 @@ export const useFetchMapExtensions = () => {
   const [hasMaps, setHasMaps] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  /** The error that produced `error` (it can carry an HTTP `status`), or null. */
+  const [errorDetail, setErrorDetail] = useState<unknown>(null);
   const { getMapExtensions } = useMapExtensionsService();
 
   /**
@@ -63,6 +66,7 @@ export const useFetchMapExtensions = () => {
   ) => {
     setIsLoading(true);
     setError(null);
+    setErrorDetail(null);
 
     logger.debug('fetchMapExtensions called', { integrationPackInstanceId, environmentId, isSingleInstall });
 
@@ -95,10 +99,11 @@ export const useFetchMapExtensions = () => {
         'Code [2004] - Unknown error fetching maps';
       logger.error('Failed to fetch maps:', message);
       setError(message);
+      setErrorDetail(err);
     } finally {
       setIsLoading(false);
     }
   }, [getMapExtensions]);
 
-  return { maps, hasMaps, hasCandidates, mapCandidates, fetchMapExtensions, isLoading, error };
+  return { maps, hasMaps, hasCandidates, mapCandidates, fetchMapExtensions, isLoading, error, errorDetail };
 };
