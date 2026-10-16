@@ -11,6 +11,9 @@ import { useHttp } from './http';
 import logger from '../logger.service';
 import { map } from 'zod';
 
+/** How long a credential check may run before the client gives up (just over the hosted server's 30 s limit). */
+export const DYNAMIC_BROWSE_TIMEOUT_MS = 35_000;
+
 export type GetMapExtensionArgs = {
   integrationPackInstanceId: string;
   environmentId: string;
@@ -71,11 +74,29 @@ export function useMapExtensionsService() {
     args: DynamicBrowseArgs
   ): Promise<BrowseCandidateResponse> {
     const { candidates, signal } = args;
-    logger.debug('Dynamically browsing candidates via service', args);
-    return http.post('/map-extensions/dynamic-browse', {
-      signal,
-      candidates
-    });
+    // Never log the candidates here: they carry the values the user just typed.
+    logger.debug('Dynamically browsing candidates via service', { count: candidates.length });
+
+    // Give up after a fixed time so the caller can show an error instead of waiting forever.
+    // The caller's own signal (if any) aborts the request too.
+    const controller = new AbortController();
+    const onCallerAbort = () => controller.abort(signal?.reason);
+    if (signal?.aborted) onCallerAbort();
+    signal?.addEventListener('abort', onCallerAbort);
+    const timer = setTimeout(
+      () => controller.abort(new DOMException('Request timed out', 'TimeoutError')),
+      DYNAMIC_BROWSE_TIMEOUT_MS
+    );
+    try {
+      return await http.post<BrowseCandidateResponse>(
+        '/map-extensions/dynamic-browse',
+        { candidates },
+        { signal: controller.signal }
+      );
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onCallerAbort);
+    }
   }
 
   async function mapFunctionBrowse(

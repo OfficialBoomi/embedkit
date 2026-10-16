@@ -89,7 +89,7 @@ const RedisAdmin: React.FC<RedisAdminProps> = ({ componentKey }) => {
   const [revealKeyValue, setRevealKeyValue] = useState(false);
   const revealTimeoutRef = useRef<number | null>(null);
   // Hidden anchor — gives us a node to walk up to the Shadow root so the
-  // shared style bridge (SwalNotification.tsx) can resolve the active theme.
+  // shared style bridge (swalStyleBridge.ts) can resolve the active theme.
   const swalAnchorRef = useRef<HTMLSpanElement>(null);
 
   const swalModal = useMemo(

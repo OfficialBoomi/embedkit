@@ -26,6 +26,7 @@ import type { SweetAlertPosition } from 'sweetalert2';
 import { usePlugin } from '../../context/pluginContext';
 import { slugifyHostId } from '../../utils/text';
 import { injectToastStyles, removeToastStyles, resolveHost, readVar } from '../../utils/toastStyleBridge';
+import { hasHandler, notifyToast } from '../../dialogs.service';
 
 type ToastType = 'error' | 'warning' | 'success' | 'info' | 'question';
 
@@ -49,9 +50,15 @@ const FALLBACK_POSITION: SweetAlertPosition = 'top';
 const FALLBACK_TIMER = 2000;
 
 const ToastNotification: React.FC<ToastNotificationProps> = ({ type, content }) => {
-  const { boomiConfig, hostId } = usePlugin();
+  const { boomiConfig, hostId, componentKey, tenantId } = usePlugin();
   const hostSlug = slugifyHostId(hostId);
   const anchorRef = useRef<HTMLSpanElement>(null);
+  // The toast already handed to a host `toast` handler, so a config change that
+  // re-runs the effect does not notify the host a second time.
+  const notifiedRef = useRef<string | null>(null);
+  // Read inside the effect through a ref so the effect keeps its original dependencies.
+  const sourceRef = useRef({ hostId, componentKey, tenantId });
+  sourceRef.current = { hostId, componentKey, tenantId };
 
   useEffect(() => {
     const resolved = resolveHost(anchorRef.current);
@@ -66,6 +73,27 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({ type, content }) 
     const position = readVar(computed, '--boomi-toast-position', FALLBACK_POSITION) as SweetAlertPosition;
     const timerRaw = Number(readVar(computed, '--boomi-toast-timer', String(FALLBACK_TIMER)));
     const timer = Number.isFinite(timerRaw) && timerRaw > 0 ? timerRaw : undefined;
+
+    // A host-registered toast handler replaces the built-in toast. It is
+    // fire-and-forget: nothing waits on it and a failure never affects the UI.
+    if (hasHandler('toast')) {
+      const notifyKey = `${type}\u0000${content}`;
+      if (notifiedRef.current !== notifyKey) {
+        notifiedRef.current = notifyKey;
+        notifyToast({
+          intent: type,
+          message: content,
+          timerMs: timer ?? 0,
+          source: {
+            hostId: sourceRef.current.hostId ?? '',
+            componentKey: sourceRef.current.componentKey ?? '',
+            tenantId: sourceRef.current.tenantId,
+          },
+        });
+      }
+      return;
+    }
+    notifiedRef.current = null;
     // Width goes through Swal's own `width` option (not forced CSS) so the
     // toast's grid/icon geometry stays intact.
     const width = readVar(computed, '--boomi-toast-width', '600px');

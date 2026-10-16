@@ -12,11 +12,10 @@
  * re-declares the resolved `--boomi-*` values in document scope so the popup
  * picks up the active theme.
  *
- * Used by both `SwalNotification.tsx` (the themed confirm/alert component)
- * and `RedisAdmin.tsx` (admin console dialogs) so there is exactly one style
+ * Used by both `swalConfirm.ts` (the themed confirm/alert dialog) and
+ * `RedisAdmin.tsx` (admin console dialogs) so there is exactly one style
  * bridge implementation, not two divergent copies. Kept in its own module
- * (rather than exported from SwalNotification.tsx) so importing it doesn't
- * pull in a React component / break Fast Refresh.
+ * so importing it doesn't pull in a React component / break Fast Refresh.
  *
  * `hostSlug` (see `slugifyHostId`) scopes the injected var-declaration block
  * to this mount's own `.boomi-swal--<hostSlug>` class (also added to the

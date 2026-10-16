@@ -1262,6 +1262,39 @@ and shows how to switch the backdrop look:
 > `--boomi-agent-composer-backdrop-bg` only if you want the panel to differ
 > from the conversation background.
 
+### Using Your Own Confirm Dialog
+
+When a user deletes an agent chat from the sidebar, EmbedKit asks "Are you sure?" with its own SweetAlert dialog. To use your own dialog component instead, pass a `dialogHandlers.confirm` function. EmbedKit calls it, waits for the answer, and deletes the chat only when it returns strictly `true`. Anything else (`false`, `undefined`, an error, no answer within 120 seconds) cancels.
+
+```html
+<script>
+  window.BoomiEmbed = {
+    publicToken: "pk_...",
+    agentId:     "project_...",
+    serverBase:  "https://api.boomi.space/api/v1",
+    dialogHandlers: {
+      confirm: (req) =>
+        new Promise((resolve) => {
+          const dialog = myDialog.open({ title: req.title, message: req.description });
+          dialog.onClose((answer) => resolve(answer === true));
+          // EmbedKit gave up waiting: close your dialog too.
+          req.signal.addEventListener("abort", () => dialog.close(), { once: true });
+        }),
+    },
+  };
+</script>
+```
+
+If your handler is not ready when the script loads, start the embed without `dialogHandlers` and register it later. This works at any time, with no reload:
+
+```js
+window.BoomiEmbedKitCdn.DialogHandlerRegistry.set({ confirm: myConfirm });
+// Back to the built-in dialog:
+window.BoomiEmbedKitCdn.DialogHandlerRegistry.clear();
+```
+
+Handlers are optional. With none registered, the built-in dialog is used, exactly as before. The request fields, the full failure rules, the `alert` and `toast` handlers and an Angular example are in [Dialog Handlers](./ConfigurationReference.md#11-dialog-handlers) in the Configuration Reference.
+
 ---
 
 ## 8. Troubleshooting

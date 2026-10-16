@@ -18,6 +18,7 @@ This document is the complete reference for all user-facing configuration option
 8. [CDN / window.BoomiEmbed Configuration](#8-cdn--windowboomiembed-configuration)
 9. [CSS Design Tokens](#9-css-design-tokens)
 10. [Events & Callbacks](#10-events--callbacks)
+11. [Dialog Handlers](#11-dialog-handlers)
 
 ---
 
@@ -43,6 +44,7 @@ BoomiPlugin({
 | `nonce` | `string` | Conditional | One-time-use HMAC nonce from the EmbedKit auth endpoint. Required unless providing `accessToken`. |
 | `accessToken` | `string` | Conditional | Pre-generated access token. Use instead of `nonce` for the public embed / CDN flow. |
 | `boomiConfig` | `PluginUiConfig` | No | Full UI and behavior configuration. See [Section 2](#2-boomiconfigjs--top-level-structure). |
+| `dialogHandlers` | `DialogHandlers` | No | Replaces EmbedKit's built-in confirm, alert and toast dialogs with your own UI. See [Section 11](#11-dialog-handlers). |
 
 ---
 
@@ -699,6 +701,7 @@ Used with the `@boomi/embedkit-cdn` UMD bundle. Set `window.BoomiEmbed` before t
 | `config` | `object` | No | — | Additional configuration forwarded to the EmbedKit Server during session creation. Accepts a full `boomiConfig` object. |
 | `autoInit` | `boolean` | No | `true` | When `true`, initializes automatically on page load from `window.BoomiEmbed`. Set to `false` to initialize manually. |
 | `sessionScope` | `'mount' \| 'multi'` | No | `'mount'` | Chat session persistence. `mount` resets on each page load; `multi` preserves history across loads for the same browser session. |
+| `dialogHandlers` | `DialogHandlers` | No | none | Replaces the built-in confirm, alert and toast dialogs with your own UI. The agent chat delete confirmation is the one confirm dialog the CDN embed can raise. See [Section 11](#11-dialog-handlers). |
 
 ### CDN Embed Types
 
@@ -1554,7 +1557,9 @@ On the 1.6.1 UI these tokens style elements with `.boomi-scroll` (`10px` track, 
 
 ### SweetAlert Dialogs
 
-Confirm/alert dialogs (`SwalNotification`) render on `document.body`, outside the plugin's Shadow DOM, so EmbedKit resolves the active `--boomi-swal-*` values from the host and re-declares them in document scope automatically — same mechanism as Toast Notifications below. Override these like any other token: globally in `cssVars`, per-theme in `cssVarsByTheme`, or per-component-key in `cssVarsByKey`.
+Confirm/alert dialogs render on `document.body`, outside the plugin's Shadow DOM, so EmbedKit resolves the active `--boomi-swal-*` values from the host and re-declares them in document scope automatically, the same mechanism as Toast Notifications below. Override these like any other token: globally in `cssVars`, per-theme in `cssVarsByTheme`, or per-component-key in `cssVarsByKey`.
+
+> To replace these dialogs with your own UI (for example a `MatDialog`), register a [dialog handler](#11-dialog-handlers). Everything below styles EmbedKit's built-in dialog, which is what a user sees when no handler is registered.
 
 | Token | Description | Default |
 |-------|-------------|---------|
@@ -1665,6 +1670,8 @@ cssVars: {
 ```
 
 > Toasts render outside the plugin's Shadow DOM (on `document.body`); EmbedKit resolves the active `--boomi-toast-*` values from the host and applies them automatically, so theme switches and per-key overrides are respected.
+
+> To show toasts with your own notification component instead, register a `toast` [dialog handler](#toast-handler).
 
 ---
 
@@ -1847,6 +1854,238 @@ configuration.
 | `data.comment` | Present only when the user submitted a comment. |
 | `data.prompt` | Text of the user message that produced this response (nearest preceding user message). |
 | `data.response` | The agent response being rated — plain text, rendered HTML, or serialized data, matching what the user saw. |
+
+---
+
+## 11. Dialog Handlers
+
+Before it deletes an integration, runs every process of an integration, disconnects mappings, deletes a transformation or deletes an agent chat, EmbedKit asks "Are you sure?" with its own SweetAlert dialog. If your app already has a dialog component (for example Angular Material's `MatDialog`), register a **dialog handler** and EmbedKit calls your function instead. EmbedKit waits for the answer and continues only when your function returns `true`.
+
+Handlers are opt-in. With no handler registered, nothing changes.
+
+> **Handlers are not events.** [Events](#10-events--callbacks) are a broadcast: any number of listeners, return values ignored, nothing waits. A dialog handler is a single owner that EmbedKit waits for, and its answer decides what EmbedKit does next. You cannot use `onEvent` to approve or block an action.
+
+### Quick start
+
+```js
+import BoomiPlugin from '@boomi/embedkit';
+
+BoomiPlugin({
+  serverBase: 'https://your-embedkit-server.com/api/v1',
+  tenantId: 'YOUR_BOOMI_PARENT_ACCOUNT_ID',
+  nonce: nonceFromServer,
+  boomiConfig: uiConfig,
+  dialogHandlers: {
+    // Return strictly `true` to proceed. Anything else cancels.
+    confirm: async (req) => {
+      const answer = await myDialog.open({
+        title: req.title,
+        message: req.description,
+        okLabel: req.confirmLabel,
+        cancelLabel: req.cancelLabel,
+        danger: req.destructive,
+      });
+      return answer === true;
+    },
+  },
+});
+```
+
+`return answer === true` is all a `confirm` handler needs: it turns `false`, `undefined` (a dialog dismissed with the backdrop or Escape) and anything else into "cancel".
+
+### Registering handlers
+
+| Where | How |
+|-------|-----|
+| npm (Integration method) | `BoomiPlugin({ ..., dialogHandlers })` |
+| CDN embed | `window.BoomiEmbed = { ..., dialogHandlers }`, or `BoomiPublicEmbed({ ..., dialogHandlers })` |
+| Any time, no reload | `DialogHandlerRegistry.set(handlers)` and `DialogHandlerRegistry.clear()` |
+
+`DialogHandlerRegistry` is exported from `@boomi/embedkit`. In the CDN build it is on the UMD global: `window.BoomiEmbedKitCdn.DialogHandlerRegistry`.
+
+| Method | Description |
+|--------|-------------|
+| `set(handlers)` | Registers handlers, replacing any previous set. `set(null)` or `set(undefined)` is the same as `clear()`. Replacing handlers does not cancel a dialog that is already open. |
+| `get()` | The registered handlers, or `null` when the built-in dialogs are in use. |
+| `clear()` | Removes all handlers and returns to the built-in dialogs. A request still waiting on a handler is cancelled and its `signal` is aborted. |
+
+Things to know:
+
+- EmbedKit reads the registry each time a dialog is needed, so registering, replacing or clearing at runtime takes effect on the next dialog. No page reload.
+- `BoomiPlugin` and the CDN embed register handlers only when their config contains `dialogHandlers`. A config without it leaves the registry as it is, so several embeds on one page do not clear each other's handlers. Call `DialogHandlerRegistry.clear()` to remove them.
+- The CDN script can start before your framework has built its handler. Start the embed without `dialogHandlers` and call `window.BoomiEmbedKitCdn.DialogHandlerRegistry.set(...)` once your handler exists.
+- `EmbedKitProvider` accepts the same `config` type, so TypeScript allows `dialogHandlers` there, but the provider does not read it and the handlers would be silently ignored. If you mount EmbedKit with `EmbedKitProvider`, register them with `DialogHandlerRegistry.set()` instead.
+- There is exactly one set of handlers per page. Each of `confirm`, `alert` and `toast` is optional and independent: registering only `toast` leaves confirm dialogs on the built-in SweetAlert.
+
+### `confirm`
+
+```ts
+confirm?: (req: ConfirmRequest) => Promise<boolean> | boolean;
+```
+
+EmbedKit proceeds only when the return value (or the resolved value of the returned promise) is strictly `true`.
+
+| `ConfirmRequest` field | Type | Description |
+|------------------------|------|-------------|
+| `id` | `string` | Unique per request. Also appears in EmbedKit's log lines about this request. |
+| `intent` | `'error' \| 'warning' \| 'success' \| 'info' \| 'question'` | The kind of dialog. Today's confirms are all `'warning'`. |
+| `title` | `string` | Dialog title. |
+| `description` | `string` | Dialog message. |
+| `confirmLabel` | `string` | Label for the confirming button. |
+| `cancelLabel` | `string` | Label for the cancelling button. |
+| `destructive` | `boolean` | `true` when the action removes or disconnects something. Use it to style your confirm button (for example Material's `warn` color). |
+| `dismissible` | `{ outsideClick: boolean; escapeKey: boolean }` | Whether the dialog may be closed by clicking outside it or pressing Escape. |
+| `timerMs` | `number` (optional) | Present only when the dialog should close itself after this many milliseconds. |
+| `signal` | `AbortSignal` | Aborted when EmbedKit stops waiting. See [Timeout and abort](#timeout-and-abort). |
+| `source` | `{ hostId: string; componentKey: string; tenantId?: string; componentName?: string }` | Which embed and component raised the dialog. |
+
+Every field except `timerMs` is always filled in, and `timerMs` is present only when a timer applies. EmbedKit never passes your handler an `undefined` for something it needs you to display.
+
+**Which actions call `confirm`:**
+
+| Action | `description` | `confirmLabel` | `destructive` |
+|--------|---------------|----------------|---------------|
+| Delete an integration | `This action cannot be undone.` | `Yes, delete it!` | `true` |
+| Run all processes of an integration | `This action will start all processes associated with this integration.` | `Yes, run now!` | `false` |
+| Disconnect all mappings from a source field | `Disconnecting these mappings cannot be undone.` | `Yes, Disconnect All!` | `true` |
+| Delete a transformation | `Deleting this transformation cannot be undone and will remove all mappings associated with it.` | `Yes, Delete!` | `true` |
+| Delete an agent chat (also in the CDN embed) | `This action cannot be undone.` | `Yes, delete it!` | `true` |
+
+All of them use the title `Are you sure?`, the cancel label `No, cancel`, the intent `'warning'`, and are dismissible by outside click and Escape. EmbedKit sets `destructive` for each action itself. It does not depend on `dialogs.destructiveVariant`, which only styles the built-in dialog.
+
+### `alert`
+
+```ts
+alert?: (req: AlertRequest) => Promise<void> | void;
+```
+
+Resolve (or return) when the user has acknowledged the message. `AlertRequest` has the same fields as `ConfirmRequest` except `cancelLabel` and `destructive`. If your handler throws, rejects or times out, EmbedKit treats the alert as acknowledged and carries on.
+
+EmbedKit's built-in screens do not raise an alert dialog today, so an `alert` handler is not called yet. It is part of the contract so you can register all three handlers once.
+
+### `toast` handler
+
+```ts
+toast?: (req: ToastRequest) => void;
+```
+
+Toasts are short, non-blocking messages such as "Integration deleted successfully!". With a `toast` handler registered, EmbedKit does not show its own toast: it calls your function once per toast and moves on. Nothing waits for it, and a handler that throws or rejects is logged and ignored.
+
+| `ToastRequest` field | Type | Description |
+|----------------------|------|-------------|
+| `id` | `string` | Unique per request. |
+| `intent` | `'error' \| 'warning' \| 'success' \| 'info' \| 'question'` | The kind of toast. |
+| `message` | `string` | The text to show. |
+| `timerMs` | `number` | How long the built-in toast would stay open, in milliseconds (the `--boomi-toast-timer` value). When the variable is not set, this is `2000`. `0` is reported when the variable is set to `0` or to something that is not a positive number, and means the built-in toast would stay until dismissed. |
+| `source` | `{ hostId: string; componentKey: string; tenantId?: string }` | Which embed raised the toast. |
+
+### Timeout and abort
+
+`timeoutMs` (default `120000`, that is 120 seconds) is the longest EmbedKit waits for a `confirm` or `alert` handler. Set it next to the handlers:
+
+```js
+dialogHandlers: { timeoutMs: 60000, confirm: myConfirm }
+```
+
+A value that is not a positive number falls back to the default, and a value above `2147483647` (about 24.8 days, the longest delay a browser timer accepts) is capped at that limit. When the time runs out, EmbedKit cancels the action, logs that the request was abandoned, ignores any answer that arrives later, and **aborts `req.signal`**. Listen for that signal to close your own dialog so it does not stay on screen after EmbedKit has moved on:
+
+```js
+confirm: (req) =>
+  new Promise((resolve) => {
+    const dialog = myDialog.open({ title: req.title, message: req.description });
+    dialog.onClose((answer) => resolve(answer === true));
+    req.signal.addEventListener('abort', () => dialog.close(), { once: true });
+  }),
+```
+
+The signal is also aborted when `DialogHandlerRegistry.clear()` is called while a request is waiting.
+
+### Failure rules
+
+A handler can never leave EmbedKit stuck or acting on a bad answer.
+
+| Situation | Outcome |
+|-----------|---------|
+| No `confirm` handler registered | The built-in SweetAlert dialog is shown, unchanged. The only case where SweetAlert renders. |
+| Handler returns or resolves strictly `true` | Proceed. |
+| Handler returns or resolves `false`, `undefined` (for example Material's `afterClosed()` after a backdrop click or Escape), `null`, or any other value that is not `true` | Cancel. |
+| Handler throws, or its promise rejects | Cancel. The error is logged with the request `id`. |
+| Handler never answers | Cancel after `timeoutMs`. Logged as abandoned, and `req.signal` is aborted. A late answer is ignored, so nothing is deleted after the fact. |
+| Any of the failures above | **The built-in dialog is never shown as a fallback once a handler is registered.** |
+| `alert` handler fails or times out | Logged and treated as acknowledged. |
+| `toast` handler fails | Logged and ignored. |
+
+### Examples
+
+**Plain JavaScript with `window.confirm`** (enough to prove the wiring):
+
+```js
+BoomiPlugin({
+  // ...serverBase, tenantId, nonce, boomiConfig
+  dialogHandlers: {
+    confirm: (req) => window.confirm(`${req.title}\n${req.description}`),
+  },
+});
+```
+
+**CDN embed, registered after your framework is ready:**
+
+```html
+<script>
+  window.BoomiEmbed = { publicToken: 'pk_...', agentId: 'project_...', mountId: 'boomi-agent', serverBase: 'https://api.boomi.space/api/v1' };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@boomi/embedkit-cdn/embedkit-cdn.umd.js" async></script>
+<script>
+  // Later, once your own dialog service exists:
+  window.BoomiEmbedKitCdn.DialogHandlerRegistry.set({
+    confirm: (req) => myDialogService.confirm(req.title, req.description).then((ok) => ok === true),
+  });
+  // And to go back to the built-in dialogs, with no reload:
+  // window.BoomiEmbedKitCdn.DialogHandlerRegistry.clear();
+</script>
+```
+
+**Angular Material `MatDialog`:**
+
+```ts
+import { Component, NgZone } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { firstValueFrom } from 'rxjs';
+import BoomiPlugin from '@boomi/embedkit';
+import type { ConfirmRequest } from '@boomi/embedkit';
+import { ConfirmDialogComponent } from './confirm-dialog.component';
+
+@Component({ selector: 'app-embed', template: '<div id="boomi-host"></div>' })
+export class EmbedComponent {
+  constructor(private dialog: MatDialog, private zone: NgZone) {}
+
+  start(nonce: string) {
+    BoomiPlugin({
+      serverBase: '/api/v1',
+      tenantId: 'YOUR_BOOMI_PARENT_ACCOUNT_ID',
+      nonce,
+      dialogHandlers: {
+        confirm: (req: ConfirmRequest) =>
+          this.zone.run(async () => {
+            const ref = this.dialog.open(ConfirmDialogComponent, {
+              data: req, // title, description, labels, destructive
+              disableClose: !req.dismissible.outsideClick || !req.dismissible.escapeKey,
+            });
+            req.signal.addEventListener('abort', () => ref.close(), { once: true });
+            const result = await firstValueFrom(ref.afterClosed());
+            return result === true; // afterClosed() emits undefined on backdrop or Escape
+          }),
+      },
+    });
+  }
+}
+```
+
+Two Angular details: EmbedKit may call your function from outside Angular's zone, so `NgZone.run` makes the dialog open with change detection working; and `afterClosed()` emits `undefined` when the user dismisses with the backdrop or Escape, which `result === true` correctly treats as cancel.
+
+### Types
+
+The types `DialogHandlers`, `ConfirmRequest`, `AlertRequest`, `ToastRequest`, `DialogIntent` and `DialogSource` are exported from `@boomi/embedkit` for TypeScript. The `DialogHandlerRegistry` object is exported from `@boomi/embedkit` too, and in the CDN build it is on the `BoomiEmbedKitCdn` global. The CDN build has no types, so only the registry is available there.
 
 ---
 

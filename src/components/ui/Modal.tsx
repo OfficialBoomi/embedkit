@@ -27,6 +27,7 @@ import { AiOutlineClose } from 'react-icons/ai';
  * @property {React.ReactNode} children - The content to display inside the modal body.
  * @property {() => void} onClose - Callback invoked when the modal is closed.
  * @property {() => void} [onSubmit] - Optional callback invoked when the modal's submit action is triggered.
+ * @property {boolean} [isSubmitting=false] - Disables the submit button while a submit is in flight.
  * @property {string} [submitLabel='Submit'] - Optional label for the submit button.
  * @property {'default' | 'wide' | 'catalog'} [size='default'] - Controls the modal width.
  *   `'wide'` is intended for content-heavy modals such as the agent
@@ -40,6 +41,8 @@ interface ModalProps {
   children: React.ReactNode;
   onClose?: () => void;
   onSubmit?: () => void;
+  /** While true the submit button is disabled so the action cannot be sent twice. */
+  isSubmitting?: boolean;
   submitLabel?: string;
   showSaveButton?: boolean;
   showCancelButton?: boolean;
@@ -53,6 +56,7 @@ const Modal: React.FC<ModalProps> = ({
   children,
   onClose,
   onSubmit,
+  isSubmitting = false,
   showSaveButton = true,
   showCancelButton = true,
   submitLabel = 'Submit',
@@ -111,6 +115,7 @@ const Modal: React.FC<ModalProps> = ({
                 primary={true}
                 showIcon={false}
                 label={submitLabel}
+                isLoading={isSubmitting}
                 onClick={onSubmit}
               />
             )}

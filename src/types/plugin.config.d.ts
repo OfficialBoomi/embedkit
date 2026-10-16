@@ -9,6 +9,7 @@ import type { Ai } from './ai';
 import type { Oauth2 } from './ouath2';
 import type { PluginUiConfig } from './plugin-ui.config';
 import type { EmbedKitEvent } from '../events.service';
+import type { DialogHandlers } from './dialog-handlers';
 
 export type PluginConfig = {
   /** The tenantId for CORS on the server. This is typically your boomi parent account Id */
@@ -32,4 +33,11 @@ export type PluginConfig = {
    * with BoomiEvents.on('*', handler).
    */
   onEvent?: (event: EmbedKitEvent) => void;
+
+  /**
+   * Optional handlers that replace EmbedKit's built-in confirm, alert and toast
+   * dialogs with the host's own UI. Unlike `onEvent`, `confirm` and `alert` are
+   * awaited. When omitted, the built-in dialogs are used.
+   */
+  dialogHandlers?: DialogHandlers;
 };

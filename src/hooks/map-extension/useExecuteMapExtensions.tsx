@@ -89,10 +89,10 @@ export const useExecuteMapExtensions = () => {
           });
         }
 
-        // log the failed candidates and return
+        // log how many failed (never the candidates themselves: they carry typed values) and return
         if (failedCandidates.length > 0) {
           const msg = `Code [4003] - Failed to execute map extensions for ${failedCandidates.length} candidate(s).`;
-          logger.error(msg, failedCandidates);
+          logger.error(msg);
           setExecuteError(msg);
           return failedCandidates;
         }
@@ -103,7 +103,8 @@ export const useExecuteMapExtensions = () => {
         const message = err?.message || 'Unknown error';
         logger.error('Failed to update MapExtension:', message);
         setExecuteError(message);
-        throw new Error(message);
+        // Keep the original error so callers can read its status; its message is unchanged.
+        throw err instanceof Error || err instanceof DOMException ? err : new Error(message);
       } finally {
         setIsExecuting(false);
       }

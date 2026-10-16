@@ -43,11 +43,13 @@ import FieldMappingCanvas from './FieldMappingCanvas';
 import FieldMappingCanvasTree from './FieldMappingCanvasTree';
 import EditMapCandidateForm, { EditMapCandidateFormRef } from './EditMapCandidatesForm';
 import Modal from '../ui/Modal';
+import Notification from '../ui/Notification';
 import Page from '../core/Page';
 import ToastNotification from '../ui/ToastNotification';
 import logger from '../../logger.service';
 import { useMapExtensionsService } from '../../service/mapExtensions.service';
 import { emitEmbedKitEvent } from '../../events.service';
+import { classifyMapError, describeFailedCandidates } from '../../utils/mapErrors';
 
 /**
  * @interface UpdateMapsProps
@@ -90,6 +92,7 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
     hasCandidates,
     mapCandidates,
     error: fetchError,
+    errorDetail: fetchErrorDetail,
     fetchMapExtensions,
   } = useFetchMapExtensions();
   const [activeMapIndex, setActiveMapIndex] = useState(0);
@@ -114,9 +117,19 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
   const { compileFunction } = useMapExtensionsService();
   const editCandidateFormRef = useRef<EditMapCandidateFormRef>(null);
   const [isCandidateModalOpen, setIsCandidateModalOpen] = useState(false);
-  const { executeMapExtensions, updatedCandidates, isExecuting, executeError, extensions } =
+  const { executeMapExtensions, isExecuting, extensions } =
     useExecuteMapExtensions();
   const [showAuthSuccess, setShowAuthSuccess] = useState(false);
+  // Message for the credentials popup when checking the values fails, and a guard so a
+  // double click cannot send the same values twice.
+  const [credentialError, setCredentialError] = useState<string | null>(null);
+  const [isSubmittingCandidates, setIsSubmittingCandidates] = useState(false);
+  const candidateSubmitInFlight = useRef(false);
+  // Same wording as before for plain errors; known HTTP failures get a friendlier message.
+  const describeSaveError = (err: unknown, fallback: string) => {
+    const { kind, message } = classifyMapError(err);
+    return kind === 'unknown' ? (err as { message?: string } | null)?.message || fallback : message;
+  };
   const sourceFields =
     currentMap?.Map?.SourceProfile?.Node?.filter((n) => n.xpath) ?? [];
   const targetFields =
@@ -161,10 +174,15 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
   };
 
 const handleCandidateSubmit = async (): Promise<boolean> => {
+  if (candidateSubmitInFlight.current) return false;
   return runWithLoading(async () => {
     const result = editCandidateFormRef.current?.validateAndSubmit();
     if (!result) return false;
 
+    candidateSubmitInFlight.current = true;
+    setIsSubmittingCandidates(true);
+    setCredentialError(null);
+    const startedAt = Date.now();
     try {
       const failed = await executeMapExtensions(result.candidates, {
         onDefaultsSeeded: (seed) => emitEmbedKitEvent(
@@ -190,6 +208,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
           failed,
           'Please supply valid credentials and try again.'
         );
+        setCredentialError(describeFailedCandidates(failed).message);
         return false;
       }
       emitEmbedKitEvent(
@@ -213,13 +232,13 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
       setShowAuthSuccess(true);
       return true;
     } catch (err) {
-      if (updatedCandidates?.length) {
-        editCandidateFormRef.current?.applyErrorsFromCandidates(
-          updatedCandidates,
-          'Authentication Failed. Please supply valid credentials and try again.'
-        );
-      }
+      // Nothing reached us in time, or the server failed: say so instead of showing nothing.
+      // The values stay in the form and nothing is retried until the user clicks Save again.
+      setCredentialError(classifyMapError(err, Date.now() - startedAt).message);
       return false;
+    } finally {
+      candidateSubmitInFlight.current = false;
+      setIsSubmittingCandidates(false);
     }
   });
 };
@@ -272,7 +291,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         m.id === updatedExtension.id ? updatedExtension : m
       );
 
-    }).catch((err: any) => setApiError(err?.message || 'Failed to update functions'));
+    }).catch((err: any) => setApiError(describeSaveError(err, 'Failed to update functions')));
   };
 
   const handleCanvasFunctionChange = async (
@@ -359,7 +378,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         ...prev,
         [currentMapKey]: updatedMappings,
       }));
-    }).catch((err: any) => setApiError(err?.message || 'Failed to update functions'));
+    }).catch((err: any) => setApiError(describeSaveError(err, 'Failed to update functions')));
   };
 
   const handleCanvasFunctionDelete = async (fn: PositionedFunction) => {
@@ -377,7 +396,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         functionId: fn.id,
         functionName: fn.name,
       });
-    }).catch((err: any) => setApiError(err?.message || 'Failed to delete functions'));
+    }).catch((err: any) => setApiError(describeSaveError(err, 'Failed to delete functions')));
   };
 
   /**
@@ -420,7 +439,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         },
         { mapId: currentMapId, functionId: fn.id, type: fn.raw?.type, warnings: compiled.warnings }
       );
-    }).catch((err: any) => setApiError(err?.message || 'Failed to convert function'));
+    }).catch((err: any) => setApiError(describeSaveError(err, 'Failed to convert function')));
   };
 
   const handleEditSubmit = async (): Promise<boolean> => {
@@ -452,7 +471,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
       setEditFunction(null);
       setIsEditing(false);
     } catch (err: any) {
-      setApiError(err.message || 'Failed to save transformation');
+      setApiError(describeSaveError(err, 'Failed to save transformation'));
     } finally {
       setIsLoading?.(false);
     }
@@ -504,6 +523,8 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
   const showTitle = boomiConfig?.components?.[componentKey]?.updateMaps?.showTitle ?? true;
   const showDescription = boomiConfig?.components?.[componentKey]?.updateMaps?.showDescription ?? true;
 
+  const loadError = fetchError ? classifyMapError(fetchErrorDetail) : null;
+
   const bodyContent = (
     <>
       {showAuthSuccess && <ToastNotification type="success" content={'Authentication Successful. Map has been updated.'} />}
@@ -538,8 +559,10 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
           description="Re-enter your credentials to update the requested map(s)."
           onClose={() => handleCancel()}
           onSubmit={handleCandidateSubmit}
+          isSubmitting={isSubmittingCandidates}
           submitLabel="Save"
         >
+          {credentialError && <Notification type="Error" message={credentialError} />}
           <EditMapCandidateForm
             ref={editCandidateFormRef}
             candidates={mapCandidates}
@@ -551,6 +574,18 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
         <div className="flex justify-center items-center pt-6 m-6">
           <AjaxLoader message="Loading maps..." />
         </div>
+      ) : !maps.length && fetchError ? (
+        <Dialog
+          error={{
+            header: "Could not load maps",
+            message: loadError?.kind === 'unknown' ? fetchError : loadError?.message ?? fetchError,
+            errorType: "error",
+            onClose: onBack ?? (() => {}),
+          }}
+          showActionButton
+          buttonLabel="Try again"
+          onButtonClick={fetchData}
+        />
       ) : !maps.length ? (
         <Dialog
           error={{

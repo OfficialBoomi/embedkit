@@ -17,6 +17,15 @@ export type {
   EmbedKitEventHandler,
   FeedbackEventData,
 } from './events.service';
+export { DialogHandlerRegistry } from './dialogs.service';
+export type {
+  DialogHandlers,
+  DialogIntent,
+  DialogSource,
+  ConfirmRequest,
+  AlertRequest,
+  ToastRequest,
+} from './types/dialog-handlers';
 export { default } from './main';
 export { Components } from './components/registry';
 export type { KnownComponent, ComponentPropsMap } from './components/registry';

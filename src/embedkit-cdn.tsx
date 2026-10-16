@@ -13,6 +13,8 @@ import tailwindCss from './main.css?inline';
 import { uiVersionCss } from './utils/ui-version';
 import logger from './logger.service';
 import { BoomiEvents } from './events.service';
+import { DialogHandlerRegistry } from './dialogs.service';
+import type { DialogHandlers } from './types/dialog-handlers';
 import { getBrowserId } from './utils/browserId';
 
 import Agent from './components/agent/Agent';
@@ -364,6 +366,11 @@ export function BoomiPlugin(config: PluginConfig) {
     unsubscribeConfigOnEvent = BoomiEvents.on('*', config.onEvent);
   }
 
+  // Dialog handlers: a config that carries handlers replaces whatever was registered
+  // before. A config without them leaves the registry alone, so several embeds on one
+  // page do not clear each other's handlers. Use DialogHandlerRegistry.clear() to remove.
+  if (config.dialogHandlers) DialogHandlerRegistry.set(config.dialogHandlers);
+
   if (config.accessToken && typeof window !== 'undefined') {
     window.__BoomiAccessToken = config.accessToken;
   }
@@ -453,6 +460,8 @@ export type PublicEmbedConfig = {
   sessionScope?: 'mount' | 'multi';
   /** Receives every EmbedKit event (feedback, etc.). Pages can also listen for the 'boomi:event' DOM CustomEvent on window. */
   onEvent?: (event: import('./events.service').EmbedKitEvent) => void;
+  /** Replaces the built-in confirm, alert and toast dialogs with the host's own. */
+  dialogHandlers?: DialogHandlers;
 };
 
 type PublicEmbedSessionResponse = {
@@ -647,6 +656,7 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
     accessToken,
     boomiConfig,
     onEvent: cfg.onEvent,
+    dialogHandlers: cfg.dialogHandlers,
   });
 
   AuthManager.get().setCustomRefresher(async () => {
@@ -707,5 +717,14 @@ if (typeof window !== 'undefined') {
 
 export { BoomiEvents, BOOMI_EVENT_NAME } from './events.service';
 export type { EmbedKitEvent, EmbedKitEventType, FeedbackEventData } from './events.service';
+export { DialogHandlerRegistry } from './dialogs.service';
+export type {
+  DialogHandlers,
+  DialogIntent,
+  DialogSource,
+  ConfirmRequest,
+  AlertRequest,
+  ToastRequest,
+} from './types/dialog-handlers';
 
 export default BoomiPublicEmbed;

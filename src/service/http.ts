@@ -11,6 +11,23 @@ export type HttpOptions = {
   params?: Record<string, string | number | boolean | null | undefined>;
 };
 
+/**
+ * Error thrown for a failed request. `message` is the same text callers have always
+ * received. `status` is the HTTP status, or 0 when no response was received at all
+ * (network failure, blocked by CORS, connection dropped).
+ */
+export class HttpError extends Error {
+  readonly status: number;
+  readonly body: unknown;
+
+  constructor(message: string, status: number, body?: unknown) {
+    super(message);
+    Object.setPrototypeOf(this, HttpError.prototype);
+    this.status = status;
+    this.body = body;
+  }
+}
+
 export type HttpClient = {
   get:  <T = unknown>(path: string, opts?: HttpOptions) => Promise<T>;
   post: <T = unknown>(path: string, body?: unknown, opts?: HttpOptions) => Promise<T>;
@@ -25,8 +42,10 @@ export function useHttp(): HttpClient {
     const txt = await res.text().catch(() => '');
     if (!res.ok) {
       let msg = txt || `HTTP ${res.status}`;
+      let body: unknown = txt;
       try {
         const data = JSON.parse(txt);
+        body = data;
         if (typeof data?.error === 'string') {
           msg = data.error;
         }
@@ -35,10 +54,23 @@ export function useHttp(): HttpClient {
           if (issueMsg) msg = issueMsg;
         }
       } catch {} // not JSON — use raw text as-is
-      throw new Error(msg);
+      throw new HttpError(msg, res.status, body);
     }
     try { return txt ? JSON.parse(txt) : null; }
     catch { throw new Error('Malformed JSON'); }
+  }
+
+  /**
+   * Sends a request and turns a fetch network failure into an HttpError with status 0.
+   * Aborts and every other error pass through unchanged.
+   */
+  async function send(call: () => Promise<Response>): Promise<Response> {
+    try {
+      return await call();
+    } catch (e) {
+      if (e instanceof TypeError) throw new HttpError(e.message, 0);
+      throw e;
+    }
   }
 
   function buildUrl(
@@ -68,40 +100,40 @@ export function useHttp(): HttpClient {
       get: async <T>(path: string, opts?: HttpOptions) => {
         await ensureAuth();
         return readJsonOrThrow(
-          await serverApi.get(buildUrl(path, opts?.params), {
+          await send(() => serverApi.get(buildUrl(path, opts?.params), {
             signal: opts?.signal,
             headers: opts?.headers,
-          })
+          }))
         );
       },
 
       post: async <T>(path: string, body?: unknown, opts?: HttpOptions) => {
         await ensureAuth();
         return readJsonOrThrow(
-          await serverApi.post(buildUrl(path, opts?.params), body, {
+          await send(() => serverApi.post(buildUrl(path, opts?.params), body, {
             signal: opts?.signal,
             headers: opts?.headers,
-          })
+          }))
         );
       },
 
       put: async <T>(path: string, body?: unknown, opts?: HttpOptions) => {
         await ensureAuth();
         return readJsonOrThrow(
-          await serverApi.put(buildUrl(path, opts?.params), body, {
+          await send(() => serverApi.put(buildUrl(path, opts?.params), body, {
             signal: opts?.signal,
             headers: opts?.headers,
-          })
+          }))
         );
       },
 
       del: async <T>(path: string, opts?: HttpOptions) => {
         await ensureAuth();
         return readJsonOrThrow(
-          await serverApi.del(buildUrl(path, opts?.params), {
+          await send(() => serverApi.del(buildUrl(path, opts?.params), {
             signal: opts?.signal,
             headers: opts?.headers,
-          })
+          }))
         );
       },
     }),

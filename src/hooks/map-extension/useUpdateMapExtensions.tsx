@@ -76,7 +76,8 @@ export const useUpdateMapExtensions = () => {
         const message = err?.message || 'Unknown error';
         logger.error('Failed to update MapExtension:', message);
         setUpdateError(message);
-        throw new Error(message);
+        // Keep the original error so callers can read its status; its message is unchanged.
+        throw err instanceof Error || err instanceof DOMException ? err : new Error(message);
       } finally {
         setIsUpdating(false);
       }
