@@ -18,6 +18,8 @@ import { uiVersionCss } from './utils/ui-version';
 import logger from './logger.service';
 import { getBrowserId } from './utils/browserId';
 import { BoomiEvents } from './events.service';
+import { DialogHandlerRegistry } from './dialogs.service';
+import type { DialogHandlers } from './types/dialog-handlers';
 
 // components
 import Agent from './components/agent/Agent';
@@ -464,6 +466,11 @@ export function BoomiPlugin(config: PluginConfig) {
     unsubscribeConfigOnEvent = BoomiEvents.on('*', config.onEvent);
   }
 
+  // Dialog handlers: a config that carries handlers replaces whatever was registered
+  // before. A config without them leaves the registry alone, so several embeds on one
+  // page do not clear each other's handlers. Use DialogHandlerRegistry.clear() to remove.
+  if (config.dialogHandlers) DialogHandlerRegistry.set(config.dialogHandlers);
+
   // Auth bootstrapping:
   if (config.accessToken && typeof window !== 'undefined') {
     window.__BoomiAccessToken = config.accessToken;
@@ -571,6 +578,8 @@ export type PublicEmbedConfig = {
   autoInit?: boolean;
   /** Receives every EmbedKit event (feedback, etc.). See BoomiEvents / 'boomi:event'. */
   onEvent?: (event: import('./events.service').EmbedKitEvent) => void;
+  /** Replaces the built-in confirm, alert and toast dialogs with the host's own. */
+  dialogHandlers?: DialogHandlers;
 };
 
 type PublicEmbedSessionResponse = {
@@ -700,6 +709,7 @@ export async function BoomiPublicEmbed(cfg: PublicEmbedConfig) {
     accessToken,
     boomiConfig,
     onEvent: cfg.onEvent,
+    dialogHandlers: cfg.dialogHandlers,
   });
 
   // Public embed sessions are issued without a refresh-token cookie, so the

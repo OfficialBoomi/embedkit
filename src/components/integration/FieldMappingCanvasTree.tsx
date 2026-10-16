@@ -18,7 +18,7 @@ import FunctionStack from './FunctionStack';
 import { MapExtensionsMapping, MapExtensionsNode } from '@boomi/embedkit-sdk';
 import { PositionedFunction } from '../../types/positioned-function';
 import Button from '../ui/Button';
-import SwalNotification from '../ui/SwalNotification';
+import { useDialogs } from '../../hooks/useDialogs';
 import MapSearchRow from './MapSearchRow';
 import logger from '../../logger.service';
 
@@ -165,10 +165,13 @@ const FieldMappingCanvasTree = forwardRef((
   const funcOutputRefs = useRef(new Map<string, HTMLDivElement>());
 
   // notifications
-  const [showNotification, setShowNotification] = useState(false);
-  const [showDeleteNotification, setShowDeleteNotification] = useState(false);
-  const [pendingDeleteSource, setPendingDeleteSource] = useState<string | null>(null);
-  const [pendingDeleteTransformation, setPendingDeleteTransformation] = useState<PositionedFunction | null>(null);
+  const { confirm } = useDialogs('UpdateMaps');
+  // One confirmation at a time: ignores a second click while a dialog is open.
+  const confirmingRef = useRef(false);
+  // A host dialog can stay open for a while, so act on the latest props when the
+  // answer arrives rather than the ones from the click.
+  const latestRef = useRef({ mappings, onMappingChange, onDeleteTransformation });
+  latestRef.current = { mappings, onMappingChange, onDeleteTransformation };
 
   // tree state
   const [collapsedSources, setCollapsedSources] = useState<Set<string>>(new Set());
@@ -230,37 +233,42 @@ const FieldMappingCanvasTree = forwardRef((
     onMappingChange?.(mappings.filter((m) => !(m.fromFunction === fnId && m.fromXPath === String(key))));
   };
 
-  const deleteMappingsBySource = (source: string) => {
-    onMappingChange?.(mappings.filter(m => m.fromXPath !== source));
-  };
-
-  const handleDeleteTransformation = (fn: PositionedFunction) => {
-    setPendingDeleteTransformation(fn);
-    setShowDeleteNotification(true);
-  };
-
-  const handleConfirm = () => {
-    if (pendingDeleteSource) {
-      deleteMappingsBySource(pendingDeleteSource);
-      setPendingDeleteSource(null);
+  const confirmThen = async (opts: Parameters<typeof confirm>[0], onConfirmed: () => void) => {
+    if (confirmingRef.current) return;
+    confirmingRef.current = true;
+    try {
+      if (await confirm(opts)) onConfirmed();
+    } finally {
+      confirmingRef.current = false;
     }
-    setShowNotification(false);
   };
 
-  const handleDeleteConfirm = () => {
-    if (pendingDeleteTransformation) {
-      onDeleteTransformation?.(pendingDeleteTransformation);
-      setPendingDeleteTransformation(null);
-    }
-    setShowDeleteNotification(false);
-  };
+  const handleDeleteTransformation = (fn: PositionedFunction) =>
+    confirmThen(
+      {
+        title: 'Are you sure?',
+        description: 'Deleting this transformation cannot be undone and will remove all mappings associated with it.',
+        confirmLabel: 'Yes, Delete!',
+        cancelLabel: 'No, cancel',
+        destructive: true,
+      },
+      () => latestRef.current.onDeleteTransformation?.(fn)
+    );
 
-  const handleCancel = () => {
-    setPendingDeleteTransformation(null);
-    setPendingDeleteSource(null);
-    setShowNotification(false);
-    setShowDeleteNotification(false);
-  };
+  const handleSourceDelete = (source: string) =>
+    confirmThen(
+      {
+        title: 'Are you sure?',
+        description: 'Disconnecting these mappings cannot be undone.',
+        confirmLabel: 'Yes, Disconnect All!',
+        cancelLabel: 'No, cancel',
+        destructive: true,
+      },
+      () => {
+        const { mappings: current, onMappingChange: change } = latestRef.current;
+        change?.(current.filter((m) => m.fromXPath !== source));
+      }
+    );
 
   const handleTargetSelect = (rawXPath: string) => {
     const targetAlreadyMapped = mappings.some((m) => m.toXPath === rawXPath);
@@ -493,8 +501,7 @@ const FieldMappingCanvasTree = forwardRef((
                   }
 
                   if (mappings.some((m) => eq(m.fromXPath, rawXPath))) {
-                    setPendingDeleteSource(rawXPath);
-                    setShowNotification(true);
+                    void handleSourceDelete(rawXPath);
                   } else {
                     setSelectedSource(rawXPath);
                     setSelectedTarget(null);
@@ -507,7 +514,7 @@ const FieldMappingCanvasTree = forwardRef((
                 {n.isLeaf && isMappedLeaf && side === 'source' && (
                   <span
                     className="boomi-map-pin-badge"
-                    onClick={(e) => { e.stopPropagation(); setPendingDeleteSource(rawXPath!); setShowNotification(true); }}
+                    onClick={(e) => { e.stopPropagation(); void handleSourceDelete(rawXPath!); }}
                     title="Disconnect"
                   >
                     ×
@@ -645,31 +652,6 @@ const FieldMappingCanvasTree = forwardRef((
   /** ───────────────────────── Render ───────────────────────── */
   return (
     <>
-      {showNotification && (
-        <SwalNotification
-          type="warning"
-          title="Are you sure?"
-          description="Disconnecting these mappings cannot be undone."
-          showCancel={true}
-          confirmButtonText="Yes, Disconnect All!"
-          cancelButtonText="No, cancel"
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
-        />
-      )}
-      {showDeleteNotification && (
-        <SwalNotification
-          type="warning"
-          title="Are you sure?"
-          description="Deleting this transformation cannot be undone and will remove all mappings associated with it."
-          showCancel={true}
-          confirmButtonText="Yes, Delete!"
-          cancelButtonText="No, cancel"
-          onConfirm={handleDeleteConfirm}
-          onCancel={handleCancel}
-        />
-      )}
-
       <div
         className="boomi-map-canvas"
         onClick={(e) => {
