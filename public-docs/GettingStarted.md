@@ -218,6 +218,7 @@ async function logout() {
   boomiReady = null;
   await serverLogout();
   DestroyPlugin({ removeHost: true, clearTheme: true, clearAuth: true });
+  // API calls now fail until the next sign-in calls BoomiPlugin(...) with a new nonce (a page reload also works).
 }
 
 /* Call your server logout endpoint to invalidate the session cookie */
@@ -303,7 +304,7 @@ The full end-to-end authentication flow is:
 7. The EmbedKit Plugin exchanges the nonce for a JWT. The JWT has a TTL of 10 minutes — all token refreshes are handled automatically by the EmbedKit.
 8. The EmbedKit Server mints the JWT and a refresh token cookie (`RT Cookie`).
 9. To render an EmbedKit component, call the `RenderComponent` method as described below.
-10. When the user ends their session on your web application, call the EmbedKit logout endpoint to invalidate the server-side session.
+10. When the user ends their session on your web application, call the EmbedKit logout endpoint to invalidate the server-side session. If the user can sign in again without a page reload, start a new session as in steps 3 to 6: get a new nonce from your server and call `BoomiPlugin(...)` with it before you render a component.
 
 ---
 

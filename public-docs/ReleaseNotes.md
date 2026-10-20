@@ -14,6 +14,23 @@
 ### All Releases
 
 <details open>
+  <summary><strong>Unreleased</strong>: Fixes the "Invalid or expired token" error after logging out and back in</summary>
+
+  **Upgrade notes**
+  - UI only: no server or SDK change is needed.
+  - CDN users get the fix when they move to the matching `@boomi/embedkit-cdn` version.
+  - If your app lets a user sign out and back in without reloading the page, start the new session by calling `BoomiPlugin(...)` with a new nonce before you render a component. See [Authentication Flow](./GettingStarted.md#authentication-flow).
+
+  **Changes for every embed** (no opt-in)
+  - ✅ **Logging out clears the in-memory session:** `DestroyPlugin({ clearAuth: true })` now also forgets the access token. Until the next `BoomiPlugin(...)` call starts a new session, API calls fail at once with `MISSING_BEARER`. Before, they kept working with the old token until it expired (up to 10 minutes).
+  - ✅ **No session means a fast error:** When no session can be started (for example the nonce was already used and no refresh cookie is available), the error now appears immediately instead of after about 10 seconds.
+
+  **Bug fixes**
+  - 🐛 **"Invalid or expired token" after signing out and back in:** In an app that signed out and back in without a page reload, a request that started while the new session was still being set up could use the previous, already expired token and fail. The list then stayed in error until the page was reloaded. EmbedKit now waits for the new session, or refreshes an expired token first, before sending a request.
+
+</details>
+
+<details open>
   <summary><strong>v1.7.4</strong>: Republish of 1.7.3 so the CDN package carries the correct bundle</summary>
 
   **Upgrade notes**
