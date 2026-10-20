@@ -14,6 +14,9 @@ type BootstrapOpts = {
 
 type TokenListener   = (tok: string | null) => void;
 
+/** Shown to the user when a request is made with no session. The `code` stays machine readable. */
+const SESSION_ENDED_MESSAGE = 'Your session has ended. Please sign in again.';
+
 class AuthManager {
   private static _instance: AuthManager | null = null;
   static get(): AuthManager {
@@ -166,7 +169,7 @@ class AuthManager {
     const headers = new Headers(init.headers || {});
     if (this.tenantId) headers.set('X-Tenant-Id', this.tenantId);
     if (tok) headers.set('Authorization', `Bearer ${tok}`);
-    if (!tok && !allowAnonymous) throw new Error('MISSING_BEARER');
+    if (!tok && !allowAnonymous) throw Object.assign(new Error(SESSION_ENDED_MESSAGE), { code: 'MISSING_BEARER' });
     return fetch(input, { ...init, headers, credentials: 'include' as const, cache: 'no-store' });
   };
 

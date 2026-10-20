@@ -402,7 +402,7 @@ function resetHost(hostId: HostId) {
  * @param opts.hostId - Host element id to destroy. If omitted, destroys all mounted hosts.
  * @param opts.removeHost - If true, removes the host element from the DOM after reset/unmount.
  * @param opts.clearAuth - If true, dispatches a logout event, clears the in-memory token and calls the server
- *   logout endpoint. Until `BoomiPlugin()` is called again with a new nonce, API calls fail with `MISSING_BEARER`.
+ *   logout endpoint. Until `BoomiPlugin()` is called again with a new nonce, API calls fail with "Your session has ended. Please sign in again." (error code `MISSING_BEARER`).
  *
  * @example
  * ```ts

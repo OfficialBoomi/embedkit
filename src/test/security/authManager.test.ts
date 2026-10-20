@@ -14,6 +14,8 @@ type Internals = {
   subscribeToken: (fn: (t: string | null) => void) => () => void;
 };
 
+const SESSION_ENDED = { code: 'MISSING_BEARER', message: 'Your session has ended. Please sign in again.' };
+
 const nowS = () => Math.floor(Date.now() / 1000);
 const jwt = (exp: number) => {
   const b64 = (o: object) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -141,7 +143,7 @@ describe('AuthManager token handling', () => {
     expect(mgr.refreshTimer).toBeNull();
     expect(seen[seen.length - 1]).toBeNull();
     calls = [];
-    await expect(mgr.fetchWithJwt('/api/v1/list', {})).rejects.toThrow('MISSING_BEARER');
+    await expect(mgr.fetchWithJwt('/api/v1/list', {})).rejects.toMatchObject(SESSION_ENDED);
     expect(calls).toHaveLength(0);
   });
 
@@ -164,7 +166,7 @@ describe('AuthManager token handling', () => {
 
     const started = Date.now();
     const boot = mgr.bootstrap(opts);
-    await expect(mgr.fetchWithJwt('/api/v1/list', {})).rejects.toThrow('MISSING_BEARER');
+    await expect(mgr.fetchWithJwt('/api/v1/list', {})).rejects.toMatchObject(SESSION_ENDED);
     await boot;
 
     expect(Date.now() - started).toBeLessThan(2000);   // not the 10 s timeout
@@ -191,7 +193,7 @@ describe('AuthManager token handling', () => {
     window.dispatchEvent(new CustomEvent('boomi:logout'));
     const started = Date.now();
 
-    await expect(pending).rejects.toThrow('MISSING_BEARER');
+    await expect(pending).rejects.toMatchObject(SESSION_ENDED);
     expect(Date.now() - started).toBeLessThan(2000);
   });
 });

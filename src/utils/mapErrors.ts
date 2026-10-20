@@ -75,7 +75,8 @@ export function classifyMapError(err: unknown, elapsedMs = 0): ClassifiedMapErro
 
   // No status: not an HTTP failure from our client. Keep any message it already has.
   const message = messageOf(err);
-  if (message === 'MISSING_BEARER') {
+  const code = (err as { code?: unknown } | null | undefined)?.code;
+  if (code === 'MISSING_BEARER' || message === 'MISSING_BEARER') {
     return { kind: 'session', message: MAP_ERROR_MESSAGES.session };
   }
   return { kind: 'unknown', message: message || MAP_ERROR_MESSAGES.generic };

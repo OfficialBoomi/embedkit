@@ -22,7 +22,7 @@
   - If your app lets a user sign out and back in without reloading the page, start the new session by calling `BoomiPlugin(...)` with a new nonce before you render a component. See [Authentication Flow](./GettingStarted.md#authentication-flow).
 
   **Changes for every embed** (no opt-in)
-  - ✅ **Logging out clears the in-memory session:** `DestroyPlugin({ clearAuth: true })` now also forgets the access token. Until the next `BoomiPlugin(...)` call starts a new session, API calls fail at once with `MISSING_BEARER`. Before, they kept working with the old token until it expired (up to 10 minutes).
+  - ✅ **Logging out clears the in-memory session:** `DestroyPlugin({ clearAuth: true })` now also forgets the access token. Until the next `BoomiPlugin(...)` call starts a new session, API calls fail at once with the message "Your session has ended. Please sign in again." (the error also carries the code `MISSING_BEARER`). Before, they kept working with the old token until it expired (up to 10 minutes).
   - ✅ **No session means a fast error:** When no session can be started (for example the nonce was already used and no refresh cookie is available), the error now appears immediately instead of after about 10 seconds.
 
   **Bug fixes**
