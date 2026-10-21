@@ -66,12 +66,14 @@ const EnvironmentSelect: React.FC<EnvironmentSelectProps> = ({
   const [selectedOption, setSelectedOption] = useState<Option>(placeholderOption);
   const includeEnvironments = boomiConfig?.components?.[componentKey]?.environmentSelect?.includeEnvironments ?? 'ALL';
   const envId = boomiConfig?.components?.[componentKey]?.environmentSelect?.environmentId ?? null;
+  // Status (runtime ONLINE) is resolved only when the host asks for an online-only list.
+  const onlineOnly = boomiConfig?.components?.[componentKey]?.environmentSelect?.onlineOnly === true;
   const environmentId = null;
 
   const fetchData = async () => {
     try {
-      logger.debug(`EnvironmentSelect: Fetching environments with includeEnvironments=${includeEnvironments} and environmentId=${envId}`);
-      await fetchEnvironments(includeEnvironments, envId);
+      logger.debug(`EnvironmentSelect: Fetching environments with includeEnvironments=${includeEnvironments}, environmentId=${envId}, onlineOnly=${onlineOnly}`);
+      await fetchEnvironments(includeEnvironments, envId, { includeStatus: onlineOnly, onlineOnly });
     } catch (err) {
       logger.error("Failed to fetch environments", err);
     }
