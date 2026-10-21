@@ -36,6 +36,12 @@ import {
   fromMapExtensionsFunctions,
   isConvertibleFunctionType,
 } from '../../utils/ui-utils';
+import {
+  changedFunctions,
+  changedMappings,
+  mergeDefaultFunctions,
+  mergeDefaultMappings,
+} from '../../utils/mapDefaults';
 import EditTransformationsForm, {
   EditTransformationsFormRef,
 } from './EditTransformationsForm';
@@ -252,6 +258,8 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
       };
       if (!currentMapId || !currentMap) return;
       const functions = functionsByMapId[currentMapKey] || [];
+      const defaultFunctions = currentMap?.Map?.DefaultFunctions?.Function ?? [];
+      const defaultMappings = currentMap?.Map?.DefaultMappings?.Mapping ?? [];
 
       const { functions: updatedFunctions } = toMapExtensionsFunctions(functions);
       const updatedExtension: EnvironmentMapExtension = {
@@ -265,8 +273,8 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
           SourceProfile: currentMap?.Map?.SourceProfile ?? { Node: [] },
           SourceProfileExtensions:
             currentMap?.Map?.SourceProfileExtensions ?? { Node: [] },
-          ExtendedFunctions: { Function: updatedFunctions },
-          ExtendedMappings: { Mapping: newMappings },
+          ExtendedFunctions: { Function: changedFunctions(updatedFunctions, defaultFunctions) },
+          ExtendedMappings: { Mapping: changedMappings(newMappings, defaultMappings) },
         },
       };
       await updateMapExtensions(updatedExtension, integration.id);
@@ -312,6 +320,8 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
       };
       if (!currentMapId || !currentMap) return;
       const baseMappings = opts?.mappingsOverride ?? (mappingsByMapId[currentMapKey] || []);
+      const defaultFunctions = currentMap?.Map?.DefaultFunctions?.Function ?? [];
+      const defaultMappings = currentMap?.Map?.DefaultMappings?.Mapping ?? [];
       const { functions: newFunctions, idMap } = toMapExtensionsFunctions(updatedFunctions);
 
       const getFnId = (f: any) =>
@@ -346,8 +356,8 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
           DestinationProfileExtensions: currentMap?.Map?.DestinationProfileExtensions ?? { Node: [] },
           SourceProfile: currentMap?.Map?.SourceProfile ?? { Node: [] },
           SourceProfileExtensions: currentMap?.Map?.SourceProfileExtensions ?? { Node: [] },
-          ExtendedFunctions: { Function: newFunctions },
-          ExtendedMappings: { Mapping: updatedMappings },
+          ExtendedFunctions: { Function: changedFunctions(newFunctions, defaultFunctions) },
+          ExtendedMappings: { Mapping: changedMappings(updatedMappings, defaultMappings) },
         },
       };
 
@@ -491,15 +501,20 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
 
   useEffect(() => {
     if (currentMap && currentMap?.Map && currentMapId) {
+      const defaultFunctions = currentMap.Map?.DefaultFunctions?.Function ?? [];
+      const defaultMappings = currentMap.Map?.DefaultMappings?.Mapping ?? [];
       setFunctionsByMapId((prev) => ({
         ...prev,
         [currentMapKey]: fromMapExtensionsFunctions(
-          currentMap.Map?.ExtendedFunctions?.Function ?? []
+          mergeDefaultFunctions(defaultFunctions, currentMap.Map?.ExtendedFunctions?.Function ?? [])
         ),
       }));
       setMappingsByMapId((prev) => ({
         ...prev,
-        [currentMapKey]: currentMap.Map?.ExtendedMappings?.Mapping ?? [],
+        [currentMapKey]: mergeDefaultMappings(
+          defaultMappings,
+          currentMap.Map?.ExtendedMappings?.Mapping ?? []
+        ),
       }));
     }
   }, [active, currentMap, currentMapId]);

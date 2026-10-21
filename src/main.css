@@ -1177,6 +1177,9 @@
   .boomi-map-fn-stack-header .boomi-map-heading { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .boomi-map-fn-stack-tools { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
   .boomi-map-fn-list { display: flex; flex-direction: column; gap: .5rem; list-style: none; margin: 0; padding: 0; }
+  .boomi-map-fn-hidden-body { display: flex; justify-content: space-between; align-items: center; gap: .75rem; }
+  .boomi-map-fn-hidden-inputs { display: flex; flex-direction: column; gap: .25rem; }
+  .boomi-map-fn-hidden-outputs { display: flex; align-items: center; }
   .boomi-map-card--function { position: relative; width: 100%; transition: box-shadow .15s ease, background-color .15s ease; }
   .boomi-map-fn-header { display: flex; align-items: center; gap: .375rem; min-height: 1.75rem; }
   .boomi-map-fn-grip {
