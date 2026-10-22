@@ -420,8 +420,8 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
 
   const renderScriptEditor = () => (
     <div>
-      <label className="block mb-1 font-semibold">Transformation Script</label>
-      <div className={`h-[200px] relative border rounded ${formErrors.script ? 'border-red-500' : ''}`}>
+      <label className="boomi-form-label">Transformation Script</label>
+      <div className={`boomi-fn-script h-[200px] relative rounded ${formErrors.script ? 'boomi-fn-script--error' : ''}`}>
         <AceEditor
           // Remount when the language changes so the highlighter follows it.
           key={language}
@@ -448,7 +448,7 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
           }}
         />
       </div>
-      {formErrors.script && <p className="text-xs text-red-600 mt-1">{formErrors.script}</p>}
+      {formErrors.script && <p className="boomi-form-error">{formErrors.script}</p>}
     </div>
   );
 
@@ -582,18 +582,23 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
     <>
       {ai && (
         <div className="space-y-2">
-          <label className="block font-semibold">Ask AI to generate transformation</label>
-          <div className="flex gap-2">
+          <label className="boomi-form-label" htmlFor="boomi-ai-prompt">Ask AI to generate transformation</label>
+          <div className="flex gap-2 items-start">
             <textarea
+              id="boomi-ai-prompt"
               rows={2}
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
               placeholder="Describe your transformation..."
-              className="flex-1 border rounded px-2 py-1 resize-y"
+              className="boomi-input flex-1 rounded-md p-2 resize-y"
             />
-            <button
-              type="button"
-              disabled={aiLoading || !aiPrompt.trim()}
+            <Button
+              toggle={false}
+              primary={true}
+              showIcon={false}
+              label={aiLoading ? 'Generating...' : 'Generate'}
+              isLoading={aiLoading}
+              disabled={!aiPrompt.trim()}
               onClick={async () => {
                 const result = await fetchTransformation(aiPrompt, id);
                 if (result) {
@@ -616,10 +621,7 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
                   setFormErrors({ outputField: '', script: '' });
                 }
               }}
-              className=" boomi-btn-primary px-3 py-1 disabled:opacity-50"
-            >
-              {aiLoading ? 'Generating...' : 'Generate'}
-            </button>
+            />
           </div>
           {aiError &&
             <Dialog
@@ -680,9 +682,6 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
           <Button
             toggle={false}
             primary={false}
-            viewLoc="field-mapping-add-transformation"
-            buttonClass="ml-2"
-            onClass="flex items-center gap-1 boomi-btn-secondary"
             showIcon={false}
             label={isScript ? 'Test Script' : 'Test'}
             onClick={handleTest}
@@ -690,38 +689,32 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
         </div>
       )}
       <div className="flex gap-6 mt-4 overflow-x-hidden ">
-        <div
-          className={`w-1/2 border-1 p-2 ${formErrors.outputField ? 'border-red-500 border-2' : ''}`}
-        >
-          <label className="block mb-1 font-semibold">Inputs</label>
+        <div className={`boomi-fn-pins w-1/2 p-2 ${formErrors.outputField ? 'boomi-fn-pins--error' : ''}`}>
+          <label className="boomi-form-label">Inputs</label>
           {isScript && (
             <div className="flex gap-2 items-center mb-2 w-full">
               <input
                 type="text"
                 value={newInputName}
                 onChange={(e) => setNewInputName(e.target.value)}
-                className="border px-2 py-1 rounded w-full"
+                className="boomi-input rounded-md px-2 py-1 w-full"
                 placeholder="Input name"
+                aria-label="New input name"
               />
               <select
                 value={newInputType}
                 onChange={(e) => setNewInputType(e.target.value as typeof DATA_TYPES[number])}
-                className="border px-2 py-1 rounded"
+                className="boomi-select rounded-md px-2 py-1"
+                aria-label="New input type"
               >
                 {DATA_TYPES.map((type) => (
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
-              <button
-                type="button"
-                onClick={addInput}
-                className="px-2 py-1 border boomi-btn-secondary"
-              >
-                Add
-              </button>
+              <Button toggle={false} primary={false} showIcon={false} label="Add" onClick={addInput} />
             </div>
           )}
-          <div className="border rounded max-h-44 overflow-y-auto">
+          <div className="boomi-fn-pins-list rounded max-h-44 overflow-y-auto">
             <div className="flex px-1 py-1.5 boomi-table-header">
               <div className="flex-1">Name</div>
               {canTest && <div className="w-1/2 text-left">Test Input</div>}
@@ -735,7 +728,8 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
                   {canTest && (
                     <input
                       type="text"
-                      className="border px-2 py-1 rounded w-1/2"
+                      aria-label={`Test input for ${inp.name}`}
+                      className="boomi-input rounded-md px-2 py-1 w-1/2"
                       value={inputValues[inp.key] ?? ''}
                       onChange={(e) => setInputValues({ ...inputValues, [inp.key]: e.target.value })}
                     />
@@ -747,9 +741,11 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
                   </div>
                   {isScript && (
                     <button
+                      type="button"
                       onClick={() => handleRemoveInput(idx)}
-                      className="text-red-400 hover:text-red-600 transition ml-2"
+                      className="boomi-fn-pin-remove ml-2"
                       title="Remove input"
+                      aria-label={`Remove input ${inp.name}`}
                     >
                       <AiOutlineDelete size={14} />
                     </button>
@@ -759,29 +755,22 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
             </ul>
           </div>
         </div>
-        <div
-          className={`w-1/2 border-1 p-2 ${formErrors.outputField ? 'border-red-500 border-2' : ''}`}
-        >
-          <label className="block mb-1 font-semibold">Outputs</label>
+        <div className={`boomi-fn-pins w-1/2 p-2 ${formErrors.outputField ? 'boomi-fn-pins--error' : ''}`}>
+          <label className="boomi-form-label">Outputs</label>
           {isScript && (
             <div className="flex gap-2 items-center mb-2">
               <input
                 type="text"
                 value={newOutputName}
                 onChange={(e) => setNewOutputName(e.target.value)}
-                className="border px-2 py-1 rounded w-full"
+                className="boomi-input rounded-md px-2 py-1 w-full"
                 placeholder="Output name"
+                aria-label="New output name"
               />
-              <button
-                type="button"
-                onClick={addOutput}
-                className="px-2 py-1 boomi-btn-secondary"
-              >
-                Add
-              </button>
+              <Button toggle={false} primary={false} showIcon={false} label="Add" onClick={addOutput} />
             </div>
           )}
-          <div className="border rounded max-h-44 overflow-y-auto">
+          <div className="boomi-fn-pins-list rounded max-h-44 overflow-y-auto">
             <div className="flex px-1 py-1.5 boomi-table-header">
               <div className="flex-1">Name</div>
               {canTest && <div className="w-1/2 text-left">Test Output</div>}
@@ -798,15 +787,17 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
                         type="text"
                         disabled
                         aria-label={`Test output for ${out.name}`}
-                        className="border px-2 py-1 rounded w-1/2 font-mono text-green-700"
+                        className="boomi-input boomi-input--readonly boomi-fn-test-output rounded-md px-2 py-1 w-1/2"
                         value={outputResults?.[out.name] ?? ''}
                       />
                     )}
                     {isScript && (
                       <button
+                        type="button"
                         onClick={() => handleRemoveOutput(idx)}
-                        className="text-red-400 hover:text-red-600 transition ml-2"
+                        className="boomi-fn-pin-remove ml-2"
                         title="Remove output"
+                        aria-label={`Remove output ${out.name}`}
                       >
                         <AiOutlineDelete size={14} />
                       </button>
@@ -817,9 +808,9 @@ const EditTransformationsForm = forwardRef<EditTransformationsFormRef, EditTrans
             </ul>
           </div>
           {outputError && (
-            <p className="text-sm text-red-600 mt-2">Test Error: {outputError}</p>
+            <p className="boomi-form-error">Test Error: {outputError}</p>
           )}
-          {formErrors.outputField && <p className="text-xs text-red-600 mt-1">{formErrors.outputField}</p>}
+          {formErrors.outputField && <p className="boomi-form-error">{formErrors.outputField}</p>}
         </div>
       </div>
       {!canTest && (

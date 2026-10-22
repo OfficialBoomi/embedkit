@@ -1091,6 +1091,21 @@
   }
   .boomi-fn-editor-row { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
   .boomi-fn-editor-fields { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+  /* Shared by the AI and Editor tabs: the script editor, the Inputs/Outputs panels and the test values. */
+  .boomi-fn-script { overflow: hidden; border: 1px solid var(--boomi-fn-script-border, var(--boomi-input-border)); }
+  .boomi-fn-script--error { border-color: var(--boomi-fn-script-border-error, var(--boomi-danger-border)); }
+  .boomi-fn-pins {
+    border: 1px solid var(--boomi-fn-pins-border, var(--boomi-update-border));
+    border-radius: var(--boomi-fn-pins-radius, .375rem);
+  }
+  .boomi-fn-pins--error { border-color: var(--boomi-fn-pins-border-error, var(--boomi-danger-border)); }
+  .boomi-fn-pins-list { border: 1px solid var(--boomi-fn-pins-list-border, var(--boomi-update-border)); }
+  .boomi-input.boomi-fn-test-output {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--boomi-fn-test-output-fg, #15803d);
+  }
+  .boomi-fn-pin-remove { color: var(--boomi-fn-pin-remove-fg, var(--boomi-danger)); opacity: .75; transition: opacity .15s ease, color .15s ease; }
+  .boomi-fn-pin-remove:hover { color: var(--boomi-fn-pin-remove-fg-hover, var(--boomi-danger)); opacity: 1; }
 
   /* Canvas wrapper */
   .boomi-map-canvas {

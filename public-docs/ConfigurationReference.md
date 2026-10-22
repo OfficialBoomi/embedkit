@@ -1235,7 +1235,7 @@ The filter icon, sortable headers and tables on the integrations list (1.7 UI), 
 
 ### Transformation Editor (Editor tab)
 
-Shown when `updateMaps.allowFullEditor` is on. When the AI editor is on too, the AI and Editor tabs use the global tab tokens above. Fields are standard inputs and dropdowns under form name `transformationEditor`, so `form.transformationEditor.<field>` overrides apply.
+Shown when `updateMaps.allowFullEditor` is on. When the AI editor is on too, the AI and Editor tabs use the global tab tokens above. Fields use the standard input, dropdown and button styles (`--boomi-input-*`, `--boomi-select-*`, `--boomi-btn-*`). Inputs are under form name `transformationEditor`, so `form.transformationEditor.<field>` overrides (label, placeholder, `wrapClass`, `inputClass`, …) apply to them; dropdowns take the tokens only, like every other dropdown. The tokens below cover the parts specific to the editor, and apply to both the AI and Editor tabs.
 
 | Token | Description |
 |-------|-------------|
@@ -1245,6 +1245,15 @@ Shown when `updateMaps.allowFullEditor` is on. When the AI editor is on too, the
 | `--boomi-fn-editor-section-border` | Section border (falls back to `--boomi-update-border`) |
 | `--boomi-fn-editor-section-radius` | Section corner radius |
 | `--boomi-fn-editor-heading-fg` | Section heading text |
+| `--boomi-fn-script-border` | Script editor border (falls back to `--boomi-input-border`) |
+| `--boomi-fn-script-border-error` | Script editor border when the script is missing (falls back to `--boomi-danger-border`) |
+| `--boomi-fn-pins-border` | Inputs and Outputs panel border (falls back to `--boomi-update-border`) |
+| `--boomi-fn-pins-border-error` | Panel border when no output is defined (falls back to `--boomi-danger-border`) |
+| `--boomi-fn-pins-radius` | Inputs and Outputs panel corner radius |
+| `--boomi-fn-pins-list-border` | Border around the input and output lists |
+| `--boomi-fn-test-output-fg` | Test result text in the Test Output boxes |
+| `--boomi-fn-pin-remove-fg` | Remove (delete) icon on an input or output |
+| `--boomi-fn-pin-remove-fg-hover` | Remove icon on hover |
 
 ---
 
