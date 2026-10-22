@@ -394,6 +394,13 @@ const cssVarOptions = [
   '--boomi-tab-bg-active',
   '--boomi-tab-fg-active',
   '--boomi-tab-border-active',
+  // Transformation Editor (Editor tab)
+  '--boomi-fn-editor-section-padding',
+  '--boomi-fn-editor-section-bg',
+  '--boomi-fn-editor-section-fg',
+  '--boomi-fn-editor-section-border',
+  '--boomi-fn-editor-section-radius',
+  '--boomi-fn-editor-heading-fg',
   // Maps
   '--boomi-map-line',
   '--boomi-map-line-width',

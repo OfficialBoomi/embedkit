@@ -45,6 +45,7 @@ import {
 import EditTransformationsForm, {
   EditTransformationsFormRef,
 } from './EditTransformationsForm';
+import { FUNCTION_TYPE_BY_ID } from '../../utils/functionTypes';
 import FieldMappingCanvas from './FieldMappingCanvas';
 import FieldMappingCanvasTree from './FieldMappingCanvasTree';
 import EditMapCandidateForm, { EditMapCandidateFormRef } from './EditMapCandidatesForm';
@@ -120,6 +121,13 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
   // script on the next save.
   const convertFunctionsToScript =
     boomiConfig?.components?.[componentKey]?.updateMaps?.convertFunctionsToScript ?? false;
+  // The Transformation Editor's two editors: AI (describe it, edit the script) and Editor (any
+  // function type). Tabs show only when both are on.
+  const allowAiEditor = boomiConfig?.components?.[componentKey]?.updateMaps?.allowAiEditor ?? true;
+  const allowFullEditor = boomiConfig?.components?.[componentKey]?.updateMaps?.allowFullEditor ?? false;
+  /** A platform-defined function the Editor can open and update in place. */
+  const opensInEditor = (fn: PositionedFunction) =>
+    allowFullEditor && !!fn.raw && FUNCTION_TYPE_BY_ID.has(String(fn.raw.type ?? ''));
   const { compileFunction } = useMapExtensionsService();
   const editCandidateFormRef = useRef<EditMapCandidateFormRef>(null);
   const [isCandidateModalOpen, setIsCandidateModalOpen] = useState(false);
@@ -416,6 +424,13 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
    * (e.g. a Groovy step) are surfaced at the top of the script.
    */
   const openFunctionEditor = async (fn: PositionedFunction) => {
+    // With the full Editor on, a platform-defined function opens in it as itself (no conversion).
+    if (opensInEditor(fn)) {
+      setEditFunction(fn);
+      setEditName(stripYFromId(fn.name));
+      setIsEditing(true);
+      return;
+    }
     if (fn.editable !== false && !fn.convertible) {
       setEditFunction(fn);
       setEditName(stripYFromId(fn.name));
@@ -458,15 +473,35 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
     const result = formRef.current.validateAndSubmit();
     if (!result) return false;
 
-    const fn: PositionedFunction = {
-      id: editFunction?.id ?? '',
-      newId: embedYInId(result.id, parseYFromId(editFunction?.id ?? '') ?? 0),
-      name: result.id,
-      script: result.script,
-      inputs: result.inputs.map(({ name, key, type }) => ({ name, key, dataType: type })),
-      outputs: result.outputs.map(({ name, key }) => ({ name, key })),
-      type: 'Custom Scripting',
-    };
+    // A partner default keeps its id, so the saved function overrides the default rather than
+    // sitting next to it; only the customer's change is written (see mapDefaults).
+    const defaultFunctionIds = new Set(
+      (currentMap?.Map?.DefaultFunctions?.Function ?? []).map((f) => f.id)
+    );
+    const keepId = !!editFunction && defaultFunctionIds.has(editFunction.id);
+    const newId = keepId
+      ? editFunction!.id
+      : embedYInId(result.id, parseYFromId(editFunction?.id ?? '') ?? 0);
+    const name = keepId ? editFunction!.name : result.id;
+
+    const fn: PositionedFunction = result.definition
+      ? {
+          // A platform-defined function from the Editor, carried as `raw` and saved verbatim.
+          ...fromMapExtensionsFunctions([{ ...result.definition, id: newId }])[0],
+          id: editFunction?.id ?? '',
+          newId,
+          name,
+        }
+      : {
+          id: editFunction?.id ?? '',
+          newId,
+          name,
+          script: result.script,
+          language: result.language,
+          inputs: result.inputs.map(({ name, key, type }) => ({ name, key, dataType: type })),
+          outputs: result.outputs.map(({ name, key }) => ({ name, key })),
+          type: 'Custom Scripting',
+        };
 
     const updated = editFunction
       ? (functionsByMapId[currentMapKey] || []).map((f) => (f.id === editFunction.id ? fn : f))
@@ -530,9 +565,11 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
   }, [hasCandidates]);
 
   const canvasFunctions: PositionedFunction[] = (functionsByMapId[currentMapKey] || []).map((f) =>
-    f.editable === false && convertFunctionsToScript && isConvertibleFunctionType(f.raw?.type)
-      ? { ...f, editable: true, convertible: true }
-      : f
+    f.editable === false && opensInEditor(f)
+      ? { ...f, editable: true }
+      : f.editable === false && convertFunctionsToScript && isConvertibleFunctionType(f.raw?.type)
+        ? { ...f, editable: true, convertible: true }
+        : f
   );
 
   const showTitle = boomiConfig?.components?.[componentKey]?.updateMaps?.showTitle ?? true;
@@ -555,8 +592,12 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
           <EditTransformationsForm
             componentKey={componentKey}
             ref={formRef}
+            showAi={allowAiEditor}
+            showEditor={allowFullEditor}
             existingName={editName}
             existingScript={editFunction?.script ?? ''}
+            existingLanguage={editFunction?.language}
+            existingFunction={editFunction && opensInEditor(editFunction) ? editFunction.raw : undefined}
             existingInputs={editFunction?.inputs.map(({ key, name, dataType }) => ({
               key,
               name,

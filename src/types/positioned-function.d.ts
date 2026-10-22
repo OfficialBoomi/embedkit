@@ -20,6 +20,7 @@
  * @property {string} outputs[].name - Output parameter name.
  * @property {number} outputs[].key - Output parameter key identifier.
  * @property {string} [script] - Optional script content defining the function logic.
+ * @property {string} [language] - Script language for scripting functions: `Javascript` (default), `GROOVY` (1.5) or `GROOVY2` (2.4).
  * @property {boolean} [editable] - False for platform-defined function types (CurrentDate, UserDefined, ...)
  *   that the Transformation Editor cannot author; they are shown and can be wired or deleted, not edited.
  * @property {MapExtensionsFunction} [raw] - The original SDK function for non-scripting types, passed back
@@ -44,6 +45,8 @@ export type PositionedFunction = {
     key: number;
   }[];
   script?: string;
+  /** Script language for scripting functions. Javascript when absent. */
+  language?: 'Javascript' | 'GROOVY' | 'GROOVY2';
   editable?: boolean;
   /** True when Edit means "convert this platform-defined function to a script first". */
   convertible?: boolean;

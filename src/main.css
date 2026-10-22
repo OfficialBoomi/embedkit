@@ -1073,6 +1073,25 @@
     border-bottom-right-radius: var(--boomi-update-radius, .2rem);
   }
 
+  /* Transformation Editor, Editor tab (updateMaps.allowFullEditor). Each token falls back to the
+     update-content tokens, so the editor matches the rest of the page until a host overrides it. */
+  .boomi-fn-editor-tabs .boomi-tabs { padding-top: 0; }
+  .boomi-fn-editor-section {
+    padding: var(--boomi-fn-editor-section-padding, .75rem);
+    background-color: var(--boomi-fn-editor-section-bg, var(--boomi-update-content-bg));
+    color: var(--boomi-fn-editor-section-fg, var(--boomi-update-content-fg));
+    border: 1px solid var(--boomi-fn-editor-section-border, var(--boomi-update-border));
+    border-radius: var(--boomi-fn-editor-section-radius, .5rem);
+  }
+  .boomi-fn-editor-heading {
+    margin: 0 0 .5rem;
+    font-size: .875rem;
+    font-weight: 600;
+    color: var(--boomi-fn-editor-heading-fg, inherit);
+  }
+  .boomi-fn-editor-row { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+  .boomi-fn-editor-fields { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+
   /* Canvas wrapper */
   .boomi-map-canvas {
     position: relative;
