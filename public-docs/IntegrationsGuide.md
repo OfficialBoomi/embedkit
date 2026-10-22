@@ -180,6 +180,7 @@ Omit `environments`, or send an empty array, for every environment in the child 
 |---|---|---|
 | `environmentSelect.includeEnvironments` | `'ALL'` (default), `'PROD'`, `'TEST'` | Which classifications environment dropdowns list. `'ALL'` lists every environment, including ones the platform reports without a classification. |
 | `environmentSelect.environmentId` | environment id | Dropdowns list only this environment; also the default install target. |
+| `environmentSelect.onlineOnly` | `true` / `false` (default `false`) | Dropdowns list only environments whose runtime is ONLINE. The server checks every environment before it pages the list. Without it, dropdowns skip the runtime check and load faster. |
 | `form.addIntegration.showEnvironmentSelect` + `defaultEnvironmentId` | `false` + id | Always install into one environment without asking. |
 | `form.addIntegration.hideEnvironmentSelectWhenSingle` | `true` | Hide the dropdown when only one environment is available. |
 
@@ -219,6 +220,7 @@ Defaults depend on the component's `uiVersion`. All paths are under `components[
 | `form.addIntegration.hideEnvironmentSelectWhenSingle` | `boolean` | `false` | `false` | Hide the environment dropdown when only one is available. |
 | `environmentSelect.includeEnvironments` | `'ALL' \| 'PROD' \| 'TEST'` | `'ALL'` | `'ALL'` | Environment classifications offered. |
 | `environmentSelect.environmentId` | `string` | — | — | Offer only this environment. |
+| `environmentSelect.onlineOnly` | `boolean` | `false` | `false` | Offer only environments whose runtime is ONLINE. |
 
 Login body (not `boomi.config.js`): `environments: string[]` sets the session scope (see [section 6](#6-limiting-environments)).
 

@@ -40,7 +40,7 @@ export const useFetchEnvironments = () => {
     async (
       includeEnvironments?: 'PROD' | 'TEST' | 'ALL',
       environmentId?: string | null,
-      opts: { includeStatus?: boolean } = {}
+      opts: { includeStatus?: boolean; onlineOnly?: boolean } = {}
     ) => {
       setIsLoading(true);
       setError(null);
@@ -60,7 +60,12 @@ export const useFetchEnvironments = () => {
           includeEnvironments,
           environmentId: environmentId ?? undefined,
           ...(opts.includeStatus === false ? { includeStatus: false } : {}),
+          ...(opts.onlineOnly ? { onlineOnly: true } : {}),
         });
+
+        if ((resp as { statusPartial?: boolean } | undefined)?.statusPartial) {
+          logger.warn('Runtime status was not resolved for every environment within the server time limit.');
+        }
 
         // Support both axios-like and fetch-like clients
         const items = resp?.result ?? [];

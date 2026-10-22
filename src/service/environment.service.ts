@@ -7,6 +7,8 @@ export type GetEnvironmentsArgs = {
   environmentId?: string;
   /** false skips per-environment runtime/ONLINE lookups (pickers only need names). */
   includeStatus?: boolean;
+  /** true returns only environments with an ONLINE runtime (the server filters the whole list, then pages). Implies status. */
+  onlineOnly?: boolean;
   search?: string;
   page?: number;
   pageSize?: number;
@@ -19,7 +21,7 @@ export function useEnvironmentsService() {
   async function getEnvironments(
     args: GetEnvironmentsArgs
   ): Promise<EnvironmentQueryResponse> {
-    const { includeEnvironments, environmentId, includeStatus, search, page, pageSize, signal } = args;
+    const { includeEnvironments, environmentId, includeStatus, onlineOnly, search, page, pageSize, signal } = args;
     logger.debug('Fetching environments via service', args);
     return http.get('/environments', {
       signal,
@@ -27,6 +29,7 @@ export function useEnvironmentsService() {
         ...(includeEnvironments ? { includeEnvironments } : {}),
         ...(environmentId ? { environmentId } : {}),
         ...(includeStatus === false ? { includeStatus: 'false' } : {}),
+        ...(onlineOnly ? { onlineOnly: 'true' } : {}),
         ...(search ? { search } : {}),
         ...(page !== undefined ? { page } : {}),
         ...(pageSize !== undefined ? { pageSize } : {}),

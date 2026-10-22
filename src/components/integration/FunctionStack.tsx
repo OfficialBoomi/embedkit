@@ -101,17 +101,19 @@ const pinRef = (refs: PinRefs, keys: string[]) => (el: HTMLDivElement | null) =>
 };
 
 const FunctionStack: React.FC<FunctionStackProps> = (props) => {
-  const { functions, onReorder, onLayoutChange, onAddTransformation } = props;
+  const { functions, inputRefs, outputRefs, onReorder, onLayoutChange, onAddTransformation } = props;
   const sorted = useMemo(() => sortByPosition(functions), [functions]);
   const byId = useMemo(() => new Map(functions.map((f) => [f.id, f])), [functions]);
   const [order, setOrder] = useState<string[]>(() => sorted.map((f) => f.id));
   // Functions start collapsed; this holds the expanded ones, keyed by the id without its
   // position so a function stays expanded after a reorder re-keys it.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Hidden: every function collapses into one card at the top of the list (see HiddenFunctionsCard).
+  const [hidden, setHidden] = useState(false);
   const isCollapsed = (id: string) => !expanded.has(stripYFromId(id));
 
   useEffect(() => { setOrder(sorted.map((f) => f.id)); }, [sorted]);
-  useLayoutEffect(() => { onLayoutChange(); }, [order, expanded]);
+  useLayoutEffect(() => { onLayoutChange(); }, [order, expanded, hidden]);
 
   // Search: hits are ids without their position, in stack order, so a reorder keeps them.
   const listRef = useRef<HTMLDivElement>(null);
@@ -204,6 +206,13 @@ const FunctionStack: React.FC<FunctionStackProps> = (props) => {
                 label="Collapse All"
                 onClick={() => setExpanded(new Set())}
               />
+              <Button
+                toggle={false}
+                primary={false}
+                showIcon={false}
+                label={hidden ? 'Show' : 'Hide'}
+                onClick={() => setHidden((h) => !h)}
+              />
             </>
           )}
           {onAddTransformation && (
@@ -229,27 +238,35 @@ const FunctionStack: React.FC<FunctionStackProps> = (props) => {
         onStep={gotoHit}
       />
 
-      <Reorder.Group ref={listRef} as="div" axis="y" values={order} onReorder={setOrder} className="boomi-map-fn-list">
-        {order.map((id, index) => {
-          const fn = byId.get(id);
-          if (!fn) return null;
-          return (
-            <FunctionCard
-              key={id}
-              {...props}
-              fn={fn}
-              index={index}
-              count={order.length}
-              isCollapsed={isCollapsed(id)}
-              isSearchHit={hitSet.has(stripYFromId(id))}
-              isCurrentHit={currentHit === stripYFromId(id)}
-              onToggle={() => toggle(id)}
-              onMove={(delta) => move(id, delta)}
-              onDragEnd={() => commit(order)}
-            />
-          );
-        })}
-      </Reorder.Group>
+      {hidden ? (
+        <HiddenFunctionsCard
+          functions={order.map((id) => byId.get(id)).filter((f): f is PositionedFunction => !!f)}
+          inputRefs={inputRefs}
+          outputRefs={outputRefs}
+        />
+      ) : (
+        <Reorder.Group ref={listRef} as="div" axis="y" values={order} onReorder={setOrder} className="boomi-map-fn-list">
+          {order.map((id, index) => {
+            const fn = byId.get(id);
+            if (!fn) return null;
+            return (
+              <FunctionCard
+                key={id}
+                {...props}
+                fn={fn}
+                index={index}
+                count={order.length}
+                isCollapsed={isCollapsed(id)}
+                isSearchHit={hitSet.has(stripYFromId(id))}
+                isCurrentHit={currentHit === stripYFromId(id)}
+                onToggle={() => toggle(id)}
+                onMove={(delta) => move(id, delta)}
+                onDragEnd={() => commit(order)}
+              />
+            );
+          })}
+        </Reorder.Group>
+      )}
     </div>
   );
 };
@@ -440,6 +457,37 @@ const FunctionCard: React.FC<FunctionCardProps> = ({
         </>
       )}
     </Reorder.Item>
+  );
+};
+
+/**
+ * Hidden view: every function collapsed into one card. The inputs of all functions run down the
+ * left edge, and all outputs share one dot on the right. The pin refs point at that card, so the
+ * mapping lines still reach each input and the output.
+ */
+const HiddenFunctionsCard: React.FC<{
+  functions: PositionedFunction[];
+  inputRefs: PinRefs;
+  outputRefs: PinRefs;
+}> = ({ functions, inputRefs, outputRefs }) => {
+  const inputKeys = functions.flatMap((fn) => fn.inputs.map((input) => `${fn.id}.in.${input.key}`));
+  const outputKeys = functions.flatMap((fn) => fn.outputs.map((o) => `${fn.id}.out.${o.key}`));
+  return (
+    <div className="boomi-map-card boomi-map-card--function boomi-map-fn-hidden">
+      <span className="boomi-map-card-title">Functions ({functions.length})</span>
+      <div className="boomi-map-fn-hidden-body">
+        <div className="boomi-map-fn-hidden-inputs">
+          {inputKeys.map((key) => (
+            <div key={key} ref={pinRef(inputRefs, [key])} className="boomi-map-pin --input" />
+          ))}
+        </div>
+        {outputKeys.length > 0 && (
+          <div className="boomi-map-fn-hidden-outputs">
+            <div ref={pinRef(outputRefs, outputKeys)} className="boomi-map-pin --output" />
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
