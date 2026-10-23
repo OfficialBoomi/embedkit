@@ -31,6 +31,44 @@
 </details>
 
 <details open>
+  <summary><strong>v1.8.0</strong>: Partner default mappings in Map Fields, a full Transformation Editor, and environment lists that no longer time out</summary>
+
+  **Upgrade notes**
+  - **Server first:** deploy `embedkit-server` built on `@boomi/embedkit-sdk` **1.5.5**. Map Fields needs it to show the partner's default mappings, and environment dropdowns need it to stop timing out. With an older server, Map Fields shows only the customer's own mappings, as in 1.7.x.
+  - **Optional server setting:** `ENVIRONMENT_STATUS_BUDGET_MS` (default `15000`) limits how long one environment list spends resolving runtime status.
+  - The full Editor and the online-only filter are opt-in. Nothing else needs a configuration change.
+
+  **Changes for every embed** (no opt-in)
+  - ✅ **Partner default mappings in Map Fields:** Maps show the partner's default mappings and functions next to the customer's own, including packs installed in the Boomi UI rather than through EmbedKit. A customer mapping to the same target replaces the default. Saving writes only what the customer changed, never an untouched default. Removing a customer mapping brings the default back.
+  - ✅ **Hide functions:** A **Hide** button in the Transformations column collapses every function into one card, **Functions (N)**, with all inputs on the left and one dot for the outputs, so the mapping lines are easier to follow. **Show** brings the list back.
+  - ✅ **Faster environment dropdowns:** Dropdowns ask for environment names only and skip the per-environment runtime status lookup they never displayed.
+
+  **Opt-in**
+  - ✅ **Full Transformation Editor** (`updateMaps.allowFullEditor`, default `false`): Build any function type the Platform API can create. Pick a category (String, Math, Numeric, Date, Property, Language, Scripting) and a function, fill in its settings, defaults and caching, and test it where it can run locally. Custom Scripting takes JavaScript or Groovy (1.5 or 2.4); only JavaScript can be tested here. Connector Call and SQL Lookup are not offered, because the API cannot create them. See [Transformation Editor § 12](./TransformationEditor.md#12-the-full-editor-allowfulleditor).
+  - ✅ **Choose the editors** (`updateMaps.allowAiEditor`, default `true`): With both editors on, the modal shows **AI** and **Editor** tabs. With one on, it shows that editor with no tabs. **Add** opens whichever is on; it does not depend on `enableAi`.
+  - ✅ **Edit functions in place:** With the full Editor on, **Edit** on a supported platform-defined function opens it as itself, with its settings and pins, instead of converting it to a script. A partner default you change is saved as the customer's override.
+  - ✅ **Online-only environment dropdowns** (`environmentSelect.onlineOnly`, default `false`): List only environments whose runtime is ONLINE. The server checks every environment before paging.
+
+  **Theming**
+  - ✅ The Transformation Editor uses the standard tab, input, dropdown and button styles. New `--boomi-fn-editor-*` and `--boomi-fn-*` tokens cover its sections, script editor border, Inputs and Outputs panels, Test Output boxes and remove icons, each falling back to the standard tokens. Editor inputs are under form name `transformationEditor`, so `form.transformationEditor.<field>` overrides apply. See [Configuration Reference → Transformation Editor](./ConfigurationReference.md#transformation-editor-editor-tab).
+  - The AI tab's inputs, outputs, AI prompt and buttons moved from fixed colours to the standard tokens, so they now follow your theme.
+
+  **Bug fixes**
+  - 🐛 **Environment lists timed out:** On accounts with many environments, `GET /api/v1/environments` ran past the 30-second router limit and failed. Browsers reported it as a CORS error, because the router's timeout response has no CORS headers. Status is now resolved in batches with a time limit, and dropdowns don't ask for it.
+  - 🐛 **Groovy scripts became JavaScript on save:** A script's language is now kept when it is loaded and saved.
+
+  **Server and SDK changes** (`embedkit-server`, `@boomi/embedkit-sdk` 1.5.5)
+  - ✅ `GET /api/v1/environments` accepts `onlineOnly` and returns `statusPartial: true` when status was not resolved for every environment in time.
+  - ✅ The SDK resolves environment status in batches (one query per 50 environments and per 50 runtimes) within `statusBudgetMs`, and reads each map with the partner's defaults included. See the SDK release notes.
+
+  **Docs**
+  - [Transformation Editor](./TransformationEditor.md): new § 12 for the full Editor; theming updated; table of contents now lists §§ 11–12.
+  - [Configuration Reference](./ConfigurationReference.md): `updateMaps.allowAiEditor` and `allowFullEditor`, and the Transformation Editor tokens.
+  - [Integrations Guide](./IntegrationsGuide.md): `environmentSelect.onlineOnly`.
+
+</details>
+
+<details open>
   <summary><strong>v1.7.4</strong>: Republish of 1.7.3 so the CDN package carries the correct bundle</summary>
 
   **Upgrade notes**

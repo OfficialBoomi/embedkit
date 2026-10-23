@@ -21,6 +21,8 @@ The **Transformation Editor** lets your users create and edit Boomi **Map Extens
 8. [Data shapes](#8-data-shapes)
 9. [Theming](#9-theming)
 10. [Troubleshooting](#10-troubleshooting)
+11. [Editing platform-defined functions (convert to script)](#11-editing-platform-defined-functions-convert-to-script)
+12. [The full Editor (`allowFullEditor`)](#12-the-full-editor-allowfulleditor)
 
 ---
 
@@ -322,6 +324,8 @@ The Transformation Editor uses the standard EmbedKit design tokens, so it inheri
 - Modal, inputs, buttons and menus follow the `--boomi-modal-*`, `--boomi-input-*`, `--boomi-btn-*`, and `--boomi-menu-*` tokens.
 - The error surfaced when AI generation fails uses the notice/alert tokens (`--boomi-notice-*`).
 - The Ace script editor switches between a dark and light editor theme based on `boomiConfig.theme.darkModeTheme`.
+- The AI and Editor tabs use the tab tokens (`--boomi-tab-*`). The Editor's sections, the script editor border, the Inputs and Outputs panels, the Test Output boxes and the remove icons have their own `--boomi-fn-*` tokens, each falling back to the standard ones. See [Configuration Reference → Transformation Editor](./ConfigurationReference.md#transformation-editor-editor-tab).
+- The Editor's settings and defaults are standard inputs under form name `transformationEditor`, so `boomiConfig.form.transformationEditor.<field>` overrides (label, placeholder, `wrapClass`, `inputClass`, …) apply to them.
 
 See [Configuration Reference → CSS Design Tokens](./ConfigurationReference.md#9-css-design-tokens) for the full list.
 
@@ -371,3 +375,59 @@ Saving turns it into an ordinary Custom Scripting function and **replaces the pa
 **What does not convert** (no Edit action even with the flag on): `SimpleLookup`, `CrossRefLookup`, `DocumentCacheLookup`, `PropertyGet`, `PropertySet`, `DocumentPropertyGet`, `DocumentPropertySet`, `JapaneseCharacterConversion` (platform services), `Count`, `Sum`, `RunningTotal`, `SequentialValue`, `LineItemIncrement` (state across documents), `NumberFormat`.
 
 > Converting is a one-way, customer-owned copy: it no longer follows the partner's function, and caching behaviour (`cacheType`) is not carried into the script. Keep the flag off if you want customers to stay on the partner's functions.
+
+---
+
+## 12. The full Editor (`allowFullEditor`)
+
+Two options choose which editors the modal offers, per component key under `updateMaps`:
+
+| Option | Default | Editor |
+|---|---|---|
+| `allowAiEditor` | `true` | **AI**: describe a transformation (needs `enableAi`) and edit its JavaScript. This is the editor described in §§ 3–5. |
+| `allowFullEditor` | `false` | **Editor**: build any function type the Platform API can create. |
+
+With both on, the modal shows **AI** and **Editor** tabs. With one on, it shows that editor with no tabs. With neither, it shows the AI editor. **Add** in the Transformations column opens whichever editor is on.
+
+```js
+components: {
+  integrationsPage: {
+    updateMaps: { allowAiEditor: true, allowFullEditor: true },
+  },
+},
+```
+
+**Building a function**
+
+Pick a **Category**, then a **Function**, as in the platform's Add a Function dialog:
+
+| Category | Functions |
+|---|---|
+| String | Left and Right Character Trim, Whitespace Trim, To Lower, To Upper, Append, Prepend, Remove, Replace, Concat, Split |
+| Math | Add, Subtract, Multiply, Divide, Absolute Value, Ceiling, Floor, Set Precision |
+| Numeric | Count, Sum, Running Total, Line Item Increment, Sequential Value, Number Format |
+| Date | Get Current Date, Date Format |
+| Property | Get and Set Dynamic Process Property, Get and Set Document Property |
+| Language | Japanese Character Conversion |
+| Scripting | Custom Scripting in JavaScript, Groovy 1.5 or Groovy 2.4 (inline scripts only) |
+
+The platform's **Connector Call** and **SQL Lookup** are not offered: the Platform API cannot create them. Pin names, key order and the `Configuration` element of each type follow the Platform API reference (Environment Map Extension functions).
+
+Each function shows its **Settings** (for example Sequential Value's key name, a document property's id, or Japanese Character Conversion's character sets), its **Defaults** (a default value per input, used when nothing or an empty value is mapped) and **Caching** (None, By Document, By Map).
+
+**Testing**
+
+Both tabs share the Inputs and Outputs tables and the Test button:
+
+- **JavaScript** runs in the sandbox, as in § 3.
+- **String, Math and Date functions** run a local evaluator that follows the SDK's runtime semantics. An empty test value falls back to the input's default.
+- **Groovy** scripts and functions whose result depends on the process run (Numeric, Property, Japanese Character Conversion) have no Test button.
+
+**Editing a function on the map**
+
+With `allowFullEditor` on, choosing **Edit** on a platform-defined function of a supported type opens it in the Editor as itself, instead of converting it to a script (§ 11 still applies to types the Editor does not support). Its settings, defaults, caching and its own pin names and keys are loaded, and its type cannot be changed, so the mapping lines drawn to it stay connected. Saving updates the function in place.
+
+A function that came from the partner's defaults keeps its id when you save it, so the change is stored as the customer's override of that default. Only functions and mappings that differ from the defaults are written. Removing the override brings the partner's default back.
+
+> Japanese Character Conversion: the Platform API reference shows the values `fullwidth_hiragana` and `halfwidth_katakana`. The other choices (`any`, `katakana`, `fullwidth_katakana`) follow the platform's labels and are not confirmed by the reference.
+

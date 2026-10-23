@@ -50,6 +50,12 @@ export default {
     // The "Integrations" page (renderType: 'integration')
     integrationsPage: {
       renderType: 'integration',
+      updateMaps: {
+        // Transformation Editor: the AI editor (on by default) and the full Editor, which builds any
+        // function type. With both on the modal shows AI and Editor tabs; with one, no tabs.
+        allowAiEditor: true,
+        allowFullEditor: false,
+      },
       integrations: {
         showHeader: true,
         defaultView: 'grid',

@@ -81,7 +81,7 @@ export function toMapExtensionsFunctions(
       },
       Configuration: {
         Scripting: {
-          language: MapExtensionsScripting.language.JAVASCRIPT,
+          language: (fn.language as MapExtensionsScripting.language) ?? MapExtensionsScripting.language.JAVASCRIPT,
           Script: fn.script ?? '',
           Inputs: {
             Input: (fn.inputs || []).map((input) => ({
@@ -153,6 +153,9 @@ export function fromMapExtensionsFunctions(
       inputs,
       outputs,
       script: fn.Configuration?.Scripting?.Script ?? '',
+      ...(scripting && fn.Configuration?.Scripting?.language
+        ? { language: fn.Configuration.Scripting.language as PositionedFunction['language'] }
+        : {}),
       editable: scripting,
       ...(scripting ? {} : { raw: fn }),
       x: undefined,

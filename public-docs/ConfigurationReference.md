@@ -469,6 +469,8 @@ components: {
 | `showTitle` / `title` | `boolean` / `string` | `true` / `'Map Fields'` | Show or override the screen title. |
 | `showDescription` / `description` | `boolean` / `string` | `true` / `'Please map fields below.'` | Show or override the description line. |
 | `showDefaultsNote` / `defaultsNote` | `boolean` / `string` | `true` / built-in copy | Note explaining that removing a mapping restores the partner's default for that field. Defaults copied in at install are ordinary mappings, but the original still lives on the map component, so deleting the copy reverts rather than removes. |
+| `allowAiEditor` | `boolean` | `true` | The Transformation Editor's **AI** editor: describe a transformation (with `enableAi`) and edit its JavaScript. |
+| `allowFullEditor` | `boolean` | `false` | The Transformation Editor's **Editor**: pick a category and function (String, Math, Numeric, Date, Property, Language, Scripting), fill in its settings and input defaults, and test it where it can run locally. Custom Scripting takes JavaScript or Groovy; only JavaScript can be tested here. Platform-defined functions on the map open in the Editor as themselves, and a partner default you change is saved as your override. With both editors on the modal shows AI and Editor tabs; with one, no tabs; with neither, the AI editor. **Add** opens whichever is on. |
 | `convertFunctionsToScript` | `boolean` | `false` | Let customers edit **platform-defined** functions (CurrentDate, TrimWhitespace, user-defined functions, …) by compiling them to a Custom Scripting function first. Off: those functions render with their connections, can be wired and deleted, and have no Edit action. On: convertible types gain Edit; choosing it compiles deterministically (no LLM), opens the Transformation Editor and emits `map.function.converted`; saving replaces the partner's function with the customer's script. Requires `embedkit-server` on `@boomi/embedkit-sdk` 1.4.0. See [Transformation Editor § 11](./TransformationEditor.md#11-editing-platform-defined-functions-convert-to-script). |
 
 > **Default mappings arrive at install.** Since `@boomi/embedkit-sdk` 1.4.0 the server copies the publisher's default mappings and functions into a new instance's map extensions during install, so **Edit Map(s)** opens with them already drawn. The result is reported through the `map.defaults.seeded` event.
@@ -1230,6 +1232,28 @@ The filter icon, sortable headers and tables on the integrations list (1.7 UI), 
 | `--boomi-tab-fg-active` | Active tab text |
 | `--boomi-tab-border-active` | Active tab border |
 | `--boomi-tablist-border` | Tab list container border |
+
+### Transformation Editor (Editor tab)
+
+Shown when `updateMaps.allowFullEditor` is on. When the AI editor is on too, the AI and Editor tabs use the global tab tokens above. Fields use the standard input, dropdown and button styles (`--boomi-input-*`, `--boomi-select-*`, `--boomi-btn-*`). Inputs are under form name `transformationEditor`, so `form.transformationEditor.<field>` overrides (label, placeholder, `wrapClass`, `inputClass`, …) apply to them; dropdowns take the tokens only, like every other dropdown. The tokens below cover the parts specific to the editor, and apply to both the AI and Editor tabs.
+
+| Token | Description |
+|-------|-------------|
+| `--boomi-fn-editor-section-padding` | Section padding |
+| `--boomi-fn-editor-section-bg` | Section background (falls back to `--boomi-update-content-bg`) |
+| `--boomi-fn-editor-section-fg` | Section text (falls back to `--boomi-update-content-fg`) |
+| `--boomi-fn-editor-section-border` | Section border (falls back to `--boomi-update-border`) |
+| `--boomi-fn-editor-section-radius` | Section corner radius |
+| `--boomi-fn-editor-heading-fg` | Section heading text |
+| `--boomi-fn-script-border` | Script editor border (falls back to `--boomi-input-border`) |
+| `--boomi-fn-script-border-error` | Script editor border when the script is missing (falls back to `--boomi-danger-border`) |
+| `--boomi-fn-pins-border` | Inputs and Outputs panel border (falls back to `--boomi-update-border`) |
+| `--boomi-fn-pins-border-error` | Panel border when no output is defined (falls back to `--boomi-danger-border`) |
+| `--boomi-fn-pins-radius` | Inputs and Outputs panel corner radius |
+| `--boomi-fn-pins-list-border` | Border around the input and output lists |
+| `--boomi-fn-test-output-fg` | Test result text in the Test Output boxes |
+| `--boomi-fn-pin-remove-fg` | Remove (delete) icon on an input or output |
+| `--boomi-fn-pin-remove-fg-hover` | Remove icon on hover |
 
 ---
 
