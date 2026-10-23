@@ -6,7 +6,7 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.7.4-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.8.0-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
