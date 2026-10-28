@@ -141,6 +141,8 @@ The wizard has up to three steps: **Make Connections**, **Map Fields** and **Set
 
 **Set Schedule / Run** is always the last step. If a check fails, the step is kept so the step itself can show the error.
 
+A schedule is optional. An integration with none opens this step empty, with an **Add** button, and finishing the step without adding one saves no schedule. To remove every schedule, delete the cards and save (this needs the updated EmbedKit server).
+
 Single-install packs keep their connection settings at the environment level rather than per process. EmbedKit 1.7 sends `isSingleInstall` with every connection and map request, so these load and save correctly. Earlier versions rejected them with `Code [1004]`.
 
 ### Default mappings

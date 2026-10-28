@@ -1827,7 +1827,7 @@ type EmbedKitEvent<T> = {
 | `map.defaults.seeded` | An integration pack instance was installed and the publisher's default mappings were copied into its map extensions (server on `@boomi/embedkit-sdk` ≥ 1.4.0) | `{ integrationPackInstanceId, environmentId?, summariesFound, seeded: { mapExtensionId, name?, mappings, functions }[], skipped: { mapExtensionId, name?, reason }[], failed: { mapExtensionId?, name?, error }[] }` |
 | `map.function.converted` | A user chose **Edit** on a platform-defined function with `updateMaps.convertFunctionsToScript` on, and it was compiled to a script | `{ mapId, functionId, type, warnings: string[] }` |
 | `map.browse.executed` | A user resolves dynamic-browse candidates (re-authenticating a connector mid-mapping) | `{ integrationPackInstanceId, mapId, succeededCount, failedCount }` |
-| `schedules.updated` | A user saves process schedule changes | `{ integrationPackInstanceId, environmentId?, scheduleCount }` |
+| `schedules.updated` | A user saves process schedule changes. `scheduleCount` is `0` when every schedule was deleted. Not emitted when the integration had no schedule and none was added | `{ integrationPackInstanceId, environmentId?, scheduleCount }` |
 | `ai.transformation.generated` | A user generates a transformation script via AI | `{ integrationPackInstanceId?, functionId, prompt }` |
 | `agent.session.created` | A chat session is created — check `data.trigger` | `{ trigger: 'user' \| 'system', integrationPackId? }` |
 | `agent.session.deleted` | A user deletes a chat session | `{ trigger: 'user', integrationPackId? }` |

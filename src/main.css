@@ -1487,6 +1487,12 @@
     justify-content: flex-end;
   }
 
+  /* Shown when the integration has no schedule */
+  .boomi-sched-empty {
+    margin: 0;
+    opacity: 0.75;
+  }
+
   /* Wrapper for the whole ConnectorForm */
   .boomi-connector {
     display: flex;

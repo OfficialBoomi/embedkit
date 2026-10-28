@@ -112,11 +112,22 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
 
   const handleSubmit = async () => {
     setApiError(null);
+    // If the current schedules did not load, an empty form would overwrite them. Send nothing.
+    if (fetchError) {
+      setApiError(`Nothing was saved because the current schedules could not be loaded. ${fetchError}`);
+      return false;
+    }
     try {
       const payload = await formRef.current?.validateAndSubmit();
       if (!payload?.Schedule || !integration.environmentId) {
         logger.warn("Schedule form is invalid or missing environmentId");
         return false;
+      }
+
+      // No schedule before and none now: nothing to save (also keeps the wizard working on an older server).
+      if (!schedule?.Schedule?.length && payload.Schedule.length === 0) {
+        onSubmit?.();
+        return true;
       }
 
       setIsLoading?.(true);
@@ -213,11 +224,15 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
           )}
 
           <div className="flex-1">
-            <ScheduleForm
-              ref={formRef}
-              defaultSchedule={schedule ?? null}
-              environmentId={integration.environmentId || ''}
-            />
+            {fetchError ? (
+              <p className="boomi-form-error" role="alert">{fetchError}</p>
+            ) : (
+              <ScheduleForm
+                ref={formRef}
+                defaultSchedule={schedule ?? null}
+                environmentId={integration.environmentId || ''}
+              />
+            )}
           </div>
 
           {!wizard && (

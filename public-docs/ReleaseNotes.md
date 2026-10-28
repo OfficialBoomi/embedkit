@@ -14,10 +14,11 @@
 ### All Releases
 
 <details open>
-  <summary><strong>Unreleased</strong>: Fixes the "Invalid or expired token" error after logging out and back in, with a friendlier session message you can customize, and adds page size, position and styling options for the integrations list pagination</summary>
+  <summary><strong>Unreleased</strong>: Fixes the "Invalid or expired token" error after logging out and back in, with a friendlier session message you can customize, adds page size, position and styling options for the integrations list pagination, lets users delete every schedule of an integration, and fixes edits to Hour schedules not being saved</summary>
 
   **Upgrade notes**
-  - UI only: no server or SDK change is needed.
+  - The session fix and the pagination options are UI only: no server or SDK change is needed.
+  - Deleting every schedule of an integration also needs the matching EmbedKit server release. On an older server the schedule screen works as before, and deleting the last schedule is still refused.
   - CDN users get the fix when they move to the matching `@boomi/embedkit-cdn` version.
   - If your app lets a user sign out and back in without reloading the page, start the new session by calling `BoomiPlugin(...)` with a new nonce before you render a component. See [Authentication Flow](./GettingStarted.md#authentication-flow).
 
@@ -29,6 +30,10 @@
   - ✅ **Match on the error code, not the text:** A request with no session fails with `code: 'MISSING_BEARER'`. A server `401` (token invalid or expired) now carries `status: 401` and `code: 'TOKEN_REJECTED'`, and its message is the session-ended message instead of "Invalid or expired token" (the server's own text stays in `error.body`). If your app matched the old message text, match `error.code` instead.
   - ✅ **A new event for hosts:** `auth.session.ended` (with `outcome: 'error'`) tells your app when a part of the UI shows the session-ended message, and which part (`data.origin`: `auth`, `maps` or `agent-chat`). If you subscribe to every event with `'*'`, you now also receive it, and a `switch` over `event.type` that must cover every case needs a new branch. See [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks).
 
+  - ✅ **Delete every schedule of an integration:** The last schedule can now be deleted and saved, matching the Boomi platform. Needs the updated EmbedKit server (see Upgrade notes). A bad schedule request now returns one readable sentence instead of a block of JSON.
+  - ✅ **An integration with no schedule opens empty:** The schedule screen no longer shows a placeholder schedule. It shows "No schedule is set. This integration will not run on a schedule." with the **Add** button. Before, finishing the setup wizard saved that placeholder as a real schedule the user never chose. Finishing the wizard with no schedule now saves nothing.
+  - ✅ **A failed load cannot be saved over:** If the current schedules cannot be loaded, the screen shows the error, and **Save** (or **Next** in the wizard) sends nothing, so an empty form never replaces real schedules.
+
   **Opt-in** (nothing changes unless you configure it)
   - 🆕 **Your own wording:** set `messages.sessionEnded` in `boomi.config.js` to replace the text of the session-ended message. See [Session-Ended Message](./ConfigurationReference.md#session-ended-message).
   - 🆕 **Your own dialog:** register `dialogHandlers.sessionError` to show the session-ended message in your own UI. EmbedKit hides its built-in message when it is registered and calls it once per session. It works in the npm package and in the CDN embed (for the chat). See [`sessionError`](./ConfigurationReference.md#sessionerror).
@@ -36,6 +41,7 @@
   - 🆕 **Pagination colors:** new `--boomi-pagination-*` tokens recolor the page controls (page numbers, current page, label, input border and the pinned background). They apply to every list that shows page controls. Without them the colors are unchanged. See [Pagination tokens](./ConfigurationReference.md#pagination-tokens).
 
   **Bug fixes**
+  - 🐛 **Edits to an Hour schedule were not saved:** On a schedule of type Hour, changing the start time, end time or interval and saving kept the old values. The edits are now saved, and a new Hour schedule saves the values shown on screen.
   - 🐛 **"Invalid or expired token" after signing out and back in:** In an app that signed out and back in without a page reload, a request that started while the new session was still being set up could use the previous, already expired token and fail. The list then stayed in error until the page was reloaded. EmbedKit now waits for the new session, or refreshes an expired token first, before sending a request.
 
 </details>
