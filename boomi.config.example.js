@@ -72,6 +72,15 @@ export default {
           title: 'Integrations',
           description: 'My Integrations',
         },
+        // Optional page controls. Every key is optional; omit the block to keep the defaults.
+        // pagination: {
+        //   pageSize: 12,              // 1 to 30, default 12
+        //   position: 'bottom',        // 'top' | 'bottom' | 'sticky-top' | 'fixed-bottom'
+        //   alignment: 'end',          // 'start' | 'center' | 'end'
+        //   // sticky-top and fixed-bottom stay in view only when the host gives EmbedKit a
+        //   // fixed or maximum height.
+        //   // styles: { root: {}, pageButton: {}, activePageButton: {}, input: {} },
+        // },
       },
       modalOffset: { offsetX: 0, offsetY: 0 },
       mapping: { useTreeMode: true },

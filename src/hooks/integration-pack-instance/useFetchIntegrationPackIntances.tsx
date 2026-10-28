@@ -9,8 +9,7 @@ import { usePlugin } from '../../context/pluginContext';
 import type { IntegrationPackInstance } from '@boomi/embedkit-sdk';
 import { useIntegrationPacksService, type ListFilters, type ListSort } from '../../service/integrationPacks.service';
 import logger from '../../logger.service';
-
-const PAGE_SIZE = 12;
+import { resolvePageSize } from '../../utils/pagination';
 
 /**
  * @function fetchIntegrationPackInstances
@@ -30,10 +29,13 @@ export const useFetchIntegrationPackInstances = ({
   includeConnectors = false,
   sort,
   filters,
+  pageSize,
 }: {
   search?: string;
   renderType: string;
   includeConnectors?: boolean;
+  /** Items per page, 1 to 30. Default 12. */
+  pageSize?: number;
   /** Server-side order of the whole list. */
   sort?: ListSort;
   /** Server-side environment / connector filter. Callers reset to page 1 when it changes. */
@@ -51,7 +53,7 @@ export const useFetchIntegrationPackInstances = ({
   const { boomiConfig } = usePlugin();
 
   const { getIntegrationPacks } = useIntegrationPacksService();
-  const PAGE_SIZE = 12;
+  const size = resolvePageSize(pageSize, 'integrations');
 
   const fetchIntegrationPacks = useCallback(async () => {
     setIsLoading(true);
@@ -61,7 +63,7 @@ export const useFetchIntegrationPackInstances = ({
         renderType,
         search,
         page: currentPage,
-        pageSize: PAGE_SIZE,
+        pageSize: size,
         includeConnectors,
         ...(sort ? { sort } : {}),
         ...(filters ? { filters } : {}),
@@ -90,24 +92,24 @@ export const useFetchIntegrationPackInstances = ({
       setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getIntegrationPacks, search, currentPage, includeConnectors, sortKey, filterKey]);
+  }, [getIntegrationPacks, search, currentPage, includeConnectors, sortKey, filterKey, size]);
 
   // 1) Initial load once
   useEffect(() => {
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
-    lastKeyRef.current = `${currentPage}|${search ?? ''}|${sortKey}|${filterKey}`;
+    lastKeyRef.current = `${currentPage}|${search ?? ''}|${sortKey}|${filterKey}|${size}`;
     void fetchIntegrationPacks();
   }, [fetchIntegrationPacks, currentPage, search]);
 
   // 2) Subsequent loads only when page/search actually change (skip initial)
   useEffect(() => {
     if (!hasFetchedRef.current) return; // skip the very first mount
-    const key = `${currentPage}|${search ?? ''}|${sortKey}|${filterKey}`;
+    const key = `${currentPage}|${search ?? ''}|${sortKey}|${filterKey}|${size}`;
     if (key === lastKeyRef.current) return; // de-dupe (handles StrictMode re-run)
     lastKeyRef.current = key;
     void fetchIntegrationPacks();
-  }, [currentPage, search, sortKey, filterKey, fetchIntegrationPacks]);
+  }, [currentPage, search, sortKey, filterKey, size, fetchIntegrationPacks]);
 
   /** Filter options (environments, connector types) for the current search, before any filter. */
   const loadFacets = useCallback(async () => {

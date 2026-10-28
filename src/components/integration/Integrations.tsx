@@ -48,6 +48,7 @@ import Integration from './Integration';
 import Modal from '../ui/Modal';
 import Page from '../core/Page';
 import Pagination from '../ui/Pagination'
+import { paginationPlacement, resolvePaginationOptions } from '../../utils/pagination'
 import SearchBar from '../ui/SearchBar';
 import ListFilterButton from '../ui/ListFilterButton';
 import { EMPTY_FILTERS, type ListFilters, type ListSort } from '../../service/integrationPacks.service';
@@ -102,6 +103,7 @@ const Integrations: React.FC<IntegrationsProps> = ({
   const formRef = useRef<AddIntegrationFormRef>(null);
   const hasFetched = useRef(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const paginationRaw = boomiConfig?.components?.[componentKey]?.integrations?.pagination;
   const {
     integrationPackInstances,
     error,
@@ -117,7 +119,24 @@ const Integrations: React.FC<IntegrationsProps> = ({
     includeConnectors: boomiConfig?.components?.[componentKey]?.integrations?.integration?.showConnectors ?? catalogUi,
     sort,
     filters,
+    pageSize: paginationRaw?.pageSize,
   });
+  const pagination = resolvePaginationOptions(paginationRaw);
+  const paginationBefore = paginationPlacement(pagination.position) === 'before';
+  const paginationControls =
+    !isLoading && totalPages > 1 ? (
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={(page) => goToPage(page)}
+        position={pagination.position}
+        alignment={pagination.alignment}
+        styles={pagination.styles}
+      />
+    ) : null;
+  // A pinned bar covers the last rows; leave room under the list for it.
+  const paginationSpacer =
+    paginationControls && pagination.position === 'fixed-bottom' ? <div className="h-20" aria-hidden="true" /> : null;
   const listCfg = boomiConfig?.components?.[componentKey]?.integrations ?? {};
   const showFilter: boolean = listCfg.filter?.show ?? catalogUi;
   const sortable: boolean = listCfg.table?.sortable ?? catalogUi;
@@ -481,6 +500,7 @@ const Integrations: React.FC<IntegrationsProps> = ({
 
   const bodyContent = viewType === 'off' ? (
     <>
+        {paginationBefore && paginationControls}
         <ul
           role="list"
           className={
@@ -512,16 +532,12 @@ const Integrations: React.FC<IntegrationsProps> = ({
           </div>
         )}
       </ul>
-      {!isLoading && totalPages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={(page) => goToPage(page)}
-          />
-      )}
+      {!paginationBefore && paginationControls}
+      {paginationSpacer}
     </>
   ) : (
     <div className="">
+      {paginationBefore && paginationControls}
       <table className="boomi-integrations-table">
         <thead className="boomi-table-header">
           <tr>
@@ -578,13 +594,8 @@ const Integrations: React.FC<IntegrationsProps> = ({
           )}
         </tbody>
       </table>
-      {!isLoading && totalPages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={(page) => goToPage(page)}
-          />
-      )}
+      {!paginationBefore && paginationControls}
+      {paginationSpacer}
     </div>
   );
   const errorMsg = error || apiError;

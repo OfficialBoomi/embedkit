@@ -3962,6 +3962,20 @@
 .boomi-catalog-pager { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
 .boomi-catalog-pager__summary { font-size: 0.75rem; color: var(--boomi-muted, inherit); opacity: 0.85; }
 
+/* Pagination controls. Every fallback is the color used before these tokens existed. The next arrow
+   keeps the button color by default and only follows the tokens when they are set. */
+.boomi-pagination__page { color: var(--boomi-pagination-text, theme('colors.indigo.400')); }
+.boomi-pagination__page--active {
+  color: var(--boomi-pagination-active-text, theme('colors.indigo.500'));
+  background-color: var(--boomi-pagination-active-bg, theme('colors.indigo.100'));
+}
+.boomi-pagination__arrow { color: var(--boomi-pagination-text, theme('colors.indigo.400')); }
+.boomi-pagination__arrow:hover { color: var(--boomi-pagination-active-text, theme('colors.indigo.500')); }
+.boomi-pagination__arrow--next { color: var(--boomi-pagination-text, inherit); }
+.boomi-pagination__arrow--next:hover { color: var(--boomi-pagination-active-text, var(--boomi-pagination-text, inherit)); }
+.boomi-pagination__label { color: var(--boomi-pagination-label-text, theme('colors.gray.700')); }
+.boomi-pagination__input { border-color: var(--boomi-pagination-input-border, currentColor); }
+
 /* Install step: target environment, inside the selected card. */
 .boomi-catalog-card__target-env {
   display: flex; align-items: center; flex-wrap: wrap;

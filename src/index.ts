@@ -1,6 +1,7 @@
 // types
 export type { Theme } from './types/theme';
 export type { KeyConfig } from './types/component-key.config';
+export type { PaginationConfig } from './types/pagination.config';
 export type { Mapping } from './types/mapping';
 export type {
   PluginConfig,

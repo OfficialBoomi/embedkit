@@ -448,6 +448,49 @@ Filter options are loaded the first time the panel opens (and again after the se
 
 **Layout at 1.7.0+.** The actions menu moves to the right end of the top visible row: the type row when `showType` is on, otherwise the title row. The environment is a full-width row above the button, and the Edit or Run Agent button spans the full width. Before 1.7.0 the card keeps its original layout (menu and button at the bottom right, environment chip inline at the bottom left) whatever you set here.
 
+### Pagination (`integrations.pagination`)
+
+Options for the page controls of the integrations list, under `components[componentKey].integrations.pagination`. Every option is optional. With none set, the list shows 12 integrations per page and the controls sit below it, aligned to the right.
+
+```js
+components: {
+  myIntegrations: {
+    renderType: 'integration',
+    integrations: {
+      pagination: {
+        position: 'top',            // 'top' | 'bottom' | 'sticky-top' | 'fixed-bottom'
+        alignment: 'center',        // 'start' | 'center' | 'end'
+        pageSize: 24,               // 1 to 30
+        styles: {
+          root:             { borderTop: '1px solid #e5e7eb' },
+          pageButton:       { borderRadius: 6 },
+          activePageButton: { fontWeight: 700 },
+          input:            { width: 64 },
+        },
+      },
+    },
+  },
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `position` | `'top' \| 'bottom' \| 'sticky-top' \| 'fixed-bottom'` | `'bottom'` | Where the controls sit. `'top'` and `'bottom'` place them above or below the list. `'sticky-top'` and `'fixed-bottom'` keep them at the top or bottom edge of the EmbedKit area while the list scrolls. |
+| `alignment` | `'start' \| 'center' \| 'end'` | `'end'` | Horizontal alignment of the controls. |
+| `pageSize` | `number` | `12` | Integrations per page. A value below 1 becomes 1, a value above 30 becomes 30, and anything that is not a number is ignored. |
+| `styles.root` | CSS object | none | Inline styles for the wrapper around all controls. |
+| `styles.pageButton` | CSS object | none | Inline styles for every page number button. |
+| `styles.activePageButton` | CSS object | none | Inline styles for the current page button, applied on top of `pageButton`. |
+| `styles.input` | CSS object | none | Inline styles for the "Go to page" number input. |
+
+An unknown `position` or `alignment` is ignored and the default is used.
+
+**Keeping the controls in view.** `'sticky-top'` and `'fixed-bottom'` pin the controls to the edge of the EmbedKit area, not to the browser window, so they never cover your own page. They stay in view only when the element that holds EmbedKit has a fixed or maximum height, so that EmbedKit scrolls inside it. In a host that grows with its content, the page scrolls instead and the controls stay with the list. These two positions add a background (`--boomi-pagination-bg`, the page background by default) and 15px of vertical padding so the list does not show through. With `'fixed-bottom'`, EmbedKit also leaves room under the list so the last rows are not hidden.
+
+**Styling the parts.** Each `styles` entry is a plain object of camelCase CSS properties, as in `{ backgroundColor: '#fff', borderRadius: 6 }`; a number means pixels for length properties. These styles win over the built-in styles and over the CSS variables below. Entries that are not a string or a number, and names that are not valid CSS property names, are ignored. Inline styles cannot express hover, focus or disabled states, and they do not follow a theme switch, so use the [pagination tokens](#pagination-tokens) for colors that should.
+
+The Add Integration catalog keeps its own `form.addIntegration.catalog.pageSize`. Other lists in EmbedKit keep their fixed page sizes.
+
 ### Update Maps (`updateMaps`)
 
 Options for the **Edit Map(s)** screen, under `components[componentKey].updateMaps`.
@@ -1165,6 +1208,19 @@ The filter icon, sortable headers and tables on the integrations list (1.7 UI), 
 | `--boomi-integrations-table-text-max-width` | `24rem` | Maximum width of the name and description cells. |
 | `--boomi-integrations-table-name-width` / `-description-width` / `-history-width` | `16.67%` / `100%` / `16.67%` | Column widths. |
 | `--boomi-wizard-loading-padding` | `2.5rem` | Space around the loader while the setup wizard checks which steps to show. |
+
+#### Pagination tokens
+
+Colors of the page controls. They apply to every list that shows page controls. The options in [`integrations.pagination`](#pagination-integrationspagination) apply to the integrations list only.
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-pagination-text` | indigo 400 | Page numbers and the arrows. The next arrow keeps the button color unless this is set. |
+| `--boomi-pagination-active-text` | indigo 500 | The current page number, and the arrows on hover. |
+| `--boomi-pagination-active-bg` | indigo 100 | Background of the current page number. |
+| `--boomi-pagination-label-text` | gray 700 | The "Go to page" label. |
+| `--boomi-pagination-input-border` | the text color | Border of the "Go to page" input. |
+| `--boomi-pagination-bg` | `--boomi-root-bg-color` | Background of the controls when `position` is `'sticky-top'` or `'fixed-bottom'`. |
 
 ---
 

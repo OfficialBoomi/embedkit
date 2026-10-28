@@ -14,7 +14,7 @@
 ### All Releases
 
 <details open>
-  <summary><strong>Unreleased</strong>: Fixes the "Invalid or expired token" error after logging out and back in, with a friendlier session message you can customize</summary>
+  <summary><strong>Unreleased</strong>: Fixes the "Invalid or expired token" error after logging out and back in, with a friendlier session message you can customize, and adds page size, position and styling options for the integrations list pagination</summary>
 
   **Upgrade notes**
   - UI only: no server or SDK change is needed.
@@ -32,6 +32,8 @@
   **Opt-in** (nothing changes unless you configure it)
   - 🆕 **Your own wording:** set `messages.sessionEnded` in `boomi.config.js` to replace the text of the session-ended message. See [Session-Ended Message](./ConfigurationReference.md#session-ended-message).
   - 🆕 **Your own dialog:** register `dialogHandlers.sessionError` to show the session-ended message in your own UI. EmbedKit hides its built-in message when it is registered and calls it once per session. It works in the npm package and in the CDN embed (for the chat). See [`sessionError`](./ConfigurationReference.md#sessionerror).
+  - 🆕 **Pagination options for the integrations list:** `integrations.pagination` sets how many integrations show per page (`pageSize`, 1 to 30, default 12), where the page controls sit (`position`: `top`, `bottom`, `sticky-top` or `fixed-bottom`), their alignment, and inline styles for each part. The `useFetchIntegrationPackInstances` hook takes an optional `pageSize`. See [Pagination](./ConfigurationReference.md#pagination-integrationspagination).
+  - 🆕 **Pagination colors:** new `--boomi-pagination-*` tokens recolor the page controls (page numbers, current page, label, input border and the pinned background). They apply to every list that shows page controls. Without them the colors are unchanged. See [Pagination tokens](./ConfigurationReference.md#pagination-tokens).
 
   **Bug fixes**
   - 🐛 **"Invalid or expired token" after signing out and back in:** In an app that signed out and back in without a page reload, a request that started while the new session was still being set up could use the previous, already expired token and fail. The list then stayed in error until the page was reloaded. EmbedKit now waits for the new session, or refreshes an expired token first, before sending a request.

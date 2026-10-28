@@ -65,7 +65,7 @@ export default {
 
 The list shows the installed integrations (integration pack instances) of the packs linked to the session's **account group**. Instances of packs that are not linked to that account group are never shown, even if they exist in the child account. `renderType` then splits them: `'integration'` hides agent packs and `'agent'` shows only agents. Packs with `agents[packId].allowInstall: false` are left out. When an environment scope is set (see [section 6](#6-limiting-environments)), only instances attached to an in-scope environment appear.
 
-The list is paged on the server, 12 per page.
+The list is paged on the server, 12 per page by default. Set `integrations.pagination.pageSize` (1 to 30) to change it. The same `integrations.pagination` block sets where the page controls sit and how they look; see [Pagination](./ConfigurationReference.md#pagination-integrationspagination).
 
 ### Cards (1.7 UI)
 
