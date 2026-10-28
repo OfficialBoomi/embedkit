@@ -2,7 +2,7 @@
  * @file dialog-handlers.d.ts
  * @license BSD-2-Clause
  *
- * Optional host-supplied handlers for EmbedKit's confirm, alert and toast
+ * Optional host-supplied handlers for EmbedKit's confirm, alert, session-error and toast
  * dialogs. When a handler is registered, EmbedKit calls it instead of rendering
  * its built-in SweetAlert dialog. With no handler registered, nothing changes.
  *
@@ -47,6 +47,27 @@ export type ConfirmRequest = {
 /** A request to show a message the user acknowledges. */
 export type AlertRequest = Omit<ConfirmRequest, 'cancelLabel' | 'destructive'>;
 
+/**
+ * Which part of the UI hit the session problem.
+ * - `auth`: any component that uses the standard error dialog or notice (Integrations, Connections, Schedules and so on).
+ * - `maps`: the Map Fields views.
+ * - `agent-chat`: the agent chat stream.
+ */
+export type SessionErrorOrigin = 'auth' | 'maps' | 'agent-chat';
+
+/**
+ * A request to show that the session has ended or timed out. `title` and
+ * `description` are fully resolved: `description` is the configured message
+ * (`boomiConfig.messages.sessionEnded`) or EmbedKit's default, and the host may show it
+ * or its own text.
+ */
+export type SessionErrorRequest = AlertRequest & {
+  /** Which part of the UI reported the problem. */
+  origin: SessionErrorOrigin;
+  /** Machine-readable reason, for example `MISSING_BEARER`, `TOKEN_REJECTED` or `TOKEN_EXPIRED`. */
+  code: string;
+};
+
 /** A short, non-blocking message. */
 export type ToastRequest = {
   id: string;
@@ -66,9 +87,17 @@ export type DialogHandlers = {
   /** Resolve (or return) when the user has acknowledged the message. A failure is treated as acknowledged. */
   alert?: (req: AlertRequest) => Promise<void> | void;
 
+  /**
+   * Replaces the dialog EmbedKit shows when the session has ended or timed out. Resolve (or
+   * return) when the user has acknowledged it. A failure is treated as acknowledged. Called
+   * once per episode: it is called again only after a new session has started.
+   * When registered, EmbedKit does not show its built-in session message.
+   */
+  sessionError?: (req: SessionErrorRequest) => Promise<void> | void;
+
   /** Fire-and-forget: never awaited, never gates anything. */
   toast?: (req: ToastRequest) => void;
 
-  /** Maximum wait before a pending confirm or alert is abandoned. Default 120000. */
+  /** Maximum wait before a pending confirm, alert or sessionError is abandoned. Default 120000. */
   timeoutMs?: number;
 };

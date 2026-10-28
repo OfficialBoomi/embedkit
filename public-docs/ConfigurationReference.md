@@ -44,7 +44,7 @@ BoomiPlugin({
 | `nonce` | `string` | Conditional | One-time-use HMAC nonce from the EmbedKit auth endpoint. Required unless providing `accessToken`. |
 | `accessToken` | `string` | Conditional | Pre-generated access token. Use instead of `nonce` for the public embed / CDN flow. |
 | `boomiConfig` | `PluginUiConfig` | No | Full UI and behavior configuration. See [Section 2](#2-boomiconfigjs--top-level-structure). |
-| `dialogHandlers` | `DialogHandlers` | No | Replaces EmbedKit's built-in confirm, alert and toast dialogs with your own UI. See [Section 11](#11-dialog-handlers). |
+| `dialogHandlers` | `DialogHandlers` | No | Replaces EmbedKit's built-in confirm, alert, toast and session-ended dialogs with your own UI. See [Section 11](#11-dialog-handlers). |
 
 ---
 
@@ -76,6 +76,7 @@ export default {
   components:     { ... },
   form:           { ... },
   dialogs:        { ... },
+  messages:       { ... },
   cssVars:        { ... },
   cssVarsByTheme: { ... },
   cssVarsByKey:   { ... },
@@ -91,6 +92,7 @@ export default {
 | `components` | `Record<componentKey, ComponentConfig>` | Per-component configuration keyed by `componentKey`. See [Section 5](#5-component-configuration). |
 | `form` | `Record<string, FormConfig>` | Form field overrides for configurable dialogs. See [Section 6](#6-form-configuration). |
 | `dialogs` | `DialogsConfig` | Structural options for callback (confirm/alert) dialogs — button order, icon visibility, destructive styling. See [Dialog Structural Options](#dialog-structural-options). |
+| `messages` | `MessagesConfig` | Text overrides for shared messages. Today: `sessionEnded`, the message shown when the session has ended or timed out. See [Session-Ended Message](#session-ended-message). |
 | `cssVars` | `Record<string, string>` | Global CSS variable overrides applied across all themes. |
 | `cssVarsByTheme` | `Record<themeName, Record<string, string>>` | CSS variable overrides scoped to a specific theme. |
 | `cssVarsByKey` | `Record<componentKey, Record<string, string>>` | CSS variable overrides scoped to a specific component instance key. |
@@ -703,7 +705,7 @@ Used with the `@boomi/embedkit-cdn` UMD bundle. Set `window.BoomiEmbed` before t
 | `config` | `object` | No | — | Additional configuration forwarded to the EmbedKit Server during session creation. Accepts a full `boomiConfig` object. |
 | `autoInit` | `boolean` | No | `true` | When `true`, initializes automatically on page load from `window.BoomiEmbed`. Set to `false` to initialize manually. |
 | `sessionScope` | `'mount' \| 'multi'` | No | `'mount'` | Chat session persistence. `mount` resets on each page load; `multi` preserves history across loads for the same browser session. |
-| `dialogHandlers` | `DialogHandlers` | No | none | Replaces the built-in confirm, alert and toast dialogs with your own UI. The agent chat delete confirmation is the one confirm dialog the CDN embed can raise. See [Section 11](#11-dialog-handlers). |
+| `dialogHandlers` | `DialogHandlers` | No | none | Replaces the built-in confirm, alert, toast and session-ended dialogs with your own UI. The agent chat delete confirmation is the one confirm dialog the CDN embed can raise, and the agent chat can also raise the session-ended message (`sessionError`). See [Section 11](#11-dialog-handlers). |
 
 ### CDN Embed Types
 
@@ -1703,8 +1705,8 @@ cssVars: {
 
 EmbedKit emits standardized, typed events for actions that happen inside the
 embed — response feedback, integration-pack lifecycle, connection and map
-edits, schedule changes, AI transformation generation, and agent
-sessions/messages. **EmbedKit never sends event data over the network** — your
+edits, schedule changes, AI transformation generation, agent
+sessions/messages, and the session ending or timing out. **EmbedKit never sends event data over the network** — your
 application subscribes and owns what happens next. This removes any security
 concern about where the data goes: there is no endpoint to protect, no key to
 ship to the browser.
@@ -1736,7 +1738,7 @@ Every event follows the same shape:
 type EmbedKitEvent<T> = {
   type: string;             // event type discriminator — see the table below
   timestamp: string;        // ISO-8601, when the event was emitted
-  outcome: 'success' | 'error'; // currently always 'success' — see note below
+  outcome: 'success' | 'error'; // 'error' for auth.session.ended; every other event is 'success' — see note below
   source: {                 // where in the embed it originated
     agentId?: string;
     sessionId?: string;
@@ -1750,9 +1752,9 @@ type EmbedKitEvent<T> = {
 };
 ```
 
-> `outcome` is reserved for a future pass that also emits on failed actions;
-> today every event emitted is a completed, successful action. Build your
-> subscriber to check it once error-emission lands rather than assuming
+> `outcome` is `'error'` for `auth.session.ended`. Every other event reports a
+> completed, successful action, and a future pass may also emit on failed
+> actions. Build your subscriber to check `outcome` rather than assuming
 > `'success'` forever.
 
 ### All Event Types
@@ -1775,6 +1777,18 @@ type EmbedKitEvent<T> = {
 | `agent.session.deleted` | A user deletes a chat session | `{ trigger: 'user', integrationPackId? }` |
 | `agent.message.sent` | A user sends a chat message | `{ text, hasAttachments, integrationPackId? }` |
 | `agent.message.received` | An agent response is received over the chat stream | `{ messageType, role }` |
+| `auth.session.ended` | A part of the UI shows that the session has ended or timed out. `outcome` is `'error'`. Fires once per part per session episode, and again after a new session starts | `{ origin: 'auth' \| 'maps' \| 'agent-chat', code, message }` |
+
+> **`auth.session.ended` tells you where it happened.** `data.origin` is `auth`
+> for any screen that uses the standard error dialog or notice (Integrations,
+> Connections, Schedules and so on), `maps` for the Map Fields screens, and
+> `agent-chat` for the agent chat. `data.code` is the reason: `MISSING_BEARER`
+> (there is no session), `TOKEN_REJECTED` (the server answered 401 because the
+> token is invalid or expired) or `TOKEN_EXPIRED` (the chat found the token
+> expired before it connected). `data.message` is the text EmbedKit shows. If you
+> already listen with `'*'`, you now also receive this event. It is a broadcast:
+> to replace the dialog itself, use the
+> [`sessionError` dialog handler](#sessionerror).
 
 > **`agent.session.created`'s `trigger` field matters.** EmbedKit
 > auto-provisions a session on first open so a chat is always ready — that is
@@ -1883,7 +1897,7 @@ configuration.
 
 ## 11. Dialog Handlers
 
-Before it deletes an integration, runs every process of an integration, disconnects mappings, deletes a transformation or deletes an agent chat, EmbedKit asks "Are you sure?" with its own SweetAlert dialog. If your app already has a dialog component (for example Angular Material's `MatDialog`), register a **dialog handler** and EmbedKit calls your function instead. EmbedKit waits for the answer and continues only when your function returns `true`.
+Before it deletes an integration, runs every process of an integration, disconnects mappings, deletes a transformation or deletes an agent chat, EmbedKit asks "Are you sure?" with its own SweetAlert dialog. If your app already has a dialog component (for example Angular Material's `MatDialog`), register a **dialog handler** and EmbedKit calls your function instead. EmbedKit waits for the answer and continues only when your function returns `true`. The same system lets you replace the message EmbedKit shows when the session has ended or timed out (see [`sessionError`](#sessionerror)).
 
 Handlers are opt-in. With no handler registered, nothing changes.
 
@@ -1939,7 +1953,7 @@ Things to know:
 - `BoomiPlugin` and the CDN embed register handlers only when their config contains `dialogHandlers`. A config without it leaves the registry as it is, so several embeds on one page do not clear each other's handlers. Call `DialogHandlerRegistry.clear()` to remove them.
 - The CDN script can start before your framework has built its handler. Start the embed without `dialogHandlers` and call `window.BoomiEmbedKitCdn.DialogHandlerRegistry.set(...)` once your handler exists.
 - `EmbedKitProvider` accepts the same `config` type, so TypeScript allows `dialogHandlers` there, but the provider does not read it and the handlers would be silently ignored. If you mount EmbedKit with `EmbedKitProvider`, register them with `DialogHandlerRegistry.set()` instead.
-- There is exactly one set of handlers per page. Each of `confirm`, `alert` and `toast` is optional and independent: registering only `toast` leaves confirm dialogs on the built-in SweetAlert.
+- There is exactly one set of handlers per page. Each of `confirm`, `alert`, `sessionError` and `toast` is optional and independent: registering only `toast` leaves confirm dialogs on the built-in SweetAlert.
 
 ### `confirm`
 
@@ -2003,9 +2017,65 @@ Toasts are short, non-blocking messages such as "Integration deleted successfull
 | `timerMs` | `number` | How long the built-in toast would stay open, in milliseconds (the `--boomi-toast-timer` value). When the variable is not set, this is `2000`. `0` is reported when the variable is set to `0` or to something that is not a positive number, and means the built-in toast would stay until dismissed. |
 | `source` | `{ hostId: string; componentKey: string; tenantId?: string }` | Which embed raised the toast. |
 
+### `sessionError`
+
+```ts
+sessionError?: (req: SessionErrorRequest) => Promise<void> | void;
+```
+
+When the session has ended or timed out, EmbedKit shows a message. Register `sessionError` to show your own UI instead. Resolve (or return) when the user has acknowledged it. If your handler throws, rejects or times out, EmbedKit treats it as acknowledged.
+
+With a `sessionError` handler registered, EmbedKit does **not** show its built-in session message anywhere (the standard error dialog and notice, the Map Fields screens and the agent chat error block all stay hidden for this error). You receive the request once per session episode: it is sent again only after a new session has started. The [`auth.session.ended`](#all-event-types) event is emitted too, so you can log it or react to it.
+
+`SessionErrorRequest` has the same fields as `AlertRequest` (`id`, `intent`, `title`, `description`, `confirmLabel`, `dismissible`, `signal`, `source`) plus:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `origin` | `'auth' \| 'maps' \| 'agent-chat'` | Which part of the UI reported the problem. `auth` is any screen that uses the standard error dialog or notice, `maps` is Map Fields, `agent-chat` is the agent chat. |
+| `code` | `string` | Why: `MISSING_BEARER` (no session), `TOKEN_REJECTED` (the server answered 401, so the token is invalid or expired) or `TOKEN_EXPIRED` (the chat found the token expired). |
+
+`description` is the ready-made text: your [`messages.sessionEnded`](#session-ended-message) value, or the default. Show it as it is, or show your own wording. `title` is `Connection timed out`.
+
+```js
+dialogHandlers: {
+  sessionError: async (req) => {
+    await myDialog.open({
+      title: req.title,
+      message: req.description, // or your own wording
+      okLabel: req.confirmLabel,
+    });
+    // Often the right move here: ask your own app for a fresh session
+    // (a new nonce), then call BoomiPlugin(...) again.
+  },
+},
+```
+
+> **Use the handler or the text, depending on what you need.** To change only the wording, set `boomiConfig.messages.sessionEnded` (below). To control the whole dialog, or react in your app, register `sessionError`. If both are set, the handler runs and EmbedKit's own message stays hidden, so the text matters only as `req.description`.
+
+### Session-Ended Message
+
+The default text is:
+
+> Your connection to this section has timed out. Reload the page to continue.
+
+To use your own wording in EmbedKit's built-in message, set `messages.sessionEnded` in `boomi.config.js`:
+
+```js
+export default {
+  messages: {
+    sessionEnded: 'This panel lost its connection. Refresh the page to continue.',
+  },
+  // ...
+};
+```
+
+An empty or non-string value restores the default. The text applies to the standard error dialog and notice and to the Map Fields screens. The agent chat keeps its own message, because it comes from a check in the browser of the token's expiry, but the chat also raises `auth.session.ended` and calls your `sessionError` handler.
+
+What your code receives on a session error has not changed: the error carries `code: 'MISSING_BEARER'` when there is no session, and the server's `401` is reported with `status: 401` and, now, `code: 'TOKEN_REJECTED'`. Match on `error.code`, not on the message text, because the text is meant to be customized.
+
 ### Timeout and abort
 
-`timeoutMs` (default `120000`, that is 120 seconds) is the longest EmbedKit waits for a `confirm` or `alert` handler. Set it next to the handlers:
+`timeoutMs` (default `120000`, that is 120 seconds) is the longest EmbedKit waits for a `confirm`, `alert` or `sessionError` handler. Set it next to the handlers:
 
 ```js
 dialogHandlers: { timeoutMs: 60000, confirm: myConfirm }
@@ -2036,7 +2106,7 @@ A handler can never leave EmbedKit stuck or acting on a bad answer.
 | Handler throws, or its promise rejects | Cancel. The error is logged with the request `id`. |
 | Handler never answers | Cancel after `timeoutMs`. Logged as abandoned, and `req.signal` is aborted. A late answer is ignored, so nothing is deleted after the fact. |
 | Any of the failures above | **The built-in dialog is never shown as a fallback once a handler is registered.** |
-| `alert` handler fails or times out | Logged and treated as acknowledged. |
+| `alert` or `sessionError` handler fails or times out | Logged and treated as acknowledged. |
 | `toast` handler fails | Logged and ignored. |
 
 ### Examples

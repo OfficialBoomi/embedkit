@@ -306,6 +306,15 @@ The full end-to-end authentication flow is:
 9. To render an EmbedKit component, call the `RenderComponent` method as described below.
 10. When the user ends their session on your web application, call the EmbedKit logout endpoint to invalidate the server-side session. If the user can sign in again without a page reload, start a new session as in steps 3 to 6: get a new nonce from your server and call `BoomiPlugin(...)` with it before you render a component.
 
+
+### Session Length
+
+- The JWT lives for 10 minutes. The plugin renews it automatically about a minute before it expires, so you do not need to handle renewals.
+- The refresh cookie keeps the session alive for 14 days from the last time it was used. Each renewal starts a new 14 days, so a page that stays open does not time out on its own.
+- A session ends sooner when your application logs the user out of EmbedKit (`DestroyPlugin({ clearAuth: true })`), when the browser blocks the refresh cookie (the session then lasts only as long as the current 10-minute JWT), or when the nonce is not used within its 2 minutes.
+- These lifetimes are set on the EmbedKit Server. They are not plugin options and cannot be changed from the client.
+- When a session ends, EmbedKit shows a message ("Your connection to this section has timed out. Reload the page to continue."). You can change its text, show it in your own dialog, or listen for it. See [Session-Ended Message](./ConfigurationReference.md#session-ended-message), [`sessionError`](./ConfigurationReference.md#sessionerror) and the `auth.session.ended` event in [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks).
+
 ---
 
 ## Rendering a Component

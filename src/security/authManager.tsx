@@ -6,6 +6,8 @@
  * including storage, refresh, and subscription to token changes.
  */
 
+import { getSessionMessage, MISSING_BEARER_CODE, noteSessionCode, resetSessionEpisode } from '../utils/sessionError';
+
 type BootstrapOpts = {
   serverBase: string;   // e.g. "https://api.../api/v1"
   tenantId?: string;
@@ -14,8 +16,7 @@ type BootstrapOpts = {
 
 type TokenListener   = (tok: string | null) => void;
 
-/** Shown to the user when a request is made with no session. The `code` stays machine readable. */
-const SESSION_ENDED_MESSAGE = 'Your session has ended. Please sign in again.';
+/** A request made with no session throws an error with the shared session message and code MISSING_BEARER. */
 
 class AuthManager {
   private static _instance: AuthManager | null = null;
@@ -169,7 +170,10 @@ class AuthManager {
     const headers = new Headers(init.headers || {});
     if (this.tenantId) headers.set('X-Tenant-Id', this.tenantId);
     if (tok) headers.set('Authorization', `Bearer ${tok}`);
-    if (!tok && !allowAnonymous) throw Object.assign(new Error(SESSION_ENDED_MESSAGE), { code: 'MISSING_BEARER' });
+    if (!tok && !allowAnonymous) {
+      noteSessionCode(MISSING_BEARER_CODE);
+      throw Object.assign(new Error(getSessionMessage()), { code: MISSING_BEARER_CODE });
+    }
     return fetch(input, { ...init, headers, credentials: 'include' as const, cache: 'no-store' });
   };
 
@@ -238,6 +242,7 @@ class AuthManager {
 
   private setToken = (tok: string | null) => {
     this.accessToken = tok;
+    if (tok) resetSessionEpisode();   // a new session starts a new episode for session-ended reports
     if (tok) this.scheduleProactiveRefresh(tok);
     this.tokenSubs.forEach(fn => fn(tok));
     if (tok) this.resolveWaiters(tok);

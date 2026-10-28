@@ -6,8 +6,8 @@
  *
  * @description
  * Standardized app-level event system. EmbedKit components emit typed events
- * (feedback was the first; integration, map, schedule, AI transformation and
- * agent-session/message events followed) and the host application
+ * (feedback was the first; integration, map, schedule, AI transformation,
+ * agent-session/message and auth-session events followed) and the host application
  * subscribes to them and decides what to do with the data — nothing is ever
  * sent over the network by EmbedKit itself.
  *
@@ -33,7 +33,7 @@ import logger from './logger.service';
 /**
  * Known event types. Extend this union as new events are added. Namespaced
  * by area (`integration.*`, `connection.*`, `map.*`, `schedules.*`, `ai.*`,
- * `agent.*`) so future areas don't collide with each other or with `feedback`.
+ * `agent.*`, `auth.*`) so future areas don't collide with each other or with `feedback`.
  */
 export type EmbedKitEventType =
   | 'feedback'
@@ -51,7 +51,8 @@ export type EmbedKitEventType =
   | 'agent.session.created'
   | 'agent.session.deleted'
   | 'agent.message.sent'
-  | 'agent.message.received';
+  | 'agent.message.received'
+  | 'auth.session.ended';
 
 /** The standardized envelope every EmbedKit event follows. */
 export type EmbedKitEvent<T = unknown> = {
@@ -197,6 +198,19 @@ export type AgentMessageReceivedEventData = {
   /** The message's `type` field (text | image | file | event | json | error) */
   messageType: string;
   role: string;
+};
+
+/**
+ * Payload for `auth.session.ended`. Emitted with `outcome: 'error'` when a part of the UI
+ * shows that the session has ended or timed out, once per part per episode (an episode ends
+ * when a new session starts). `message` is the text EmbedKit shows or would show.
+ */
+export type AuthSessionEndedEventData = {
+  /** `auth`: standard error dialog or notice. `maps`: Map Fields. `agent-chat`: agent chat stream. */
+  origin: 'auth' | 'maps' | 'agent-chat';
+  /** Machine-readable reason, for example `MISSING_BEARER`, `TOKEN_REJECTED` or `TOKEN_EXPIRED`. */
+  code: string;
+  message: string;
 };
 
 export type EmbedKitEventHandler = (event: EmbedKitEvent) => void;

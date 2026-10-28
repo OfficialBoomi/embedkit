@@ -48,6 +48,7 @@ describe('classifyMapError', () => {
     expect(classifyMapError(httpError(status))).toEqual({
       kind: 'session',
       message: MAP_ERROR_MESSAGES.session,
+      code: 'TOKEN_REJECTED',
     });
   });
 
@@ -71,7 +72,8 @@ describe('classifyMapError', () => {
 
   it('treats a missing bearer token as an expired session', () => {
     expect(classifyMapError(new Error('MISSING_BEARER')).kind).toBe('session');
-    expect(classifyMapError(Object.assign(new Error('Your session has ended. Please sign in again.'), { code: 'MISSING_BEARER' })).kind).toBe('session');
+    const noSession = classifyMapError(Object.assign(new Error('anything'), { code: 'MISSING_BEARER' }));
+    expect(noSession).toEqual({ kind: 'session', message: MAP_ERROR_MESSAGES.session, code: 'MISSING_BEARER' });
   });
 
   it('survives non-error values', () => {

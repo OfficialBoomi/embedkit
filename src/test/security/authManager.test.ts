@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AuthManager from '../../security/authManager';
+import { DEFAULT_SESSION_MESSAGE } from '../../utils/sessionError';
 
 type Call = { path: string; bearer: string | null };
 
@@ -14,7 +15,7 @@ type Internals = {
   subscribeToken: (fn: (t: string | null) => void) => () => void;
 };
 
-const SESSION_ENDED = { code: 'MISSING_BEARER', message: 'Your session has ended. Please sign in again.' };
+const SESSION_ENDED = { code: 'MISSING_BEARER', message: DEFAULT_SESSION_MESSAGE };
 
 const nowS = () => Math.floor(Date.now() / 1000);
 const jwt = (exp: number) => {

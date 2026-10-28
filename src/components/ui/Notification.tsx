@@ -12,6 +12,8 @@
  */
 
 import classNames from 'classnames';
+import type { SessionErrorOrigin } from '../../types/dialog-handlers';
+import { useSessionErrorGate } from '../../hooks/useSessionErrorGate';
 import {
   AiOutlineWarning,
   AiOutlineCheck,
@@ -32,9 +34,14 @@ interface NotificationProps {
   type: 'Error' | 'Warning' | 'Success';
   message: string;
   className?: string;
+  /** Which part of the UI shows the notice. Reported with the `auth.session.ended` event for a session error. */
+  origin?: SessionErrorOrigin;
 }
 
-const Notification: React.FC<NotificationProps> = ({ type, message, className }) => {
+const Notification: React.FC<NotificationProps> = ({ type, message, className, origin = 'auth' }) => {
+  // Only error notices can be session errors. When the host's sessionError handler owns the display, hide this one.
+  const sessionGate = useSessionErrorGate(type === 'Error' ? message : null, message, origin);
+  if (sessionGate.hidden) return null;
   const variant = type.toLowerCase() as 'error' | 'warning' | 'success';
   const ariaLive = type === 'Error' ? 'assertive' : 'polite';
 

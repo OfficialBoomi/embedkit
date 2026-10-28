@@ -10,6 +10,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { ChatMessage } from '../../types/agent-chat';
 import { usePlugin } from '../../context/pluginContext';
 import logger from '../../logger.service';
+import { CHAT_SESSION_EXPIRED_MESSAGE, reportSessionEnded, TOKEN_EXPIRED_CODE } from '../../utils/sessionError';
 
 type StatusEvent = {
   event: 'status';
@@ -58,13 +59,13 @@ type Args = {
   sessionId: string;
   onMessage: (m: ChatMessage) => void;
   onStatus?: (s: StatusEvent) => void;
-  onError?: (err: { message: string; raw?: unknown }) => void;
+  onError?: (err: { message: string; raw?: unknown; sessionCode?: string }) => void;
   onOpen?: () => void;
   enabled?: boolean;
 };
 
 export function useSseConversation({ sessionId, onMessage, onStatus, onError, onOpen, enabled = true }: Args) {
-  const { serverBase, accessToken } = usePlugin();
+  const { serverBase, accessToken, hostId, componentKey, tenantId } = usePlugin();
 
   // stable latest handlers
   const onMessageRef = useRef(onMessage);
@@ -103,7 +104,13 @@ export function useSseConversation({ sessionId, onMessage, onStatus, onError, on
     }
     if (isTokenExpired(accessToken)) {
       lastErrorSigRef.current = '';
-      onErrorRef.current?.({ message: 'Session expired. Please refresh or re-authenticate.' });
+      reportSessionEnded({
+        origin: 'agent-chat',
+        code: TOKEN_EXPIRED_CODE,
+        message: CHAT_SESSION_EXPIRED_MESSAGE,
+        source: { hostId, componentKey, tenantId },
+      });
+      onErrorRef.current?.({ message: CHAT_SESSION_EXPIRED_MESSAGE, sessionCode: TOKEN_EXPIRED_CODE });
       return;
     }
 
@@ -119,11 +126,21 @@ export function useSseConversation({ sessionId, onMessage, onStatus, onError, on
       onStatusRef.current?.(s);
     };
 
-    const pushError = (message: string, raw?: unknown) => {
+    // `sessionCode` is not `code` on purpose: the chat's error block shows `code` to the user.
+    const pushError = (message: string, raw?: unknown, sessionCode?: string) => {
       const sig = message.trim();
       if (!sig || sig === lastErrorSigRef.current) return;
       lastErrorSigRef.current = sig;
-      onErrorRef.current?.({ message: sig, raw });
+      onErrorRef.current?.({ message: sig, raw, ...(sessionCode ? { sessionCode } : {}) });
+    };
+    const pushSessionExpired = () => {
+      reportSessionEnded({
+        origin: 'agent-chat',
+        code: TOKEN_EXPIRED_CODE,
+        message: CHAT_SESSION_EXPIRED_MESSAGE,
+        source: { hostId, componentKey, tenantId },
+      });
+      pushError(CHAT_SESSION_EXPIRED_MESSAGE, undefined, TOKEN_EXPIRED_CODE);
     };
 
     const qs  = accessToken ? `?access_token=${encodeURIComponent(accessToken)}` : '';
@@ -141,7 +158,7 @@ export function useSseConversation({ sessionId, onMessage, onStatus, onError, on
     const scheduleReconnect = (delayOverride?: number) => {
       if (stopped) return;
       if (isTokenExpired(accessToken)) {
-        pushError('Session expired. Please refresh or re-authenticate.');
+        pushSessionExpired();
         return;
       }
       if (retryRef.current.timer) return;
@@ -158,7 +175,7 @@ export function useSseConversation({ sessionId, onMessage, onStatus, onError, on
     const connect = () => {
       if (stopped) return;
       if (isTokenExpired(accessToken)) {
-        pushError('Session expired. Please refresh or re-authenticate.');
+        pushSessionExpired();
         return;
       }
 
@@ -255,5 +272,5 @@ export function useSseConversation({ sessionId, onMessage, onStatus, onError, on
         esRef.current = null;
       }
     };
-  }, [enabled, sessionId, serverBase, accessToken]);
+  }, [enabled, sessionId, serverBase, accessToken, hostId, componentKey, tenantId]);
 }

@@ -14,7 +14,7 @@
 ### All Releases
 
 <details open>
-  <summary><strong>Unreleased</strong>: Fixes the "Invalid or expired token" error after logging out and back in</summary>
+  <summary><strong>Unreleased</strong>: Fixes the "Invalid or expired token" error after logging out and back in, with a friendlier session message you can customize</summary>
 
   **Upgrade notes**
   - UI only: no server or SDK change is needed.
@@ -22,8 +22,16 @@
   - If your app lets a user sign out and back in without reloading the page, start the new session by calling `BoomiPlugin(...)` with a new nonce before you render a component. See [Authentication Flow](./GettingStarted.md#authentication-flow).
 
   **Changes for every embed** (no opt-in)
-  - ✅ **Logging out clears the in-memory session:** `DestroyPlugin({ clearAuth: true })` now also forgets the access token. Until the next `BoomiPlugin(...)` call starts a new session, API calls fail at once with the message "Your session has ended. Please sign in again." (the error also carries the code `MISSING_BEARER`). Before, they kept working with the old token until it expired (up to 10 minutes).
+  - ✅ **Logging out clears the in-memory session:** `DestroyPlugin({ clearAuth: true })` now also forgets the access token. Until the next `BoomiPlugin(...)` call starts a new session, API calls fail at once with the session-ended message (the error carries the code `MISSING_BEARER`). Before, they kept working with the old token until it expired (up to 10 minutes).
   - ✅ **No session means a fast error:** When no session can be started (for example the nonce was already used and no refresh cookie is available), the error now appears immediately instead of after about 10 seconds.
+
+  - ✅ **A friendlier session-ended message:** When the session has ended or timed out, EmbedKit now says "Your connection to this section has timed out. Reload the page to continue." instead of asking the user to sign in, which was wrong for apps where the user is still signed in. This replaces the three earlier wordings ("Your session has ended. Please sign in again.", "Your session has expired. Reload the page and sign in again." in Map Fields, and the server's "Invalid or expired token" shown as is). The agent chat keeps its own message.
+  - ✅ **Match on the error code, not the text:** A request with no session fails with `code: 'MISSING_BEARER'`. A server `401` (token invalid or expired) now carries `status: 401` and `code: 'TOKEN_REJECTED'`, and its message is the session-ended message instead of "Invalid or expired token" (the server's own text stays in `error.body`). If your app matched the old message text, match `error.code` instead.
+  - ✅ **A new event for hosts:** `auth.session.ended` (with `outcome: 'error'`) tells your app when a part of the UI shows the session-ended message, and which part (`data.origin`: `auth`, `maps` or `agent-chat`). If you subscribe to every event with `'*'`, you now also receive it, and a `switch` over `event.type` that must cover every case needs a new branch. See [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks).
+
+  **Opt-in** (nothing changes unless you configure it)
+  - 🆕 **Your own wording:** set `messages.sessionEnded` in `boomi.config.js` to replace the text of the session-ended message. See [Session-Ended Message](./ConfigurationReference.md#session-ended-message).
+  - 🆕 **Your own dialog:** register `dialogHandlers.sessionError` to show the session-ended message in your own UI. EmbedKit hides its built-in message when it is registered and calls it once per session. It works in the npm package and in the CDN embed (for the chat). See [`sessionError`](./ConfigurationReference.md#sessionerror).
 
   **Bug fixes**
   - 🐛 **"Invalid or expired token" after signing out and back in:** In an app that signed out and back in without a page reload, a request that started while the new session was still being set up could use the previous, already expired token and fail. The list then stayed in error until the page was reloaded. EmbedKit now waits for the new session, or refreshes an expired token first, before sending a request.

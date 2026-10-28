@@ -16,6 +16,7 @@ export type {
   EmbedKitEventType,
   EmbedKitEventHandler,
   FeedbackEventData,
+  AuthSessionEndedEventData,
 } from './events.service';
 export { DialogHandlerRegistry } from './dialogs.service';
 export type {
@@ -24,6 +25,8 @@ export type {
   DialogSource,
   ConfirmRequest,
   AlertRequest,
+  SessionErrorRequest,
+  SessionErrorOrigin,
   ToastRequest,
 } from './types/dialog-handlers';
 export { default } from './main';

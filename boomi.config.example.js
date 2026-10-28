@@ -15,6 +15,15 @@ export default {
     defaultTheme: 'default',          // 'default' | 'oem' | any key in cssVarsByTheme
   },
 
+  // Optional text overrides. Every key is optional; omit this block to keep the defaults.
+  // messages: {
+  //   // Replaces the message shown when the session has ended or timed out.
+  //   // Default: "Your connection to this section has timed out. Reload the page to continue."
+  //   // To show it in your own dialog instead, register dialogHandlers.sessionError
+  //   // (see index.example.js). The agent chat keeps its own message.
+  //   sessionEnded: 'This panel lost its connection. Refresh the page to continue.',
+  // },
+
   components: {
     // The "Agents" page (renderType: 'agent')
     agentsPage: {

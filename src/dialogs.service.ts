@@ -26,8 +26,8 @@
  * - A handler that never answers is abandoned after `timeoutMs` (default 120 s).
  *   The request's `signal` is aborted so the host can close its own dialog, and a
  *   late answer is ignored.
- * - `alert` failures count as acknowledged. `toast` failures are logged and
- *   swallowed.
+ * - `alert` and `sessionError` failures count as acknowledged. `toast` failures are
+ *   logged and swallowed.
  */
 
 import logger from './logger.service';
@@ -35,6 +35,7 @@ import type {
   AlertRequest,
   ConfirmRequest,
   DialogHandlers,
+  SessionErrorRequest,
   ToastRequest,
 } from './types/dialog-handlers';
 
@@ -45,9 +46,10 @@ const MAX_TIMEOUT_MS = 2_147_483_647;
 /** What a caller supplies. The service adds `id` and `signal`. */
 export type ConfirmInput = Omit<ConfirmRequest, 'id' | 'signal'>;
 export type AlertInput = Omit<AlertRequest, 'id' | 'signal'>;
+export type SessionErrorInput = Omit<SessionErrorRequest, 'id' | 'signal'>;
 export type ToastInput = Omit<ToastRequest, 'id'>;
 
-type DialogKind = 'confirm' | 'alert' | 'toast';
+type DialogKind = 'confirm' | 'alert' | 'sessionError' | 'toast';
 
 let handlers: DialogHandlers | null = null;
 let counter = 0;
@@ -108,7 +110,7 @@ export function hasHandler(kind: DialogKind): boolean {
 }
 
 function awaitHandler<T>(opts: {
-  kind: 'confirm' | 'alert';
+  kind: 'confirm' | 'alert' | 'sessionError';
   id: string;
   controller: AbortController;
   timeoutMs: number;
@@ -174,6 +176,29 @@ export function requestConfirm(input: ConfirmInput): Promise<boolean> {
     invoke: () => handler(req),
     toResult: (value) => value === true,
     fallback: false,
+  });
+}
+
+/**
+ * Asks the registered `sessionError` handler and resolves once the user has
+ * acknowledged. Always resolves: a failure or timeout counts as acknowledged.
+ */
+export function requestSessionError(input: SessionErrorInput): Promise<void> {
+  const handler = handlers?.sessionError;
+  if (typeof handler !== 'function') return Promise.resolve();
+
+  const id = nextId();
+  const controller = new AbortController();
+  const req: SessionErrorRequest = { id, ...input, signal: controller.signal };
+
+  return awaitHandler<void>({
+    kind: 'sessionError',
+    id,
+    controller,
+    timeoutMs: resolveTimeoutMs(handlers),
+    invoke: () => handler(req),
+    toResult: () => undefined,
+    fallback: undefined,
   });
 }
 

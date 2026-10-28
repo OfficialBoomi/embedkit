@@ -1004,7 +1004,7 @@ Replace `publicToken` and `agentId` with the values from the Admin Console after
 | `userId` | `string` | No | An identifier for the current user (for analytics / session tracking) |
 | `origin` | `string` | No | Override the detected origin. Defaults to `window.location.origin` |
 | `autoInit` | `boolean` | No | Set to `false` to disable automatic initialization. Default: `true` |
-| `onEvent` | `function` | No | Receives every EmbedKit event (e.g. response feedback) as a standardized envelope. See [Response Feedback](#response-feedback) |
+| `onEvent` | `function` | No | Receives every EmbedKit event (e.g. response feedback, `auth.session.ended`) as a standardized envelope. See [Response Feedback](#response-feedback) and [Handling a Timed-Out Session](#handling-a-timed-out-session) |
 
 ---
 
@@ -1292,6 +1292,31 @@ window.BoomiEmbedKitCdn.DialogHandlerRegistry.set({ confirm: myConfirm });
 // Back to the built-in dialog:
 window.BoomiEmbedKitCdn.DialogHandlerRegistry.clear();
 ```
+
+### Handling a Timed-Out Session
+
+When the chat finds that its session has expired, it shows "Session expired. Please refresh or re-authenticate." in the chat. You can react to this in two ways, and you can use both:
+
+- **Event.** The embed emits `auth.session.ended` with `outcome: 'error'` and `data: { origin: 'agent-chat', code: 'TOKEN_EXPIRED', message }`. Receive it with `onEvent`, the same way as feedback events. It is emitted once until a new session starts.
+- **Your own dialog.** Pass `dialogHandlers.sessionError`. EmbedKit calls it with the ready-made `description` and hides the chat's own error block. Resolve when the user has acknowledged it.
+
+```html
+<script>
+  window.BoomiEmbed = {
+    publicToken: "pk_...",
+    agentId:     "project_...",
+    serverBase:  "https://api.boomi.space/api/v1",
+    onEvent: (event) => {
+      if (event.type === "auth.session.ended") console.warn("Chat session ended:", event.data.code);
+    },
+    dialogHandlers: {
+      sessionError: (req) => myDialog.open({ title: req.title, message: req.description }),
+    },
+  };
+</script>
+```
+
+The chat keeps its own message text. The full request fields and rules are in [Configuration Reference, `sessionError`](./ConfigurationReference.md#sessionerror).
 
 Handlers are optional. With none registered, the built-in dialog is used, exactly as before. The request fields, the full failure rules, the `alert` and `toast` handlers and an Angular example are in [Dialog Handlers](./ConfigurationReference.md#11-dialog-handlers) in the Configuration Reference.
 

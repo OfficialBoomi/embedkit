@@ -20,6 +20,13 @@ import { useSseConversation } from './useSseConversation';
 import logger from '../../logger.service';
 import { extractErrorMessage } from '../../utils/ui-utils';
 import { emitEmbedKitEvent } from '../../events.service';
+import {
+  CHAT_SESSION_EXPIRED_MESSAGE,
+  isSessionError,
+  isSessionErrorHandled,
+  reportSessionEnded,
+  sessionCodeOf,
+} from '../../utils/sessionError';
 
 /** Helpers */
 const toIso = (v?: unknown): string | undefined => {
@@ -147,15 +154,19 @@ function getUserTextData(m: ChatMessage | undefined | null): string | undefined 
 }
 
 function normalizeAgentError(err: any, fallback: string) {
-  const message = extractErrorMessage(err) || fallback;
+  // An expired or rejected token: show the chat's own session text, not the server's, and keep the
+  // reason in `sessionCode` (the error block shows `code` to the user, as it always did for status).
+  const sessionError = isSessionError(err);
+  const message = sessionError ? CHAT_SESSION_EXPIRED_MESSAGE : extractErrorMessage(err) || fallback;
   const status = err?.status ?? err?.statusCode ?? err?.response?.status;
-  const code = err?.code ?? err?.response?.code ?? err?.response?.data?.code;
+  const code = sessionError ? undefined : err?.code ?? err?.response?.code ?? err?.response?.data?.code;
   const details = err?.details ?? err?.issues ?? err?.response?.data ?? err?.data;
   return {
     title: 'Agent error',
     message,
     status,
     code,
+    ...(sessionError ? { sessionCode: sessionCodeOf(err) } : {}),
     details,
     source: 'embedkit-server',
     raw: err,
@@ -181,7 +192,22 @@ export function useAgentApi(args: {
     persistMode = 'none',
   } = args;
 
-  const { boomiConfig } = usePlugin();
+  const { boomiConfig, hostId, componentKey, tenantId } = usePlugin();
+
+  /**
+   * A failed send caused by the session ending is reported to the host (event, then handler).
+   * Returns true when the host's sessionError handler owns the display, so no error message is added to the chat.
+   */
+  const reportIfSessionError = useCallback((payload: { sessionCode?: string; message: string }): boolean => {
+    if (!payload.sessionCode) return false;
+    reportSessionEnded({
+      origin: 'agent-chat',
+      code: payload.sessionCode,
+      message: payload.message,
+      source: { hostId, componentKey, tenantId },
+    });
+    return isSessionErrorHandled();
+  }, [hostId, componentKey, tenantId]);
   const isControlled = controlledSid != null;
   const storageKey = useMemo(() => {
     const base = args.storageKey ?? `agent:sess:${integration.id ?? 'unknown'}`;
@@ -603,7 +629,8 @@ export function useAgentApi(args: {
     } catch (e) {
       logger.error({ e }, 'sendMessageRich failed');
       const errorPayload = normalizeAgentError(e, 'Failed to send message');
-      dispatch({
+      const sessionHandled = reportIfSessionError(errorPayload);
+      if (!sessionHandled) dispatch({
         type: 'mergeFromServer',
         list: [{
           id: crypto.randomUUID(),
@@ -617,12 +644,15 @@ export function useAgentApi(args: {
           content: { data: errorPayload },
         } as ChatMessage],
       });
-      setAgentStatus('error');
-      setAgentNote(errorPayload.message || 'Failed to send message');
+      // When the host's sessionError handler owns the session message, the status line stays quiet too.
+      if (!sessionHandled) {
+        setAgentStatus('error');
+        setAgentNote(errorPayload.message || 'Failed to send message');
+      }
     } finally {
       setSending(false);
     }
-  }, [activeSessionId, integration.integrationPackId, createSession, svc, sendRef, dispatch, forceMultipart, useBoomiDirect]);
+  }, [activeSessionId, integration.integrationPackId, createSession, svc, sendRef, dispatch, forceMultipart, useBoomiDirect, reportIfSessionError]);
 
   const sendMessage = useCallback(async (data: string) => {
     if (forceMultipart) {
@@ -679,7 +709,8 @@ export function useAgentApi(args: {
     } catch (e) {
       logger.error({ e }, 'sendMessage failed');
       const errorPayload = normalizeAgentError(e, 'Failed to send message');
-      dispatch({
+      const sessionHandled = reportIfSessionError(errorPayload);
+      if (!sessionHandled) dispatch({
         type: 'mergeFromServer',
         list: [{
           id: crypto.randomUUID(),
@@ -693,12 +724,15 @@ export function useAgentApi(args: {
           content: { data: errorPayload },
         } as ChatMessage],
       });
-      setAgentStatus('error');
-      setAgentNote(errorPayload.message || 'Failed to send message');
+      // When the host's sessionError handler owns the session message, the status line stays quiet too.
+      if (!sessionHandled) {
+        setAgentStatus('error');
+        setAgentNote(errorPayload.message || 'Failed to send message');
+      }
     } finally {
       setSending(false);
     }
-  }, [activeSessionId, integration.integrationPackId, createSession, sendMessageRich, forceMultipart, useBoomiDirect]);
+  }, [activeSessionId, integration.integrationPackId, createSession, sendMessageRich, forceMultipart, useBoomiDirect, reportIfSessionError]);
 
   // ===== Effects =====
 
@@ -813,6 +847,8 @@ export function useAgentApi(args: {
     onError: (err) => {
       sseErrorRef.current = true;
       setChatError(err);
+      // When the host's sessionError handler owns the session message, the status line stays quiet too.
+      if (err?.sessionCode && isSessionErrorHandled()) return;
       setAgentStatus('error');
       setAgentNote(err?.message || 'Realtime connection lost. Retrying…');
     },

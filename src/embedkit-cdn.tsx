@@ -14,6 +14,7 @@ import { uiVersionCss } from './utils/ui-version';
 import logger from './logger.service';
 import { BoomiEvents } from './events.service';
 import { DialogHandlerRegistry } from './dialogs.service';
+import { setSessionMessage } from './utils/sessionError';
 import type { DialogHandlers } from './types/dialog-handlers';
 import { getBrowserId } from './utils/browserId';
 
@@ -370,6 +371,9 @@ export function BoomiPlugin(config: PluginConfig) {
   // before. A config without them leaves the registry alone, so several embeds on one
   // page do not clear each other's handlers. Use DialogHandlerRegistry.clear() to remove.
   if (config.dialogHandlers) DialogHandlerRegistry.set(config.dialogHandlers);
+
+  // Host text for the session-ended message (boomiConfig.messages.sessionEnded); empty restores the default.
+  setSessionMessage(config.boomiConfig?.messages?.sessionEnded);
 
   if (config.accessToken && typeof window !== 'undefined') {
     window.__BoomiAccessToken = config.accessToken;

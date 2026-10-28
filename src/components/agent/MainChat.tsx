@@ -12,6 +12,7 @@ import { MessageBlock } from './MessageBlock';
 import { getMsgText } from './utils/message';
 import StatusRowChip from './StatusRowChip';
 import { ErrorBlock } from './ErrorBlock';
+import { isSessionError, isSessionErrorHandled } from '../../utils/sessionError';
 
 type MainChatProps = {
   integration: IntegrationPackInstance;
@@ -59,6 +60,8 @@ export default function MainChat({
   error,
 }: MainChatProps) {
   const { boomiConfig } = usePlugin();
+  // When the host's sessionError handler owns the session-ended display, keep the built-in chat error hidden.
+  const sessionErrorHidden = !!error && isSessionError(error) && isSessionErrorHandled();
 
   const [draft, setDraft] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -323,7 +326,7 @@ export default function MainChat({
           className="h-full overflow-auto boomi-scroll bg-[var(--boomi-agent-pane-bg)] text-[var(--boomi-agent-pane-fg)]"
           style={{ paddingBottom: composerPad }}
         >
-        {!!error && (
+        {!!error && !sessionErrorHidden && (
           <div className="mx-auto w-full max-w-[1024px] px-4 md:px-6 pt-4">
             <ErrorBlock
               error={error}

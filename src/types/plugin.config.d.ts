@@ -35,9 +35,9 @@ export type PluginConfig = {
   onEvent?: (event: EmbedKitEvent) => void;
 
   /**
-   * Optional handlers that replace EmbedKit's built-in confirm, alert and toast
-   * dialogs with the host's own UI. Unlike `onEvent`, `confirm` and `alert` are
-   * awaited. When omitted, the built-in dialogs are used.
+   * Optional handlers that replace EmbedKit's built-in confirm, alert, session-error
+   * and toast dialogs with the host's own UI. Unlike `onEvent`, `confirm`, `alert` and
+   * `sessionError` are awaited. When omitted, the built-in dialogs are used.
    */
   dialogHandlers?: DialogHandlers;
 };
