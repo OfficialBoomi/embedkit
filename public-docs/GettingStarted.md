@@ -218,6 +218,7 @@ async function logout() {
   boomiReady = null;
   await serverLogout();
   DestroyPlugin({ removeHost: true, clearTheme: true, clearAuth: true });
+  // API calls now fail until the next sign-in calls BoomiPlugin(...) with a new nonce (a page reload also works).
 }
 
 /* Call your server logout endpoint to invalidate the session cookie */
@@ -237,6 +238,7 @@ async function initBoomiFromServer(res) {
     tenantId: res.tenantId,       // Your Boomi Parent Account ID
     nonce: res.nonce,             // One-time-use nonce from the EmbedKit auth endpoint
     boomiConfig: uiConfig,        // Contents of your boomi.config.js file
+    // userId: 'YOUR_USER_ID',    // Optional. Your own id for the signed-in user (an opaque id, not an email address). Gives each user their own "Last viewed" order.
   });
 
   // Wait one animation frame to ensure the plugin has fully mounted before rendering components
@@ -303,7 +305,16 @@ The full end-to-end authentication flow is:
 7. The EmbedKit Plugin exchanges the nonce for a JWT. The JWT has a TTL of 10 minutes — all token refreshes are handled automatically by the EmbedKit.
 8. The EmbedKit Server mints the JWT and a refresh token cookie (`RT Cookie`).
 9. To render an EmbedKit component, call the `RenderComponent` method as described below.
-10. When the user ends their session on your web application, call the EmbedKit logout endpoint to invalidate the server-side session.
+10. When the user ends their session on your web application, call the EmbedKit logout endpoint to invalidate the server-side session. If the user can sign in again without a page reload, start a new session as in steps 3 to 6: get a new nonce from your server and call `BoomiPlugin(...)` with it before you render a component.
+
+
+### Session Length
+
+- The JWT lives for 10 minutes. The plugin renews it automatically about a minute before it expires, so you do not need to handle renewals.
+- The refresh cookie keeps the session alive for 14 days from the last time it was used. Each renewal starts a new 14 days, so a page that stays open does not time out on its own.
+- A session ends sooner when your application logs the user out of EmbedKit (`DestroyPlugin({ clearAuth: true })`), when the browser blocks the refresh cookie (the session then lasts only as long as the current 10-minute JWT), or when the nonce is not used within its 2 minutes.
+- These lifetimes are set on the EmbedKit Server. They are not plugin options and cannot be changed from the client.
+- When a session ends, EmbedKit shows a message ("Your connection to this section has timed out. Reload the page to continue."). You can change its text, show it in your own dialog, or listen for it. See [Session-Ended Message](./ConfigurationReference.md#session-ended-message), [`sessionError`](./ConfigurationReference.md#sessionerror) and the `auth.session.ended` event in [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks).
 
 ---
 

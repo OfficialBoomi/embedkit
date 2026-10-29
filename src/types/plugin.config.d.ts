@@ -21,6 +21,13 @@ export type PluginConfig = {
   /** One-time nonce the host app obtained from the server login flow. */
   nonce?: string;
 
+  /**
+   * Optional. Your own id for the signed-in user. Used to keep each user's own "Last viewed"
+   * list on the integrations list. When omitted, EmbedKit uses an id kept in this browser.
+   * Use an opaque id, not an email address.
+   */
+  userId?: string;
+
   /** Optional access token (public embed flow). */
   accessToken?: string;
 
@@ -35,9 +42,9 @@ export type PluginConfig = {
   onEvent?: (event: EmbedKitEvent) => void;
 
   /**
-   * Optional handlers that replace EmbedKit's built-in confirm, alert and toast
-   * dialogs with the host's own UI. Unlike `onEvent`, `confirm` and `alert` are
-   * awaited. When omitted, the built-in dialogs are used.
+   * Optional handlers that replace EmbedKit's built-in confirm, alert, session-error
+   * and toast dialogs with the host's own UI. Unlike `onEvent`, `confirm`, `alert` and
+   * `sessionError` are awaited. When omitted, the built-in dialogs are used.
    */
   dialogHandlers?: DialogHandlers;
 };

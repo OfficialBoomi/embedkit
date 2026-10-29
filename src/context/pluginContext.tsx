@@ -10,9 +10,15 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import type { PluginContextValue, PluginContextProps, ServerApi } from '../types/plugin-context';
 import type { PluginUiConfig } from '../types/plugin-ui.config';
 import AuthManager from '../security/authManager';
+import { setSessionMessage } from '../utils/sessionError';
 
 const PluginContext = createContext<PluginContextValue | undefined>(undefined);
 const auth = AuthManager.get();
+
+/** Like {@link usePlugin}, but returns undefined instead of throwing when there is no provider. */
+export function usePluginOptional(): PluginContextValue | undefined {
+  return useContext(PluginContext);
+}
 
 /** Hook to access the Plugin context. */
 export function usePlugin(): PluginContextValue {
@@ -42,6 +48,7 @@ const PluginContextProvider = ({
   tenantId,
   nonce,
   boomiConfig,
+  userId,
 }: PluginContextProps & { nonce?: string }) => {
   const auth = AuthManager.get();
   const [accessToken, setAccessToken] = useState<string | null>(auth.getToken());
@@ -53,6 +60,10 @@ const PluginContextProvider = ({
     () => serverBase.replace(/\/$/, ''),
     [serverBase]
   );
+
+  // Host text for the session-ended message (boomiConfig.messages.sessionEnded).
+  const sessionEndedText = (boomiConfig as PluginUiConfig | undefined)?.messages?.sessionEnded;
+  useEffect(() => { setSessionMessage(sessionEndedText); }, [sessionEndedText]);
 
   useEffect(() => {
     let unsub: (() => void) | undefined;
@@ -123,6 +134,7 @@ const value: PluginContextValue = {
   setPageIsLoading,
   logout: () => window.dispatchEvent(new CustomEvent('boomi:logout')),
   serverBase: serverBaseNorm,
+  userId,
   };
 
   return <PluginContext.Provider value={value}>{children}</PluginContext.Provider>;

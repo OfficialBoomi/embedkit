@@ -19,6 +19,7 @@ import logger from './logger.service';
 import { getBrowserId } from './utils/browserId';
 import { BoomiEvents } from './events.service';
 import { DialogHandlerRegistry } from './dialogs.service';
+import { setSessionMessage } from './utils/sessionError';
 import type { DialogHandlers } from './types/dialog-handlers';
 
 // components
@@ -361,6 +362,7 @@ async function ensureRootMountedForHost(host: HostRecord): Promise<boolean> {
       serverBase={pluginConfig.serverBase || '/api/v1'}
       tenantId={pluginConfig.tenantId || ''}
       boomiConfig={pluginConfig.boomiConfig}
+      userId={pluginConfig.userId}
     >
       <ErrorBoundary>
         <Root ref={host.rootRef as unknown as React.RefObject<RootRef>} />
@@ -401,7 +403,10 @@ function resetHost(hostId: HostId) {
  * @param opts - Optional cleanup options.
  * @param opts.hostId - Host element id to destroy. If omitted, destroys all mounted hosts.
  * @param opts.removeHost - If true, removes the host element from the DOM after reset/unmount.
- * @param opts.clearAuth - If true, dispatches a logout event and calls the server logout endpoint.
+ * @param opts.clearAuth - If true, dispatches a logout event, clears the in-memory token and calls the server
+ *   logout endpoint. Until `BoomiPlugin()` is called again with a new nonce, API calls fail with the session-ended message
+ *   (error code `MISSING_BEARER`). The default text is "Your connection to this section has timed out. Reload the page to continue."
+ *   and can be replaced with `boomiConfig.messages.sessionEnded` or handled with `dialogHandlers.sessionError`.
  *
  * @example
  * ```ts
@@ -470,6 +475,9 @@ export function BoomiPlugin(config: PluginConfig) {
   // before. A config without them leaves the registry alone, so several embeds on one
   // page do not clear each other's handlers. Use DialogHandlerRegistry.clear() to remove.
   if (config.dialogHandlers) DialogHandlerRegistry.set(config.dialogHandlers);
+
+  // Host text for the session-ended message (boomiConfig.messages.sessionEnded); empty restores the default.
+  setSessionMessage(config.boomiConfig?.messages?.sessionEnded);
 
   // Auth bootstrapping:
   if (config.accessToken && typeof window !== 'undefined') {

@@ -37,6 +37,8 @@ import {
 } from 'react-icons/ai';
 import { MdErrorOutline } from 'react-icons/md';
 import { UIError } from '../../types/ui';
+import type { SessionErrorOrigin } from '../../types/dialog-handlers';
+import { useSessionErrorGate } from '../../hooks/useSessionErrorGate';
 
 // Map each type to its icon + notice state. Colors are driven by the
 // --boomi-notice-* token family (themeable via boomi.config.js) rather than
@@ -74,9 +76,15 @@ const iconMap = {
  * @property {boolean} [showActionButton=false] - If true, renders an action button below the message.
  * @property {string} [buttonLabel='Go Back'] - Label text for the action button.
  * @property {() => void} [onButtonClick] - Callback when the action button is clicked. Defaults to `window.history.back`.
+ * @property {SessionErrorOrigin} [origin='auth'] - Which part of the UI shows the dialog. Reported with the
+ *   `auth.session.ended` event when the error is a session error.
+ * @property {string} [sessionCode] - The reason for a session error (for example `TOKEN_REJECTED`), reported with the
+ *   event and the handler request. Unlike `error.code`, it is not shown to the user.
  */
 interface DialogProps {
   error: UIError;
+  origin?: SessionErrorOrigin;
+  sessionCode?: string;
   showCloseButton?: boolean;
   showActionButton?: boolean;
   buttonLabel?: string;
@@ -89,8 +97,13 @@ const Dialog: React.FC<DialogProps> = ({
   showActionButton = false,
   buttonLabel = 'Go Back',
   onButtonClick = () => window.history.back(),
+  origin = 'auth',
+  sessionCode,
 }) => {
   const [visible, setVisible] = useState(true);
+  // A session error is reported to the host (event, then handler). When the host's
+  // sessionError handler owns the display, this dialog stays hidden.
+  const sessionGate = useSessionErrorGate(error, error.message, origin, sessionCode);
   const handleClose = () => {
     if (error.onClose) {
       error.onClose();
@@ -99,7 +112,7 @@ const Dialog: React.FC<DialogProps> = ({
     }
   };
 
-  if (!visible) return null;
+  if (!visible || sessionGate.hidden) return null;
   const { icon, state } = iconMap[error.errorType || 'info'];
 
   return (

@@ -1,6 +1,7 @@
 // types
 export type { Theme } from './types/theme';
 export type { KeyConfig } from './types/component-key.config';
+export type { PaginationConfig } from './types/pagination.config';
 export type { Mapping } from './types/mapping';
 export type {
   PluginConfig,
@@ -16,6 +17,7 @@ export type {
   EmbedKitEventType,
   EmbedKitEventHandler,
   FeedbackEventData,
+  AuthSessionEndedEventData,
 } from './events.service';
 export { DialogHandlerRegistry } from './dialogs.service';
 export type {
@@ -24,6 +26,8 @@ export type {
   DialogSource,
   ConfirmRequest,
   AlertRequest,
+  SessionErrorRequest,
+  SessionErrorOrigin,
   ToastRequest,
 } from './types/dialog-handlers';
 export { default } from './main';

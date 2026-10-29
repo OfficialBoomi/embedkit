@@ -112,17 +112,9 @@ interface ScheduleFormProps {
 
 const ScheduleForm = forwardRef<ScheduleFormRef, ScheduleFormProps>(
   ({ defaultSchedule, environmentId }, ref) => {
+    // No schedule on the platform means an empty list, not a placeholder card.
     const [schedules, setSchedules] = useState<Schedule[]>(
-      defaultSchedule?.Schedule?.length
-        ? defaultSchedule.Schedule
-        : [{
-            minutes: '0-59/',
-            hours: '00-18',
-            daysOfWeek: '2,3,4,5,6',
-            daysOfMonth: '*',
-            months: '*',
-            years: '*',
-          }]
+      defaultSchedule?.Schedule?.length ? defaultSchedule.Schedule : []
     );
     const parseScheduleToUIState = (sched: Schedule): ScheduleUIState => {
       if (!sched) return defaultUIState();
@@ -267,7 +259,7 @@ const ScheduleForm = forwardRef<ScheduleFormRef, ScheduleFormProps>(
           const ui = uiStates[i];
           let rSched: Schedule = sched;
           switch (ui.type) {
-            case 'avanced':
+            case 'advanced':
               break;
             case 'day':
               rSched = {
@@ -282,7 +274,7 @@ const ScheduleForm = forwardRef<ScheduleFormRef, ScheduleFormProps>(
                 years: '*',
               };
               break;
-            case 'hours':
+            case 'hour':
               rSched = {
                 minutes: `${ui.startMinute}`,
                 hours: `${ui.startHour}-${ui.endHour}/${ui.interval}`,
@@ -334,6 +326,12 @@ const ScheduleForm = forwardRef<ScheduleFormRef, ScheduleFormProps>(
             onClick={handleAddSchedule}
           />
         </div>
+
+        {schedules.length === 0 && (
+          <p className="boomi-sched-empty">
+            No schedule is set. This integration will not run on a schedule. Select Add to create one.
+          </p>
+        )}
 
         {schedules.map((sched, index) => {
           const isOpen = openIndex === index;

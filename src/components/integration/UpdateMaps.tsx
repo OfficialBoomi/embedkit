@@ -618,7 +618,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
           isSubmitting={isSubmittingCandidates}
           submitLabel="Save"
         >
-          {credentialError && <Notification type="Error" message={credentialError} />}
+          {credentialError && <Notification type="Error" message={credentialError} origin="maps" />}
           <EditMapCandidateForm
             ref={editCandidateFormRef}
             candidates={mapCandidates}
@@ -638,6 +638,8 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
             errorType: "error",
             onClose: onBack ?? (() => {}),
           }}
+          origin="maps"
+          sessionCode={loadError?.code}
           showActionButton
           buttonLabel="Try again"
           onButtonClick={fetchData}
@@ -690,6 +692,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
                   errorType: "error",
                   onClose: () => setApiError(null),
                 }}
+                origin="maps"
               />
             )}
             {useTreeMap ? (

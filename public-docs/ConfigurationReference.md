@@ -44,7 +44,8 @@ BoomiPlugin({
 | `nonce` | `string` | Conditional | One-time-use HMAC nonce from the EmbedKit auth endpoint. Required unless providing `accessToken`. |
 | `accessToken` | `string` | Conditional | Pre-generated access token. Use instead of `nonce` for the public embed / CDN flow. |
 | `boomiConfig` | `PluginUiConfig` | No | Full UI and behavior configuration. See [Section 2](#2-boomiconfigjs--top-level-structure). |
-| `dialogHandlers` | `DialogHandlers` | No | Replaces EmbedKit's built-in confirm, alert and toast dialogs with your own UI. See [Section 11](#11-dialog-handlers). |
+| `dialogHandlers` | `DialogHandlers` | No | Replaces EmbedKit's built-in confirm, alert, toast and session-ended dialogs with your own UI. See [Section 11](#11-dialog-handlers). |
+| `userId` | `string` | No | Your own id for the signed-in user. EmbedKit keeps each user's "Last viewed" order of the integrations list under it. Use an opaque id such as a database key, not an email address. When omitted, EmbedKit uses an id kept in the browser, and with neither, one list is shared by the customer account. See [List filter and sorting](#list-filter-and-sorting). |
 
 ---
 
@@ -76,6 +77,7 @@ export default {
   components:     { ... },
   form:           { ... },
   dialogs:        { ... },
+  messages:       { ... },
   cssVars:        { ... },
   cssVarsByTheme: { ... },
   cssVarsByKey:   { ... },
@@ -91,6 +93,7 @@ export default {
 | `components` | `Record<componentKey, ComponentConfig>` | Per-component configuration keyed by `componentKey`. See [Section 5](#5-component-configuration). |
 | `form` | `Record<string, FormConfig>` | Form field overrides for configurable dialogs. See [Section 6](#6-form-configuration). |
 | `dialogs` | `DialogsConfig` | Structural options for callback (confirm/alert) dialogs — button order, icon visibility, destructive styling. See [Dialog Structural Options](#dialog-structural-options). |
+| `messages` | `MessagesConfig` | Text overrides for shared messages. Today: `sessionEnded`, the message shown when the session has ended or timed out. See [Session-Ended Message](#session-ended-message). |
 | `cssVars` | `Record<string, string>` | Global CSS variable overrides applied across all themes. |
 | `cssVarsByTheme` | `Record<themeName, Record<string, string>>` | CSS variable overrides scoped to a specific theme. |
 | `cssVarsByKey` | `Record<componentKey, Record<string, string>>` | CSS variable overrides scoped to a specific component instance key. |
@@ -393,7 +396,7 @@ components: {
 | `uiVersion` | What changes |
 |-------------|--------------|
 | omitted, `'1.6.1'` or lower | The 1.6.1 UI. |
-| `'1.7.0'` or higher | Add Integration opens the searchable catalog (`form.addIntegration.layout` defaults to `'catalog'`). Integration cards use the 1.7 layout (see [Integration cards](#integration-cards-integrationsintegration)): no type row, the actions menu at the top right, connector icons, a full-width environment row, and the card itself opens Edit. The list gets a filter beside the search box and sortable table columns with an Environment column (see [List filter and sorting](#list-filter-and-sorting)). Every scroll area uses thin scrollbars (see [Scrollbars](#scrollbars)). |
+| `'1.7.0'` or higher | Add Integration opens the searchable catalog (`form.addIntegration.layout` defaults to `'catalog'`). Integration cards use the 1.7 layout (see [Integration cards](#integration-cards-integrationsintegration)): no type row, the actions menu at the top right, connector icons, a full-width environment row, and the card itself opens Edit. The list gets a filter beside the search box, a Sort by menu and sortable table columns with an Environment column (see [List filter and sorting](#list-filter-and-sorting)). Every scroll area uses thin scrollbars (see [Scrollbars](#scrollbars)). |
 
 ### Integration cards (`integrations.integration`)
 
@@ -440,11 +443,79 @@ The table view adds an **Environment** column (the first in-scope environment, `
 | `integrations.filter.show` | `boolean` | `false` | `true` | Filter icon beside the list's search box. Also the catalog's default. |
 | `form.addIntegration.catalog.filter.show` | `boolean` | follows `integrations.filter.show` | follows `integrations.filter.show` | Filter icon in the Add Integration catalog. |
 | `integrations.table.sortable` | `boolean` | `false` | `true` | Sortable table headers. |
+| `integrations.sort.show` | `boolean` | follows `integrations.table.sortable` | follows `integrations.table.sortable` | The Sort by menu, left of the grid and table toggle. |
+| `integrations.sort.options` | `string[]` | all five | all five | Which options the menu offers, in this order: `'name'`, `'description'`, `'environment'`, `'created'`, `'lastViewed'`. Unknown names are ignored. Environment is left out when environments are not shown. |
+| `integrations.sort.default` | `{ by, dir }` | none (Default order) | none (Default order) | Starting sort, for example `{ by: 'lastViewed', dir: 'desc' }`. `dir` is `'asc'` or `'desc'` and defaults to the option's natural direction. A choice the user already made in this browser wins over it. |
 | `integrations.integration.showEnvironment` | `boolean` | `false` | `true` | Also controls the table's Environment column. |
 
 Filter options are loaded the first time the panel opens (and again after the search changes). Tokens are listed under [List filter, sorting and tables](#list-filter-sorting-and-tables).
 
+**Sort by menu.** A **Sort by** menu sits left of the grid and table toggle and works in both views, so the card view can be sorted as well. It offers **Default order** (no sort: the order the list has always had, selected until the user picks another) and the options in `integrations.sort.options`:
+
+| Option | First pick | Picked again |
+|--------|------------|--------------|
+| Name, Description, Environment | A to Z | Z to A |
+| Created | Newest first | Oldest first |
+| Last viewed | Most recent first | Least recent first |
+
+The menu and the table headers set the same sort, so each always shows what the other chose. A sort chosen in the menu for Created or Last viewed leaves every header looking inactive, because those two have no column. Sorting runs on the server across the whole list before it is paged, and returns to page 1. There is no Updated option: Boomi records no update date for an installed integration.
+
+**Created and Last viewed.** Created uses the date Boomi recorded when the integration was installed. Boomi only records it for newer installs, so an integration installed earlier counts as the oldest and these keep Boomi's own order. Last viewed orders by when the user last opened an integration to configure or run it (from the card, the Edit button or the ⋮ menu). Integrations never opened come last in either direction. The times are kept on the EmbedKit server, for each user, under the first id available:
+
+1. the `userId` you pass to [`BoomiPlugin()`](#1-boomiplugin--initialization-options),
+2. an anonymous id EmbedKit keeps in the browser,
+3. one list shared by the customer account, when the browser cannot keep an id.
+
+Each user keeps their 500 most recent integrations, and the list is dropped after 180 days without use. Only integration ids and times are stored. The id is hashed before it is used in a key.
+
+Created and Last viewed need the matching `@boomi/embedkit-sdk` and EmbedKit server. With an older server EmbedKit loads the list without the sort, selects Default order, forgets a remembered Created or Last viewed, and stops offering the two options.
+
+**Remembering where the user was.** Opening an integration replaces the list, and going back builds it again. EmbedKit remembers, per component key, for the length of the browser tab: the page, and where the filter button is shown, the environment and connector filters. A new tab starts on page 1 with no filters. The search is not remembered: after a search, going back shows page 1 with the same filters and an empty search. If the remembered page no longer exists (integrations were deleted), the last page is shown. The sort choice is remembered in the browser until it is changed, so it also survives a reload and a new tab; a deliberate **Default order** is remembered too and wins over `integrations.sort.default`. A remembered sort or filter is only used where its control is shown. Nothing is stored when the browser blocks storage, and the list then starts as it always did.
+
 **Layout at 1.7.0+.** The actions menu moves to the right end of the top visible row: the type row when `showType` is on, otherwise the title row. The environment is a full-width row above the button, and the Edit or Run Agent button spans the full width. Before 1.7.0 the card keeps its original layout (menu and button at the bottom right, environment chip inline at the bottom left) whatever you set here.
+
+### Pagination (`integrations.pagination`)
+
+Options for the page controls of the integrations list, under `components[componentKey].integrations.pagination`. Every option is optional. With none set, the list shows 12 integrations per page and the controls sit below it, aligned to the right.
+
+```js
+components: {
+  myIntegrations: {
+    renderType: 'integration',
+    integrations: {
+      pagination: {
+        position: 'top',            // 'top' | 'bottom' | 'sticky-top' | 'fixed-bottom'
+        alignment: 'center',        // 'start' | 'center' | 'end'
+        pageSize: 24,               // 1 to 30
+        styles: {
+          root:             { borderTop: '1px solid #e5e7eb' },
+          pageButton:       { borderRadius: 6 },
+          activePageButton: { fontWeight: 700 },
+          input:            { width: 64 },
+        },
+      },
+    },
+  },
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `position` | `'top' \| 'bottom' \| 'sticky-top' \| 'fixed-bottom'` | `'bottom'` | Where the controls sit. `'top'` and `'bottom'` place them above or below the list. `'sticky-top'` and `'fixed-bottom'` keep them at the top or bottom edge of the EmbedKit area while the list scrolls. |
+| `alignment` | `'start' \| 'center' \| 'end'` | `'end'` | Horizontal alignment of the controls. |
+| `pageSize` | `number` | `12` | Integrations per page. A value below 1 becomes 1, a value above 30 becomes 30, and anything that is not a number is ignored. |
+| `styles.root` | CSS object | none | Inline styles for the wrapper around all controls. |
+| `styles.pageButton` | CSS object | none | Inline styles for every page number button. |
+| `styles.activePageButton` | CSS object | none | Inline styles for the current page button, applied on top of `pageButton`. |
+| `styles.input` | CSS object | none | Inline styles for the "Go to page" number input. |
+
+An unknown `position` or `alignment` is ignored and the default is used.
+
+**Keeping the controls in view.** `'sticky-top'` and `'fixed-bottom'` pin the controls to the edge of the EmbedKit area, not to the browser window, so they never cover your own page. They stay in view only when the element that holds EmbedKit has a fixed or maximum height, so that EmbedKit scrolls inside it. In a host that grows with its content, the page scrolls instead and the controls stay with the list. These two positions add a background (`--boomi-pagination-bg`, the page background by default) and 15px of vertical padding so the list does not show through. With `'fixed-bottom'`, EmbedKit also leaves room under the list so the last rows are not hidden.
+
+**Styling the parts.** Each `styles` entry is a plain object of camelCase CSS properties, as in `{ backgroundColor: '#fff', borderRadius: 6 }`; a number means pixels for length properties. These styles win over the built-in styles and over the CSS variables below. Entries that are not a string or a number, and names that are not valid CSS property names, are ignored. Inline styles cannot express hover, focus or disabled states, and they do not follow a theme switch, so use the [pagination tokens](#pagination-tokens) for colors that should.
+
+The Add Integration catalog keeps its own `form.addIntegration.catalog.pageSize`. Other lists in EmbedKit keep their fixed page sizes.
 
 ### Update Maps (`updateMaps`)
 
@@ -703,7 +774,7 @@ Used with the `@boomi/embedkit-cdn` UMD bundle. Set `window.BoomiEmbed` before t
 | `config` | `object` | No | — | Additional configuration forwarded to the EmbedKit Server during session creation. Accepts a full `boomiConfig` object. |
 | `autoInit` | `boolean` | No | `true` | When `true`, initializes automatically on page load from `window.BoomiEmbed`. Set to `false` to initialize manually. |
 | `sessionScope` | `'mount' \| 'multi'` | No | `'mount'` | Chat session persistence. `mount` resets on each page load; `multi` preserves history across loads for the same browser session. |
-| `dialogHandlers` | `DialogHandlers` | No | none | Replaces the built-in confirm, alert and toast dialogs with your own UI. The agent chat delete confirmation is the one confirm dialog the CDN embed can raise. See [Section 11](#11-dialog-handlers). |
+| `dialogHandlers` | `DialogHandlers` | No | none | Replaces the built-in confirm, alert, toast and session-ended dialogs with your own UI. The agent chat delete confirmation is the one confirm dialog the CDN embed can raise, and the agent chat can also raise the session-ended message (`sessionError`). See [Section 11](#11-dialog-handlers). |
 
 ### CDN Embed Types
 
@@ -1154,6 +1225,10 @@ The filter icon, sortable headers and tables on the integrations list (1.7 UI), 
 | `--boomi-filter-legend-font-size` / `-legend-opacity` / `-legend-fg` | `0.6875rem` / `0.7` / inherit | "Environment" and "Connector" group labels. |
 | `--boomi-filter-option-font-size` / `-option-fg` | `0.8125rem` / inherit | Checkbox rows. |
 | `--boomi-sort-icon-size` / `-icon-opacity` / `-active-fg` | `0.875em` / `0.35` / accent | Sort arrows on table headers; the active column's arrow uses `-active-fg`. |
+| `--boomi-sortmenu-height` / `-radius` / `-font-size` | `2.5rem` / `0.5rem` / `0.8125rem` | Sort by button height, corners and text. |
+| `--boomi-sortmenu-bg` / `-fg` / `-border` / `-border-hover` | input tokens / inherit / input border / accent | Sort by button colors. |
+| `--boomi-sortmenu-active-fg` | accent | Button and menu row color while a sort is active. |
+| `--boomi-sortmenu-panel-width` / `-panel-padding` | `15rem` / `0.25rem` | Sort by menu panel (also uses the `--boomi-menu-*` colors). |
 | `--boomi-list-toolbar-gap` / `-toolbar-padding` | `0.5rem` / `1rem 0.5rem 1rem 0` | Search box, filter and add button row (`.boomi-list-search`). |
 | `--boomi-list-search-padding` | `1rem 1.5rem 1rem 0` | Search box without the filter (1.6.1 layout). |
 | `--boomi-integrations-table-radius` / `-shadow` | `0.5rem` / small shadow | Integrations table frame (`.boomi-integrations-table`). |
@@ -1163,6 +1238,19 @@ The filter icon, sortable headers and tables on the integrations list (1.7 UI), 
 | `--boomi-integrations-table-text-max-width` | `24rem` | Maximum width of the name and description cells. |
 | `--boomi-integrations-table-name-width` / `-description-width` / `-history-width` | `16.67%` / `100%` / `16.67%` | Column widths. |
 | `--boomi-wizard-loading-padding` | `2.5rem` | Space around the loader while the setup wizard checks which steps to show. |
+
+#### Pagination tokens
+
+Colors of the page controls. They apply to every list that shows page controls. The options in [`integrations.pagination`](#pagination-integrationspagination) apply to the integrations list only.
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-pagination-text` | indigo 400 | Page numbers and the arrows. The next arrow keeps the button color unless this is set. |
+| `--boomi-pagination-active-text` | indigo 500 | The current page number, and the arrows on hover. |
+| `--boomi-pagination-active-bg` | indigo 100 | Background of the current page number. |
+| `--boomi-pagination-label-text` | gray 700 | The "Go to page" label. |
+| `--boomi-pagination-input-border` | the text color | Border of the "Go to page" input. |
+| `--boomi-pagination-bg` | `--boomi-root-bg-color` | Background of the controls when `position` is `'sticky-top'` or `'fixed-bottom'`. |
 
 ---
 
@@ -1703,8 +1791,8 @@ cssVars: {
 
 EmbedKit emits standardized, typed events for actions that happen inside the
 embed — response feedback, integration-pack lifecycle, connection and map
-edits, schedule changes, AI transformation generation, and agent
-sessions/messages. **EmbedKit never sends event data over the network** — your
+edits, schedule changes, AI transformation generation, agent
+sessions/messages, and the session ending or timing out. **EmbedKit never sends event data over the network** — your
 application subscribes and owns what happens next. This removes any security
 concern about where the data goes: there is no endpoint to protect, no key to
 ship to the browser.
@@ -1736,7 +1824,7 @@ Every event follows the same shape:
 type EmbedKitEvent<T> = {
   type: string;             // event type discriminator — see the table below
   timestamp: string;        // ISO-8601, when the event was emitted
-  outcome: 'success' | 'error'; // currently always 'success' — see note below
+  outcome: 'success' | 'error'; // 'error' for auth.session.ended; every other event is 'success' — see note below
   source: {                 // where in the embed it originated
     agentId?: string;
     sessionId?: string;
@@ -1750,9 +1838,9 @@ type EmbedKitEvent<T> = {
 };
 ```
 
-> `outcome` is reserved for a future pass that also emits on failed actions;
-> today every event emitted is a completed, successful action. Build your
-> subscriber to check it once error-emission lands rather than assuming
+> `outcome` is `'error'` for `auth.session.ended`. Every other event reports a
+> completed, successful action, and a future pass may also emit on failed
+> actions. Build your subscriber to check `outcome` rather than assuming
 > `'success'` forever.
 
 ### All Event Types
@@ -1769,12 +1857,24 @@ type EmbedKitEvent<T> = {
 | `map.defaults.seeded` | An integration pack instance was installed and the publisher's default mappings were copied into its map extensions (server on `@boomi/embedkit-sdk` ≥ 1.4.0) | `{ integrationPackInstanceId, environmentId?, summariesFound, seeded: { mapExtensionId, name?, mappings, functions }[], skipped: { mapExtensionId, name?, reason }[], failed: { mapExtensionId?, name?, error }[] }` |
 | `map.function.converted` | A user chose **Edit** on a platform-defined function with `updateMaps.convertFunctionsToScript` on, and it was compiled to a script | `{ mapId, functionId, type, warnings: string[] }` |
 | `map.browse.executed` | A user resolves dynamic-browse candidates (re-authenticating a connector mid-mapping) | `{ integrationPackInstanceId, mapId, succeededCount, failedCount }` |
-| `schedules.updated` | A user saves process schedule changes | `{ integrationPackInstanceId, environmentId?, scheduleCount }` |
+| `schedules.updated` | A user saves process schedule changes. `scheduleCount` is `0` when every schedule was deleted. Not emitted when the integration had no schedule and none was added | `{ integrationPackInstanceId, environmentId?, scheduleCount }` |
 | `ai.transformation.generated` | A user generates a transformation script via AI | `{ integrationPackInstanceId?, functionId, prompt }` |
 | `agent.session.created` | A chat session is created — check `data.trigger` | `{ trigger: 'user' \| 'system', integrationPackId? }` |
 | `agent.session.deleted` | A user deletes a chat session | `{ trigger: 'user', integrationPackId? }` |
 | `agent.message.sent` | A user sends a chat message | `{ text, hasAttachments, integrationPackId? }` |
 | `agent.message.received` | An agent response is received over the chat stream | `{ messageType, role }` |
+| `auth.session.ended` | A part of the UI shows that the session has ended or timed out. `outcome` is `'error'`. Fires once per part per session episode, and again after a new session starts | `{ origin: 'auth' \| 'maps' \| 'agent-chat', code, message }` |
+
+> **`auth.session.ended` tells you where it happened.** `data.origin` is `auth`
+> for any screen that uses the standard error dialog or notice (Integrations,
+> Connections, Schedules and so on), `maps` for the Map Fields screens, and
+> `agent-chat` for the agent chat. `data.code` is the reason: `MISSING_BEARER`
+> (there is no session), `TOKEN_REJECTED` (the server answered 401 because the
+> token is invalid or expired) or `TOKEN_EXPIRED` (the chat found the token
+> expired before it connected). `data.message` is the text EmbedKit shows. If you
+> already listen with `'*'`, you now also receive this event. It is a broadcast:
+> to replace the dialog itself, use the
+> [`sessionError` dialog handler](#sessionerror).
 
 > **`agent.session.created`'s `trigger` field matters.** EmbedKit
 > auto-provisions a session on first open so a chat is always ready — that is
@@ -1883,7 +1983,7 @@ configuration.
 
 ## 11. Dialog Handlers
 
-Before it deletes an integration, runs every process of an integration, disconnects mappings, deletes a transformation or deletes an agent chat, EmbedKit asks "Are you sure?" with its own SweetAlert dialog. If your app already has a dialog component (for example Angular Material's `MatDialog`), register a **dialog handler** and EmbedKit calls your function instead. EmbedKit waits for the answer and continues only when your function returns `true`.
+Before it deletes an integration, runs every process of an integration, disconnects mappings, deletes a transformation or deletes an agent chat, EmbedKit asks "Are you sure?" with its own SweetAlert dialog. If your app already has a dialog component (for example Angular Material's `MatDialog`), register a **dialog handler** and EmbedKit calls your function instead. EmbedKit waits for the answer and continues only when your function returns `true`. The same system lets you replace the message EmbedKit shows when the session has ended or timed out (see [`sessionError`](#sessionerror)).
 
 Handlers are opt-in. With no handler registered, nothing changes.
 
@@ -1939,7 +2039,7 @@ Things to know:
 - `BoomiPlugin` and the CDN embed register handlers only when their config contains `dialogHandlers`. A config without it leaves the registry as it is, so several embeds on one page do not clear each other's handlers. Call `DialogHandlerRegistry.clear()` to remove them.
 - The CDN script can start before your framework has built its handler. Start the embed without `dialogHandlers` and call `window.BoomiEmbedKitCdn.DialogHandlerRegistry.set(...)` once your handler exists.
 - `EmbedKitProvider` accepts the same `config` type, so TypeScript allows `dialogHandlers` there, but the provider does not read it and the handlers would be silently ignored. If you mount EmbedKit with `EmbedKitProvider`, register them with `DialogHandlerRegistry.set()` instead.
-- There is exactly one set of handlers per page. Each of `confirm`, `alert` and `toast` is optional and independent: registering only `toast` leaves confirm dialogs on the built-in SweetAlert.
+- There is exactly one set of handlers per page. Each of `confirm`, `alert`, `sessionError` and `toast` is optional and independent: registering only `toast` leaves confirm dialogs on the built-in SweetAlert.
 
 ### `confirm`
 
@@ -2003,9 +2103,65 @@ Toasts are short, non-blocking messages such as "Integration deleted successfull
 | `timerMs` | `number` | How long the built-in toast would stay open, in milliseconds (the `--boomi-toast-timer` value). When the variable is not set, this is `2000`. `0` is reported when the variable is set to `0` or to something that is not a positive number, and means the built-in toast would stay until dismissed. |
 | `source` | `{ hostId: string; componentKey: string; tenantId?: string }` | Which embed raised the toast. |
 
+### `sessionError`
+
+```ts
+sessionError?: (req: SessionErrorRequest) => Promise<void> | void;
+```
+
+When the session has ended or timed out, EmbedKit shows a message. Register `sessionError` to show your own UI instead. Resolve (or return) when the user has acknowledged it. If your handler throws, rejects or times out, EmbedKit treats it as acknowledged.
+
+With a `sessionError` handler registered, EmbedKit does **not** show its built-in session message anywhere (the standard error dialog and notice, the Map Fields screens and the agent chat error block all stay hidden for this error). You receive the request once per session episode: it is sent again only after a new session has started. The [`auth.session.ended`](#all-event-types) event is emitted too, so you can log it or react to it.
+
+`SessionErrorRequest` has the same fields as `AlertRequest` (`id`, `intent`, `title`, `description`, `confirmLabel`, `dismissible`, `signal`, `source`) plus:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `origin` | `'auth' \| 'maps' \| 'agent-chat'` | Which part of the UI reported the problem. `auth` is any screen that uses the standard error dialog or notice, `maps` is Map Fields, `agent-chat` is the agent chat. |
+| `code` | `string` | Why: `MISSING_BEARER` (no session), `TOKEN_REJECTED` (the server answered 401, so the token is invalid or expired) or `TOKEN_EXPIRED` (the chat found the token expired). |
+
+`description` is the ready-made text: your [`messages.sessionEnded`](#session-ended-message) value, or the default. Show it as it is, or show your own wording. `title` is `Connection timed out`.
+
+```js
+dialogHandlers: {
+  sessionError: async (req) => {
+    await myDialog.open({
+      title: req.title,
+      message: req.description, // or your own wording
+      okLabel: req.confirmLabel,
+    });
+    // Often the right move here: ask your own app for a fresh session
+    // (a new nonce), then call BoomiPlugin(...) again.
+  },
+},
+```
+
+> **Use the handler or the text, depending on what you need.** To change only the wording, set `boomiConfig.messages.sessionEnded` (below). To control the whole dialog, or react in your app, register `sessionError`. If both are set, the handler runs and EmbedKit's own message stays hidden, so the text matters only as `req.description`.
+
+### Session-Ended Message
+
+The default text is:
+
+> Your connection to this section has timed out. Reload the page to continue.
+
+To use your own wording in EmbedKit's built-in message, set `messages.sessionEnded` in `boomi.config.js`:
+
+```js
+export default {
+  messages: {
+    sessionEnded: 'This panel lost its connection. Refresh the page to continue.',
+  },
+  // ...
+};
+```
+
+An empty or non-string value restores the default. The text applies to the standard error dialog and notice and to the Map Fields screens. The agent chat keeps its own message, because it comes from a check in the browser of the token's expiry, but the chat also raises `auth.session.ended` and calls your `sessionError` handler.
+
+What your code receives on a session error has not changed: the error carries `code: 'MISSING_BEARER'` when there is no session, and the server's `401` is reported with `status: 401` and, now, `code: 'TOKEN_REJECTED'`. Match on `error.code`, not on the message text, because the text is meant to be customized.
+
 ### Timeout and abort
 
-`timeoutMs` (default `120000`, that is 120 seconds) is the longest EmbedKit waits for a `confirm` or `alert` handler. Set it next to the handlers:
+`timeoutMs` (default `120000`, that is 120 seconds) is the longest EmbedKit waits for a `confirm`, `alert` or `sessionError` handler. Set it next to the handlers:
 
 ```js
 dialogHandlers: { timeoutMs: 60000, confirm: myConfirm }
@@ -2036,7 +2192,7 @@ A handler can never leave EmbedKit stuck or acting on a bad answer.
 | Handler throws, or its promise rejects | Cancel. The error is logged with the request `id`. |
 | Handler never answers | Cancel after `timeoutMs`. Logged as abandoned, and `req.signal` is aborted. A late answer is ignored, so nothing is deleted after the fact. |
 | Any of the failures above | **The built-in dialog is never shown as a fallback once a handler is registered.** |
-| `alert` handler fails or times out | Logged and treated as acknowledged. |
+| `alert` or `sessionError` handler fails or times out | Logged and treated as acknowledged. |
 | `toast` handler fails | Logged and ignored. |
 
 ### Examples

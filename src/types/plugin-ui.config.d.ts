@@ -35,9 +35,22 @@ export type DialogsConfig = {
   destructiveVariant?: boolean;
 };
 
+/** Text shown by EmbedKit in a few shared situations. Every field is optional; defaults apply when omitted. */
+export type MessagesConfig = {
+  /**
+   * Replaces the message shown when the session has ended or timed out, for example after
+   * the token expired. Default: "Your connection to this section has timed out. Reload the
+   * page to continue." The agent chat keeps its own message.
+   */
+  sessionEnded?: string;
+};
+
 export type PluginUiConfig = {
   /** Theme settings for the plugin UI. */
   theme?: Theme;
+
+  /** Text overrides for shared messages (for example the session-ended message). */
+  messages?: MessagesConfig;
 
   /** Structural options for callback dialogs (button order, icon, destructive styling). */
   dialogs?: DialogsConfig;

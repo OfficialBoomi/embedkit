@@ -6,6 +6,8 @@
  * including storage, refresh, and subscription to token changes.
  */
 
+import { getSessionMessage, MISSING_BEARER_CODE, noteSessionCode, resetSessionEpisode } from '../utils/sessionError';
+
 type BootstrapOpts = {
   serverBase: string;   // e.g. "https://api.../api/v1"
   tenantId?: string;
@@ -13,6 +15,8 @@ type BootstrapOpts = {
 };
 
 type TokenListener   = (tok: string | null) => void;
+
+/** A request made with no session throws an error with the shared session message and code MISSING_BEARER. */
 
 class AuthManager {
   private static _instance: AuthManager | null = null;
@@ -35,9 +39,34 @@ class AuthManager {
   private waiters: Array<(v: string | null) => void> = [];
   private authRequiredWaiters: Array<() => void> = [];
 
+  /** Number of bootstrap() calls still running (a login is in progress while > 0). */
+  private bootstrapping = 0;
+
+  /** Host logged out (DestroyPlugin with clearAuth): forget the token so it is never sent again. */
+  private onLogout = () => {
+    if (this.refreshTimer) { clearTimeout(this.refreshTimer); this.refreshTimer = null; }
+    this.inflight = null;
+    this.setToken(null);
+    this.phase = 'blocked';
+    this.rejectWaiters();
+  };
+
+  constructor() {
+    if (typeof window !== 'undefined') window.addEventListener('boomi:logout', this.onLogout);
+  }
+
   // ---------- Public API ----------
 
-  bootstrap = async ({ serverBase, tenantId, nonce }: BootstrapOpts) => {
+  bootstrap = async (opts: BootstrapOpts) => {
+    this.bootstrapping++;
+    try {
+      await this.runBootstrap(opts);
+    } finally {
+      this.bootstrapping--;
+    }
+  };
+
+  private runBootstrap = async ({ serverBase, tenantId, nonce }: BootstrapOpts) => {
     this.serverBase = (serverBase || '/api/v1').replace(/\/$/, '');
     this.tenantId = tenantId?.trim() || '';
 
@@ -72,12 +101,22 @@ class AuthManager {
 
     // 3) we’re blocked (no RT cookie, bad/expired nonce, or no nonce)
     this.phase = 'blocked';
-    this.rejectWaiters();
+    if (this.bootstrapping === 1) this.rejectWaiters();   // release waiters unless another login is still running
     this.fireAuthRequired();
   };
 
-  /** Ensures auth is ready (returns when token exists, or resolves immediately if blocked). */
+  /**
+   * Ensures auth is ready (returns when token exists, or resolves immediately if blocked).
+   * A token that has already expired is never handed out while a login is in progress:
+   * it is dropped so callers wait for the fresh token. With no login in progress, one
+   * deduped refresh is tried and, if it fails, the old token is kept so the request
+   * behaves as before.
+   */
   ensureReady = async () => {
+    if (this.accessToken && this.isExpired(this.accessToken)) {
+      if (this.bootstrapping > 0) this.setToken(null);
+      else await this.refreshAccessToken();
+    }
     if (this.accessToken) return;
     if (this.phase === 'blocked') return;
     await this.waitForToken(10_000).catch(() => undefined);
@@ -91,11 +130,10 @@ class AuthManager {
         reject(new Error('AUTH_TIMEOUT'));
       }, timeoutMs);
       const onToken = (tok: string | null) => {
-        if (tok) {
-          clearTimeout(timer);
-          this.waiters = this.waiters.filter(fn => fn !== onToken);
-          resolve(tok);
-        }
+        clearTimeout(timer);
+        this.waiters = this.waiters.filter(fn => fn !== onToken);
+        if (tok) resolve(tok);
+        else reject(new Error('AUTH_BLOCKED'));   // login ended without a token: stop waiting
       };
       this.waiters.push(onToken);
     });
@@ -132,7 +170,10 @@ class AuthManager {
     const headers = new Headers(init.headers || {});
     if (this.tenantId) headers.set('X-Tenant-Id', this.tenantId);
     if (tok) headers.set('Authorization', `Bearer ${tok}`);
-    if (!tok && !allowAnonymous) throw new Error('MISSING_BEARER');
+    if (!tok && !allowAnonymous) {
+      noteSessionCode(MISSING_BEARER_CODE);
+      throw Object.assign(new Error(getSessionMessage()), { code: MISSING_BEARER_CODE });
+    }
     return fetch(input, { ...init, headers, credentials: 'include' as const, cache: 'no-store' });
   };
 
@@ -201,6 +242,7 @@ class AuthManager {
 
   private setToken = (tok: string | null) => {
     this.accessToken = tok;
+    if (tok) resetSessionEpisode();   // a new session starts a new episode for session-ended reports
     if (tok) this.scheduleProactiveRefresh(tok);
     this.tokenSubs.forEach(fn => fn(tok));
     if (tok) this.resolveWaiters(tok);
@@ -215,6 +257,12 @@ class AuthManager {
       const json = JSON.parse(atob(padded));
       return typeof json?.exp === 'number' ? json.exp : null;
     } catch { return null; }
+  }
+
+  /** True only when the token carries an exp claim that is already in the past. */
+  private isExpired(token: string): boolean {
+    const exp = this.parseJwtExp(token);
+    return exp !== null && exp * 1000 <= Date.now();
   }
 
   private scheduleProactiveRefresh(token: string) {

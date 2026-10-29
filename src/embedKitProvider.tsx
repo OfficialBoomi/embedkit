@@ -22,6 +22,7 @@ export default function EmbedKitProvider({ config, children }: EmbedKitProviderP
       tenantId: config.tenantId,
       nonce: config.nonce,          
       boomiConfig: config.boomiConfig,
+      userId: config.userId,
     },
     children as any
   );

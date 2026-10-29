@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { usePlugin } from '../context/pluginContext';
 import AuthManager from '../security/authManager';
 import logger from '../logger.service';
+import { getSessionMessage, isServerTokenRejection, noteSessionCode, TOKEN_REJECTED_CODE } from '../utils/sessionError';
 
 const auth = AuthManager.get();
 
@@ -19,12 +20,15 @@ export type HttpOptions = {
 export class HttpError extends Error {
   readonly status: number;
   readonly body: unknown;
+  /** Set for session errors (see `utils/sessionError`), for example `TOKEN_REJECTED`. */
+  readonly code?: string;
 
-  constructor(message: string, status: number, body?: unknown) {
+  constructor(message: string, status: number, body?: unknown, code?: string) {
     super(message);
     Object.setPrototypeOf(this, HttpError.prototype);
     this.status = status;
     this.body = body;
+    if (code) this.code = code;
   }
 }
 
@@ -54,6 +58,12 @@ export function useHttp(): HttpClient {
           if (issueMsg) msg = issueMsg;
         }
       } catch {} // not JSON — use raw text as-is
+      // The server's own "Invalid or expired token" text becomes the shared session message;
+      // the original text stays in `body`.
+      if (isServerTokenRejection(res.status, msg)) {
+        noteSessionCode(TOKEN_REJECTED_CODE);
+        throw new HttpError(getSessionMessage(), res.status, body, TOKEN_REJECTED_CODE);
+      }
       // `body.code` carries server codes such as MAP_DEFAULTS_PENDING.
       throw new HttpError(msg, res.status, body);
     }

@@ -48,9 +48,22 @@ import Integration from './Integration';
 import Modal from '../ui/Modal';
 import Page from '../core/Page';
 import Pagination from '../ui/Pagination'
+import { paginationPlacement, resolvePaginationOptions } from '../../utils/pagination'
 import SearchBar from '../ui/SearchBar';
 import ListFilterButton from '../ui/ListFilterButton';
-import { EMPTY_FILTERS, type ListFilters, type ListSort } from '../../service/integrationPacks.service';
+import ListSortButton from '../ui/ListSortButton';
+import { EMPTY_FILTERS, useIntegrationPacksService, type ListFilters, type ListSort } from '../../service/integrationPacks.service';
+import {
+  LIST_SORT_OPTIONS,
+  forgetStoredSort,
+  isNewerSort,
+  readStoredSort,
+  resolveDefaultSort,
+  resolveInitialSort,
+  resolveSortOptions,
+  storeSort,
+} from '../../utils/listSort';
+import { readListState, writeListState } from '../../utils/listState';
 import { AiOutlineArrowUp, AiOutlineArrowDown, AiOutlineSwap } from 'react-icons/ai';
 import ToastNotification from '../ui/ToastNotification';
 import ViewExecutionDetails from './ViewExecutionDetails';
@@ -80,6 +93,13 @@ const Integrations: React.FC<IntegrationsProps> = ({
   // 1.7 UI (catalog, connector icons, environment chip) only when this component opts in via uiVersion.
   const catalogUi = uiVersionAtLeast(boomiConfig, componentKey, UI_VERSIONS.CATALOG);
   const simple = boomiConfig?.components?.[componentKey]?.integrations?.simple ?? false;
+  const showEnvironmentColumn: boolean = boomiConfig?.components?.[componentKey]?.integrations?.integration?.showEnvironment ?? catalogUi;
+  const listCfg = boomiConfig?.components?.[componentKey]?.integrations ?? {};
+  const sortCfg = listCfg.sort;
+  const showFilter: boolean = listCfg.filter?.show ?? catalogUi;
+  const sortable: boolean = listCfg.table?.sortable ?? catalogUi;
+  // The Sort by menu follows the sortable table headers unless `integrations.sort.show` says otherwise.
+  const showSortMenu: boolean = sortCfg?.show ?? sortable;
   const [toasts, setToasts] = useState<{
     delete: boolean;
     update: boolean;
@@ -92,16 +112,33 @@ const Integrations: React.FC<IntegrationsProps> = ({
     startError: false,
   });
   const { deleteIntegrationPackInstance } = useDeleteIntegrationPackInstance();
+  const { markIntegrationPackViewed } = useIntegrationPacksService();
   const { createInstance } = useCreateIntegrationPackInstance();
   const [searchContext, setSearchContext] = useState<string>('');
   // Server-side filter and sort (1.7 UI). Changing either goes back to page 1.
-  const [filters, setFilters] = useState<ListFilters>(EMPTY_FILTERS);
-  const [sort, setSort] = useState<ListSort | undefined>(undefined);
+  // Page and filters this tab remembers from before the list was left (for example to open a pack). Filters are only
+  // restored when the filter button is shown, so a remembered filter can never be stuck on with no way to clear it;
+  // without that button a remembered filtered page is not used either.
+  const [restored] = useState(() => {
+    const saved = readListState(String(componentKey));
+    if (!saved || showFilter) return saved;
+    return saved.filters.environmentIds.length || saved.filters.connectorTypes.length ? undefined : saved;
+  });
+  const [filters, setFilters] = useState<ListFilters>(() => restored?.filters ?? EMPTY_FILTERS);
+  // Starts where the user left it, else at the host's `integrations.sort.default`, else Default order. A remembered sort
+  // is only used while some sort control (the menu or the table headers) is shown.
+  const [sort, setSort] = useState<ListSort | undefined>(() => {
+    const options = resolveSortOptions(sortCfg?.options, showEnvironmentColumn);
+    return sortable || showSortMenu
+      ? resolveInitialSort(String(componentKey), sortCfg?.default, options)
+      : resolveDefaultSort(sortCfg?.default, options);
+  });
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [isOpen, setIsOpen] = useState(false);
   const formRef = useRef<AddIntegrationFormRef>(null);
   const hasFetched = useRef(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const paginationRaw = boomiConfig?.components?.[componentKey]?.integrations?.pagination;
   const {
     integrationPackInstances,
     error,
@@ -111,22 +148,56 @@ const Integrations: React.FC<IntegrationsProps> = ({
     totalPages,
     goToPage,
     loadFacets,
+    sortUnsupported,
   } = useFetchIntegrationPackInstances({
     search: searchContext,
     renderType: renderType,
     includeConnectors: boomiConfig?.components?.[componentKey]?.integrations?.integration?.showConnectors ?? catalogUi,
     sort,
     filters,
+    pageSize: paginationRaw?.pageSize,
+    initialPage: restored?.page,
   });
-  const listCfg = boomiConfig?.components?.[componentKey]?.integrations ?? {};
-  const showFilter: boolean = listCfg.filter?.show ?? catalogUi;
-  const sortable: boolean = listCfg.table?.sortable ?? catalogUi;
-  const showEnvironmentColumn: boolean = listCfg.integration?.showEnvironment ?? catalogUi;
+  const pagination = resolvePaginationOptions(paginationRaw);
+  const paginationBefore = paginationPlacement(pagination.position) === 'before';
+  const paginationControls =
+    !isLoading && totalPages > 1 ? (
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={(page) => goToPage(page)}
+        position={pagination.position}
+        alignment={pagination.alignment}
+        styles={pagination.styles}
+      />
+    ) : null;
+  // A pinned bar covers the last rows; leave room under the list for it.
+  const paginationSpacer =
+    paginationControls && pagination.position === 'fixed-bottom' ? <div className="h-20" aria-hidden="true" /> : null;
+  // An older server rejects Created and Last viewed; the list then loads without them and they are not offered.
+  const sortOptions = resolveSortOptions(sortCfg?.options, showEnvironmentColumn).filter(
+    (by) => !(sortUnsupported && isNewerSort(by))
+  );
+  useEffect(() => {
+    if (!sortUnsupported) return;
+    setSort((cur) => (cur && isNewerSort(cur.by) ? undefined : cur));
+    // Do not keep trying a remembered sort the server cannot do.
+    const stored = readStoredSort(String(componentKey), LIST_SORT_OPTIONS);
+    if (stored && isNewerSort(stored.by)) forgetStoredSort(String(componentKey));
+  }, [sortUnsupported, componentKey]);
+  // Remember the page and filters for the length of this tab, so coming back from a pack lands where the user was.
+  // A search is not remembered, and a page number only fits the list it came from, so while one is active the page is
+  // kept as 1 and only the filters carry over.
+  useEffect(() => {
+    writeListState(String(componentKey), { page: searchContext ? 1 : currentPage, filters });
+  }, [componentKey, currentPage, filters, searchContext]);
+  /** Applies a sort the user picked, remembers it in this browser and returns to page 1. */
+  const applySort = (next: ListSort | undefined) => { setSort(next); storeSort(String(componentKey), next); goToPage(1); };
+  const changeSortFromMenu = applySort;
   const changeFilters = (next: ListFilters) => { setFilters(next); goToPage(1); };
   /** Click a header: ascending, then descending, then back to the default order. */
   const changeSort = (by: ListSort['by']) => {
-    setSort((cur) => (cur?.by !== by ? { by, dir: 'asc' } : cur.dir === 'asc' ? { by, dir: 'desc' } : undefined));
-    goToPage(1);
+    applySort(sort?.by !== by ? { by, dir: 'asc' } : sort.dir === 'asc' ? { by, dir: 'desc' } : undefined);
   };
   const header = (by: ListSort['by'], label: string) => {
     if (!sortable) return label;
@@ -275,6 +346,8 @@ const Integrations: React.FC<IntegrationsProps> = ({
     componentName: keyof typeof componentMap,
     integration: IntegrationPackInstance
   ) => {
+    // Feeds the Last viewed sort. Fire and forget: a failure never delays opening the pack.
+    if (showSortMenu && sortOptions.includes('lastViewed') && integration?.id) markIntegrationPackViewed(integration.id);
     setPageIsLoading(true);
     renderComponent?.({
       component: componentName || 'ConfigureIntegration',
@@ -461,6 +534,11 @@ const Integrations: React.FC<IntegrationsProps> = ({
           />
         </div>
       )}
+      {showSortMenu && sortOptions.length > 0 && (
+        <div className="flex-none pt-4 pr-4">
+          <ListSortButton value={sort} onChange={changeSortFromMenu} options={sortOptions} />
+        </div>
+      )}
       {showType && (
         <div className="flex-none pt-4 pr-4">
           <Button
@@ -481,6 +559,7 @@ const Integrations: React.FC<IntegrationsProps> = ({
 
   const bodyContent = viewType === 'off' ? (
     <>
+        {paginationBefore && paginationControls}
         <ul
           role="list"
           className={
@@ -512,16 +591,12 @@ const Integrations: React.FC<IntegrationsProps> = ({
           </div>
         )}
       </ul>
-      {!isLoading && totalPages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={(page) => goToPage(page)}
-          />
-      )}
+      {!paginationBefore && paginationControls}
+      {paginationSpacer}
     </>
   ) : (
     <div className="">
+      {paginationBefore && paginationControls}
       <table className="boomi-integrations-table">
         <thead className="boomi-table-header">
           <tr>
@@ -578,13 +653,8 @@ const Integrations: React.FC<IntegrationsProps> = ({
           )}
         </tbody>
       </table>
-      {!isLoading && totalPages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={(page) => goToPage(page)}
-          />
-      )}
+      {!paginationBefore && paginationControls}
+      {paginationSpacer}
     </div>
   );
   const errorMsg = error || apiError;

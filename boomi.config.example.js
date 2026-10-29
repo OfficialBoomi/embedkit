@@ -15,6 +15,15 @@ export default {
     defaultTheme: 'default',          // 'default' | 'oem' | any key in cssVarsByTheme
   },
 
+  // Optional text overrides. Every key is optional; omit this block to keep the defaults.
+  // messages: {
+  //   // Replaces the message shown when the session has ended or timed out.
+  //   // Default: "Your connection to this section has timed out. Reload the page to continue."
+  //   // To show it in your own dialog instead, register dialogHandlers.sessionError
+  //   // (see index.example.js). The agent chat keeps its own message.
+  //   sessionEnded: 'This panel lost its connection. Refresh the page to continue.',
+  // },
+
   components: {
     // The "Agents" page (renderType: 'agent')
     agentsPage: {
@@ -63,6 +72,15 @@ export default {
           title: 'Integrations',
           description: 'My Integrations',
         },
+        // Optional page controls. Every key is optional; omit the block to keep the defaults.
+        // pagination: {
+        //   pageSize: 12,              // 1 to 30, default 12
+        //   position: 'bottom',        // 'top' | 'bottom' | 'sticky-top' | 'fixed-bottom'
+        //   alignment: 'end',          // 'start' | 'center' | 'end'
+        //   // sticky-top and fixed-bottom stay in view only when the host gives EmbedKit a
+        //   // fixed or maximum height.
+        //   // styles: { root: {}, pageButton: {}, activePageButton: {}, input: {} },
+        // },
       },
       modalOffset: { offsetX: 0, offsetY: 0 },
       mapping: { useTreeMode: true },

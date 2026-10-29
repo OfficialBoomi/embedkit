@@ -82,7 +82,21 @@ export async function login() {
       // Alternative (zero-import): window.addEventListener('boomi:event', (e) => e.detail)
       onEvent: (event) => {
         console.info(`[Harness] EmbedKit event (${event.type}):`, event);
+        // Fires when a part of the UI shows the session-ended message. event.data.origin is
+        // 'auth' (standard error dialog or notice), 'maps' (Map Fields) or 'agent-chat'.
+        if (event.type === 'auth.session.ended') {
+          console.warn('[Harness] Session ended:', event.data.origin, event.data.code);
+        }
       },
+      // Optional: show the session-ended message in your own UI. When registered, EmbedKit does not
+      // show its built-in message, and calls this once per session. req.description is the ready-made
+      // text (boomiConfig.messages.sessionEnded, or the default); show it or your own wording.
+      // dialogHandlers: {
+      //   sessionError: async (req) => {
+      //     await myDialog.open({ title: req.title, message: req.description });
+      //     // Often the right move here: get a fresh nonce from your server and call BoomiPlugin(...) again.
+      //   },
+      // },
     });
     console.info('[Harness] Plugin initialized.');
   } catch (err) {

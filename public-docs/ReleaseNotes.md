@@ -6,12 +6,56 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.8.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.8.1-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
 
 ### All Releases
+
+<details open>
+  <summary><strong>v1.8.1</strong>: Fixes the "Invalid or expired token" error after logging out and back in, with a friendlier session message you can customize, adds page size, position and styling options for the integrations list pagination, adds a Sort by menu with Created and Last viewed, remembers the page, filters and sort when going back to the integrations list, lets users delete every schedule of an integration, and fixes edits to Hour schedules not being saved</summary>
+
+  **Upgrade notes**
+  - The session fix and the pagination options are UI only: no server or SDK change is needed.
+  - The Sort by menu for Name, Description and Environment, going back to the same page, and the optional `userId` are UI only. Sorting by **Created** and **Last viewed** also needs the matching `@boomi/embedkit-sdk` and EmbedKit server releases (publish the SDK first, then deploy the server). On an older server the list still loads, in its default order, and EmbedKit stops offering Created and Last viewed.
+  - Deleting every schedule of an integration also needs the matching EmbedKit server release. On an older server the schedule screen works as before, and deleting the last schedule is still refused.
+  - CDN users get the fix when they move to the matching `@boomi/embedkit-cdn` version.
+  - If your app lets a user sign out and back in without reloading the page, start the new session by calling `BoomiPlugin(...)` with a new nonce before you render a component. See [Authentication Flow](./GettingStarted.md#authentication-flow).
+
+  **Changes for every embed** (no opt-in)
+  - ✅ **Logging out clears the in-memory session:** `DestroyPlugin({ clearAuth: true })` now also forgets the access token. Until the next `BoomiPlugin(...)` call starts a new session, API calls fail at once with the session-ended message (the error carries the code `MISSING_BEARER`). Before, they kept working with the old token until it expired (up to 10 minutes).
+  - ✅ **No session means a fast error:** When no session can be started (for example the nonce was already used and no refresh cookie is available), the error now appears immediately instead of after about 10 seconds.
+
+  - ✅ **A friendlier session-ended message:** When the session has ended or timed out, EmbedKit now says "Your connection to this section has timed out. Reload the page to continue." instead of asking the user to sign in, which was wrong for apps where the user is still signed in. This replaces the three earlier wordings ("Your session has ended. Please sign in again.", "Your session has expired. Reload the page and sign in again." in Map Fields, and the server's "Invalid or expired token" shown as is). The agent chat keeps its own message.
+  - ✅ **Match on the error code, not the text:** A request with no session fails with `code: 'MISSING_BEARER'`. A server `401` (token invalid or expired) now carries `status: 401` and `code: 'TOKEN_REJECTED'`, and its message is the session-ended message instead of "Invalid or expired token" (the server's own text stays in `error.body`). If your app matched the old message text, match `error.code` instead.
+  - ✅ **A new event for hosts:** `auth.session.ended` (with `outcome: 'error'`) tells your app when a part of the UI shows the session-ended message, and which part (`data.origin`: `auth`, `maps` or `agent-chat`). If you subscribe to every event with `'*'`, you now also receive it, and a `switch` over `event.type` that must cover every case needs a new branch. See [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks).
+
+  - ✅ **Delete every schedule of an integration:** The last schedule can now be deleted and saved, matching the Boomi platform. Needs the updated EmbedKit server (see Upgrade notes). A bad schedule request now returns one readable sentence instead of a block of JSON.
+  - ✅ **An integration with no schedule opens empty:** The schedule screen no longer shows a placeholder schedule. It shows "No schedule is set. This integration will not run on a schedule." with the **Add** button. Before, finishing the setup wizard saved that placeholder as a real schedule the user never chose. Finishing the wizard with no schedule now saves nothing.
+  - ✅ **A failed load cannot be saved over:** If the current schedules cannot be loaded, the screen shows the error, and **Save** (or **Next** in the wizard) sends nothing, so an empty form never replaces real schedules.
+
+  - ✅ **Going back keeps your place:** Going back to the integrations list from an integration now returns to the page you were on. Where the filter button is shown (the 1.7 UI), the environment and connector filters you picked stay selected too. This is remembered for the length of the browser tab, so a new tab starts on page 1. The search is not remembered: after a search, going back shows page 1 with the same filters and an empty search. If the remembered page no longer exists, the last page is shown. The `useFetchIntegrationPackInstances` hook takes an optional `initialPage` for the same purpose.
+
+  **New** (1.7 UI: on by default at `uiVersion: '1.7.0'`; turn it on for older components with `integrations.sort.show`)
+  - 🆕 **Sort by menu:** A **Sort by** menu sits left of the grid and table toggle, so the card view can be sorted too (before, only the table headers could). It offers Name, Description, Environment, Created and Last viewed, plus **Default order**, the order the list always had and the one selected until the user picks another. Picking an option starts it in its natural direction (A to Z, newest first) and picking it again reverses it. The table headers and the menu stay in step. Sorting runs on the server across the whole list, not just the visible page, and returns to page 1. See [List filter and sorting](./ConfigurationReference.md#list-filter-and-sorting).
+  - 🆕 **Sort by Created and Last viewed:** Created uses the date Boomi recorded when the integration was installed. Integrations installed before Boomi recorded a date count as the oldest and keep Boomi's own order. Last viewed orders by when the user last opened an integration to configure or run it, and integrations never opened come last. It is kept on the EmbedKit server for each user: under your own `userId` when you pass one to `BoomiPlugin(...)`, otherwise under an id kept in the browser, and as one list shared by the customer account when neither is available. Updated is not offered, because Boomi records no update date for an installed integration. The `useFetchIntegrationPackInstances` hook accepts the two new sort values and returns `sortUnsupported`, which is `true` when an older server could not do the sort.
+  - 🆕 **The sort choice is remembered:** The sort a user picks is kept in their browser, so it survives going back to the list and reloading the page.
+
+  **Opt-in** (nothing changes unless you configure it)
+  - 🆕 **Your own user id:** pass an optional `userId` to `BoomiPlugin(...)` (an opaque id such as a database key, not an email address) so each of your users gets their own Last viewed order. Leave it out and EmbedKit uses an id kept in the browser. See [BoomiPlugin options](./ConfigurationReference.md#1-boomiplugin--initialization-options).
+  - 🆕 **Sort by options:** `integrations.sort.show`, `integrations.sort.options` (choose and order the options) and `integrations.sort.default` (start sorted, for example `{ by: 'lastViewed', dir: 'desc' }`). See [List filter and sorting](./ConfigurationReference.md#list-filter-and-sorting).
+  - 🆕 **Sort by tokens:** new `--boomi-sortmenu-*` tokens restyle the Sort by button and menu. Without them the look is unchanged. See [List filter, sorting and tables](./ConfigurationReference.md#list-filter-sorting-and-tables).
+  - 🆕 **Your own wording:** set `messages.sessionEnded` in `boomi.config.js` to replace the text of the session-ended message. See [Session-Ended Message](./ConfigurationReference.md#session-ended-message).
+  - 🆕 **Your own dialog:** register `dialogHandlers.sessionError` to show the session-ended message in your own UI. EmbedKit hides its built-in message when it is registered and calls it once per session. It works in the npm package and in the CDN embed (for the chat). See [`sessionError`](./ConfigurationReference.md#sessionerror).
+  - 🆕 **Pagination options for the integrations list:** `integrations.pagination` sets how many integrations show per page (`pageSize`, 1 to 30, default 12), where the page controls sit (`position`: `top`, `bottom`, `sticky-top` or `fixed-bottom`), their alignment, and inline styles for each part. The `useFetchIntegrationPackInstances` hook takes an optional `pageSize`. See [Pagination](./ConfigurationReference.md#pagination-integrationspagination).
+  - 🆕 **Pagination colors:** new `--boomi-pagination-*` tokens recolor the page controls (page numbers, current page, label, input border and the pinned background). They apply to every list that shows page controls. Without them the colors are unchanged. See [Pagination tokens](./ConfigurationReference.md#pagination-tokens).
+
+  **Bug fixes**
+  - 🐛 **Edits to an Hour schedule were not saved:** On a schedule of type Hour, changing the start time, end time or interval and saving kept the old values. The edits are now saved, and a new Hour schedule saves the values shown on screen.
+  - 🐛 **"Invalid or expired token" after signing out and back in:** In an app that signed out and back in without a page reload, a request that started while the new session was still being set up could use the previous, already expired token and fail. The list then stayed in error until the page was reloaded. EmbedKit now waits for the new session, or refreshes an expired token first, before sending a request.
+
+</details>
 
 <details open>
   <summary><strong>v1.8.0</strong>: Partner default mappings in Map Fields, a full Transformation Editor, and environment lists that no longer time out</summary>

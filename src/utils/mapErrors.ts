@@ -5,6 +5,13 @@
  * network may be down, or the server hit its time limit while waiting on an offline runtime.
  * A failure that took a long time is treated as a timeout.
  */
+import {
+  DEFAULT_SESSION_MESSAGE,
+  getSessionMessage,
+  isSessionCode,
+  MISSING_BEARER_CODE,
+  TOKEN_REJECTED_CODE,
+} from './sessionError';
 
 export type MapErrorKind =
   | 'timeout'
@@ -18,7 +25,10 @@ export type MapErrorKind =
 export type ClassifiedMapError = {
   kind: MapErrorKind;
   message: string;
+  /** Set for `session` errors: the machine-readable reason (see `utils/sessionError`). */
+  code?: string;
 };
+
 
 /** A request with no response that took at least this long is shown as a timeout, not a network problem. */
 export const SLOW_NO_RESPONSE_MS = 25_000;
@@ -28,7 +38,8 @@ export const MAP_ERROR_MESSAGES = {
   unreachable: 'Could not reach the server. Check your connection and try again.',
   unavailable: 'The service or runtime is unavailable right now. Try again in a few minutes.',
   server: 'Something went wrong on the server. Try again.',
-  session: 'Your session has expired. Reload the page and sign in again.',
+  /** The default. The text actually shown comes from `getSessionMessage()`, which a host can override. */
+  session: DEFAULT_SESSION_MESSAGE,
   generic: 'Something went wrong. Try again.',
 } as const;
 
@@ -64,7 +75,8 @@ export function classifyMapError(err: unknown, elapsedMs = 0): ClassifiedMapErro
     return { kind: 'unavailable', message: MAP_ERROR_MESSAGES.unavailable };
   }
   if (status === 401 || status === 403) {
-    return { kind: 'session', message: MAP_ERROR_MESSAGES.session };
+    const own = (err as { code?: unknown } | null | undefined)?.code;
+    return { kind: 'session', message: getSessionMessage(), code: isSessionCode(own) ? own : TOKEN_REJECTED_CODE };
   }
   if (status !== undefined && status >= 500) {
     return { kind: 'server', message: MAP_ERROR_MESSAGES.server };
@@ -75,8 +87,9 @@ export function classifyMapError(err: unknown, elapsedMs = 0): ClassifiedMapErro
 
   // No status: not an HTTP failure from our client. Keep any message it already has.
   const message = messageOf(err);
-  if (message === 'MISSING_BEARER') {
-    return { kind: 'session', message: MAP_ERROR_MESSAGES.session };
+  const code = (err as { code?: unknown } | null | undefined)?.code;
+  if (code === MISSING_BEARER_CODE || message === MISSING_BEARER_CODE) {
+    return { kind: 'session', message: getSessionMessage(), code: MISSING_BEARER_CODE };
   }
   return { kind: 'unknown', message: message || MAP_ERROR_MESSAGES.generic };
 }
