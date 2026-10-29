@@ -80,7 +80,7 @@ export const MessageBlock: React.FC<MessageBlockProps> = ({
       }
     }
   }
-  logger.debug("recieved message: ", m);
+  logger.debug("received message: ", m);
 
   // USER bubble
   if (isUser) {
