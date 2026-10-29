@@ -6,7 +6,7 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.8.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.8.1-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
@@ -14,7 +14,7 @@
 ### All Releases
 
 <details open>
-  <summary><strong>Unreleased</strong>: Fixes the "Invalid or expired token" error after logging out and back in, with a friendlier session message you can customize, adds page size, position and styling options for the integrations list pagination, adds a Sort by menu with Created and Last viewed, remembers the page, filters and sort when going back to the integrations list, lets users delete every schedule of an integration, and fixes edits to Hour schedules not being saved</summary>
+  <summary><strong>v1.8.1</strong>: Fixes the "Invalid or expired token" error after logging out and back in, with a friendlier session message you can customize, adds page size, position and styling options for the integrations list pagination, adds a Sort by menu with Created and Last viewed, remembers the page, filters and sort when going back to the integrations list, lets users delete every schedule of an integration, and fixes edits to Hour schedules not being saved</summary>
 
   **Upgrade notes**
   - The session fix and the pagination options are UI only: no server or SDK change is needed.
