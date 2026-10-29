@@ -10,6 +10,7 @@ import type { IntegrationPackInstance } from '@boomi/embedkit-sdk';
 import { useIntegrationPacksService, type ListFilters, type ListSort } from '../../service/integrationPacks.service';
 import logger from '../../logger.service';
 import { resolvePageSize } from '../../utils/pagination';
+import { isNewerSort } from '../../utils/listSort';
 
 /**
  * @function fetchIntegrationPackInstances
@@ -30,6 +31,7 @@ export const useFetchIntegrationPackInstances = ({
   sort,
   filters,
   pageSize,
+  initialPage,
 }: {
   search?: string;
   renderType: string;
@@ -40,14 +42,21 @@ export const useFetchIntegrationPackInstances = ({
   sort?: ListSort;
   /** Server-side environment / connector filter. Callers reset to page 1 when it changes. */
   filters?: ListFilters;
+  /** Page to start on (default 1), for example when coming back to a list the user had paged. */
+  initialPage?: number;
 }) => {
   const sortKey = sort ? `${sort.by}:${sort.dir}` : '';
   const filterKey = filters ? `${filters.environmentIds.join(',')}|${filters.connectorTypes.join(',')}` : '';
   const [integrationPackInstances, setIntegrationPackInstances] = useState<IntegrationPackInstance[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() =>
+    Number.isInteger(initialPage) && (initialPage as number) >= 1 ? (initialPage as number) : 1
+  );
   const [totalPages, setTotalPages] = useState(1);
+  // Set when the server rejected a Created or Last viewed sort that an older server does not know.
+  const [sortUnsupported, setSortUnsupported] = useState(false);
+  const sortUnsupportedRef = useRef(false);
   const hasFetchedRef = useRef(false);          
   const lastKeyRef = useRef<string | null>(null); 
   const { boomiConfig } = usePlugin();
@@ -59,15 +68,38 @@ export const useFetchIntegrationPackInstances = ({
     setIsLoading(true);
     setError(null);
     try {
-      const resp = await getIntegrationPacks({
-        renderType,
-        search,
-        page: currentPage,
-        pageSize: size,
-        includeConnectors,
-        ...(sort ? { sort } : {}),
-        ...(filters ? { filters } : {}),
-      });
+      const activeSort = sort && !(sortUnsupportedRef.current && isNewerSort(sort.by)) ? sort : undefined;
+      const request = (withSort: boolean) =>
+        getIntegrationPacks({
+          renderType,
+          search,
+          page: currentPage,
+          pageSize: size,
+          includeConnectors,
+          ...(withSort && activeSort ? { sort: activeSort } : {}),
+          ...(filters ? { filters } : {}),
+        });
+      let resp;
+      try {
+        resp = await request(true);
+      } catch (e: unknown) {
+        // An older server rejects the newer sort values with a 400 or 500. Load the list without the
+        // sort and tell the caller to stop offering them. A failure that also happens without the sort
+        // is a real error and is reported as before.
+        const status = Number((e as { status?: unknown } | null)?.status);
+        if (activeSort && isNewerSort(activeSort.by) && (status === 400 || status === 500)) {
+          try {
+            resp = await request(false);
+          } catch {
+            throw e;
+          }
+          sortUnsupportedRef.current = true;
+          setSortUnsupported(true);
+          logger.warn(`[useFetchIntegrationPackInstances] server does not support sort "${activeSort.by}"; listing without it`);
+        } else {
+          throw e;
+        }
+      }
       logger.debug('[useFetchIntegrationPackInstances] fetched packs', resp);
       
       let instances: IntegrationPackInstance[] = [];
@@ -82,6 +114,9 @@ export const useFetchIntegrationPackInstances = ({
       }
       setIntegrationPackInstances(instances || []);
       setTotalPages(resp.totalPages || 1);
+      // The server shows the last page when the one asked for no longer exists (for example after
+      // deletions since the page was remembered). Follow it so the page controls tell the truth.
+      if (typeof resp.page === 'number' && resp.page >= 1 && resp.page !== currentPage) setCurrentPage(resp.page);
     } catch (e: any) {
       const msg = e?.message || 'Failed to load integration packs';
       logger.error({ err: e }, '[useFetchIntegrationPackInstances] fetch failed');
@@ -130,5 +165,6 @@ export const useFetchIntegrationPackInstances = ({
     totalPages,
     goToPage,
     loadFacets,
-  }), [integrationPackInstances, fetchIntegrationPacks, isLoading, error, currentPage, totalPages, goToPage, loadFacets]);
+    sortUnsupported,
+  }), [integrationPackInstances, fetchIntegrationPacks, isLoading, error, currentPage, totalPages, goToPage, loadFacets, sortUnsupported]);
 };

@@ -362,6 +362,7 @@ async function ensureRootMountedForHost(host: HostRecord): Promise<boolean> {
       serverBase={pluginConfig.serverBase || '/api/v1'}
       tenantId={pluginConfig.tenantId || ''}
       boomiConfig={pluginConfig.boomiConfig}
+      userId={pluginConfig.userId}
     >
       <ErrorBoundary>
         <Root ref={host.rootRef as unknown as React.RefObject<RootRef>} />

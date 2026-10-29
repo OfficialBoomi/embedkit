@@ -21,6 +21,13 @@ export type PluginConfig = {
   /** One-time nonce the host app obtained from the server login flow. */
   nonce?: string;
 
+  /**
+   * Optional. Your own id for the signed-in user. Used to keep each user's own "Last viewed"
+   * list on the integrations list. When omitted, EmbedKit uses an id kept in this browser.
+   * Use an opaque id, not an email address.
+   */
+  userId?: string;
+
   /** Optional access token (public embed flow). */
   accessToken?: string;
 

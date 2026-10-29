@@ -45,6 +45,7 @@ BoomiPlugin({
 | `accessToken` | `string` | Conditional | Pre-generated access token. Use instead of `nonce` for the public embed / CDN flow. |
 | `boomiConfig` | `PluginUiConfig` | No | Full UI and behavior configuration. See [Section 2](#2-boomiconfigjs--top-level-structure). |
 | `dialogHandlers` | `DialogHandlers` | No | Replaces EmbedKit's built-in confirm, alert, toast and session-ended dialogs with your own UI. See [Section 11](#11-dialog-handlers). |
+| `userId` | `string` | No | Your own id for the signed-in user. EmbedKit keeps each user's "Last viewed" order of the integrations list under it. Use an opaque id such as a database key, not an email address. When omitted, EmbedKit uses an id kept in the browser, and with neither, one list is shared by the customer account. See [List filter and sorting](#list-filter-and-sorting). |
 
 ---
 
@@ -395,7 +396,7 @@ components: {
 | `uiVersion` | What changes |
 |-------------|--------------|
 | omitted, `'1.6.1'` or lower | The 1.6.1 UI. |
-| `'1.7.0'` or higher | Add Integration opens the searchable catalog (`form.addIntegration.layout` defaults to `'catalog'`). Integration cards use the 1.7 layout (see [Integration cards](#integration-cards-integrationsintegration)): no type row, the actions menu at the top right, connector icons, a full-width environment row, and the card itself opens Edit. The list gets a filter beside the search box and sortable table columns with an Environment column (see [List filter and sorting](#list-filter-and-sorting)). Every scroll area uses thin scrollbars (see [Scrollbars](#scrollbars)). |
+| `'1.7.0'` or higher | Add Integration opens the searchable catalog (`form.addIntegration.layout` defaults to `'catalog'`). Integration cards use the 1.7 layout (see [Integration cards](#integration-cards-integrationsintegration)): no type row, the actions menu at the top right, connector icons, a full-width environment row, and the card itself opens Edit. The list gets a filter beside the search box, a Sort by menu and sortable table columns with an Environment column (see [List filter and sorting](#list-filter-and-sorting)). Every scroll area uses thin scrollbars (see [Scrollbars](#scrollbars)). |
 
 ### Integration cards (`integrations.integration`)
 
@@ -442,9 +443,34 @@ The table view adds an **Environment** column (the first in-scope environment, `
 | `integrations.filter.show` | `boolean` | `false` | `true` | Filter icon beside the list's search box. Also the catalog's default. |
 | `form.addIntegration.catalog.filter.show` | `boolean` | follows `integrations.filter.show` | follows `integrations.filter.show` | Filter icon in the Add Integration catalog. |
 | `integrations.table.sortable` | `boolean` | `false` | `true` | Sortable table headers. |
+| `integrations.sort.show` | `boolean` | follows `integrations.table.sortable` | follows `integrations.table.sortable` | The Sort by menu, left of the grid and table toggle. |
+| `integrations.sort.options` | `string[]` | all five | all five | Which options the menu offers, in this order: `'name'`, `'description'`, `'environment'`, `'created'`, `'lastViewed'`. Unknown names are ignored. Environment is left out when environments are not shown. |
+| `integrations.sort.default` | `{ by, dir }` | none (Default order) | none (Default order) | Starting sort, for example `{ by: 'lastViewed', dir: 'desc' }`. `dir` is `'asc'` or `'desc'` and defaults to the option's natural direction. A choice the user already made in this browser wins over it. |
 | `integrations.integration.showEnvironment` | `boolean` | `false` | `true` | Also controls the table's Environment column. |
 
 Filter options are loaded the first time the panel opens (and again after the search changes). Tokens are listed under [List filter, sorting and tables](#list-filter-sorting-and-tables).
+
+**Sort by menu.** A **Sort by** menu sits left of the grid and table toggle and works in both views, so the card view can be sorted as well. It offers **Default order** (no sort: the order the list has always had, selected until the user picks another) and the options in `integrations.sort.options`:
+
+| Option | First pick | Picked again |
+|--------|------------|--------------|
+| Name, Description, Environment | A to Z | Z to A |
+| Created | Newest first | Oldest first |
+| Last viewed | Most recent first | Least recent first |
+
+The menu and the table headers set the same sort, so each always shows what the other chose. A sort chosen in the menu for Created or Last viewed leaves every header looking inactive, because those two have no column. Sorting runs on the server across the whole list before it is paged, and returns to page 1. There is no Updated option: Boomi records no update date for an installed integration.
+
+**Created and Last viewed.** Created uses the date Boomi recorded when the integration was installed. Boomi only records it for newer installs, so an integration installed earlier counts as the oldest and these keep Boomi's own order. Last viewed orders by when the user last opened an integration to configure or run it (from the card, the Edit button or the ⋮ menu). Integrations never opened come last in either direction. The times are kept on the EmbedKit server, for each user, under the first id available:
+
+1. the `userId` you pass to [`BoomiPlugin()`](#1-boomiplugin--initialization-options),
+2. an anonymous id EmbedKit keeps in the browser,
+3. one list shared by the customer account, when the browser cannot keep an id.
+
+Each user keeps their 500 most recent integrations, and the list is dropped after 180 days without use. Only integration ids and times are stored. The id is hashed before it is used in a key.
+
+Created and Last viewed need the matching `@boomi/embedkit-sdk` and EmbedKit server. With an older server EmbedKit loads the list without the sort, selects Default order, forgets a remembered Created or Last viewed, and stops offering the two options.
+
+**Remembering where the user was.** Opening an integration replaces the list, and going back builds it again. EmbedKit remembers, per component key, for the length of the browser tab: the page, and where the filter button is shown, the environment and connector filters. A new tab starts on page 1 with no filters. The search is not remembered: after a search, going back shows page 1 with the same filters and an empty search. If the remembered page no longer exists (integrations were deleted), the last page is shown. The sort choice is remembered in the browser until it is changed, so it also survives a reload and a new tab; a deliberate **Default order** is remembered too and wins over `integrations.sort.default`. A remembered sort or filter is only used where its control is shown. Nothing is stored when the browser blocks storage, and the list then starts as it always did.
 
 **Layout at 1.7.0+.** The actions menu moves to the right end of the top visible row: the type row when `showType` is on, otherwise the title row. The environment is a full-width row above the button, and the Edit or Run Agent button spans the full width. Before 1.7.0 the card keeps its original layout (menu and button at the bottom right, environment chip inline at the bottom left) whatever you set here.
 
@@ -1199,6 +1225,10 @@ The filter icon, sortable headers and tables on the integrations list (1.7 UI), 
 | `--boomi-filter-legend-font-size` / `-legend-opacity` / `-legend-fg` | `0.6875rem` / `0.7` / inherit | "Environment" and "Connector" group labels. |
 | `--boomi-filter-option-font-size` / `-option-fg` | `0.8125rem` / inherit | Checkbox rows. |
 | `--boomi-sort-icon-size` / `-icon-opacity` / `-active-fg` | `0.875em` / `0.35` / accent | Sort arrows on table headers; the active column's arrow uses `-active-fg`. |
+| `--boomi-sortmenu-height` / `-radius` / `-font-size` | `2.5rem` / `0.5rem` / `0.8125rem` | Sort by button height, corners and text. |
+| `--boomi-sortmenu-bg` / `-fg` / `-border` / `-border-hover` | input tokens / inherit / input border / accent | Sort by button colors. |
+| `--boomi-sortmenu-active-fg` | accent | Button and menu row color while a sort is active. |
+| `--boomi-sortmenu-panel-width` / `-panel-padding` | `15rem` / `0.25rem` | Sort by menu panel (also uses the `--boomi-menu-*` colors). |
 | `--boomi-list-toolbar-gap` / `-toolbar-padding` | `0.5rem` / `1rem 0.5rem 1rem 0` | Search box, filter and add button row (`.boomi-list-search`). |
 | `--boomi-list-search-padding` | `1rem 1.5rem 1rem 0` | Search box without the filter (1.6.1 layout). |
 | `--boomi-integrations-table-radius` / `-shadow` | `0.5rem` / small shadow | Integrations table frame (`.boomi-integrations-table`). |

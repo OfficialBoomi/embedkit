@@ -4187,6 +4187,39 @@ td > .boomi-integration-card__env--unattached { max-width: none; margin-right: 0
 .boomi-filter__link:disabled { opacity: 0.45; cursor: default; }
 .boomi-filter__note { margin: 0.25rem 0 0.5rem; font-size: 0.8125rem; }
 
+/* ---------- Sort by menu (integrations list, grid and table) ---------- */
+.boomi-sortmenu { position: relative; flex: 0 0 auto; display: inline-flex; }
+.boomi-sortmenu__button {
+  display: inline-flex; align-items: center; gap: 0.375rem;
+  height: var(--boomi-sortmenu-height, 2.5rem); padding: 0 0.75rem; white-space: nowrap;
+  border-radius: var(--boomi-sortmenu-radius, 0.5rem);
+  border: 1px solid var(--boomi-sortmenu-border, var(--boomi-input-border, color-mix(in srgb, currentColor 25%, transparent)));
+  background: var(--boomi-sortmenu-bg, var(--boomi-input-bg, transparent));
+  color: var(--boomi-sortmenu-fg, inherit);
+  font-size: var(--boomi-sortmenu-font-size, 0.8125rem); cursor: pointer;
+}
+.boomi-sortmenu__button:hover { border-color: var(--boomi-sortmenu-border-hover, var(--boomi-accent, currentColor)); }
+.boomi-sortmenu__button:focus-visible { outline: 2px solid var(--boomi-accent, #6366f1); outline-offset: 2px; }
+.boomi-sortmenu__button--active { color: var(--boomi-sortmenu-active-fg, var(--boomi-accent, currentColor)); border-color: var(--boomi-sortmenu-active-fg, var(--boomi-accent, currentColor)); }
+.boomi-sortmenu__icon { flex: 0 0 auto; font-size: 1rem; }
+.boomi-sortmenu__panel {
+  position: absolute; right: 0; top: calc(100% + 0.375rem); z-index: 600;
+  width: var(--boomi-sortmenu-panel-width, 15rem); max-width: 80vw;
+  padding: var(--boomi-sortmenu-panel-padding, 0.25rem); text-align: left;
+}
+.boomi-sortmenu__option {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%;
+  padding: 0.4375rem 0.625rem; border: 0; border-radius: var(--boomi-menu-item-radius, 0.375rem);
+  background: transparent; color: inherit; font: inherit; font-size: 0.8125rem; text-align: left; cursor: pointer;
+}
+.boomi-sortmenu__option:hover { background-color: var(--boomi-menu-item-bg-hover, color-mix(in srgb, currentColor 8%, transparent)); }
+.boomi-sortmenu__option:focus-visible { outline: 2px solid var(--boomi-accent, #6366f1); outline-offset: -2px; }
+.boomi-sortmenu__option--active { font-weight: 600; color: var(--boomi-sortmenu-active-fg, var(--boomi-accent, currentColor)); }
+.boomi-sortmenu__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boomi-sortmenu__dir { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.6875rem; font-weight: 400; opacity: 0.65; }
+.boomi-sortmenu__option--active .boomi-sortmenu__dir { opacity: 1; }
+.boomi-sortmenu__arrow { font-size: 0.875rem; }
+
 /* Scroll areas stop at their ends instead of rubber-banding (macOS) or scrolling the host page. */
 .boomi-scroll, .boomi-catalog-grid, .boomi-filter__panel { overscroll-behavior: none; }
 

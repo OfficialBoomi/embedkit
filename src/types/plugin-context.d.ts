@@ -58,6 +58,9 @@ export interface PluginContextValue {
 
   /** The base url of the embedkit server passed into the context.  */
   serverBase: string;
+
+  /** The host's optional id for the signed-in user (see `PluginConfig.userId`). */
+  userId?: string;
 }
 
 /** What the provider needs from the host bootstrapping code. */
@@ -80,4 +83,7 @@ export interface PluginContextProps {
 
   /** Base URL to the embedkit server (e.g., "/api/v1" or "https://boomi.space/embedkit-server/api/v1"). */
   serverBase?: string;
+
+  /** Optional id for the signed-in user (see `PluginConfig.userId`). */
+  userId?: string;
 }

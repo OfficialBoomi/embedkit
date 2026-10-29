@@ -48,6 +48,7 @@ const PluginContextProvider = ({
   tenantId,
   nonce,
   boomiConfig,
+  userId,
 }: PluginContextProps & { nonce?: string }) => {
   const auth = AuthManager.get();
   const [accessToken, setAccessToken] = useState<string | null>(auth.getToken());
@@ -133,6 +134,7 @@ const value: PluginContextValue = {
   setPageIsLoading,
   logout: () => window.dispatchEvent(new CustomEvent('boomi:logout')),
   serverBase: serverBaseNorm,
+  userId,
   };
 
   return <PluginContext.Provider value={value}>{children}</PluginContext.Provider>;

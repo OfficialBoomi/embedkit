@@ -29,6 +29,8 @@
 | Clickable catalog cards, or an **Install** button on each card | Add Integration modal | Install button always (configurable) |
 | Filter by environment and connector | Integrations list and catalog | at `uiVersion` 1.7.0 |
 | Environment column and sortable Name / Description / Environment headers | Integrations table view | at `uiVersion` 1.7.0 |
+| **Sort by** menu: Name, Description, Environment, Created, Last viewed | Integrations list (card and table views) | at `uiVersion` 1.7.0 |
+| Going back to the list keeps the page, the filters and the sort | Integrations list | the page always; the filters at `uiVersion` 1.7.0; the sort wherever a sort control shows |
 | **Unattached** pill for integrations attached to no environment | Integrations list | wherever the environment is shown |
 | Setup wizard skips steps with nothing to configure | After install and on Edit | always |
 | Single-install packs use the setup wizard and can edit connections | After install and on Edit | always |
@@ -92,6 +94,22 @@ The pill needs a server that reports each instance's environments (embedkit-serv
 ### Table view
 
 At 1.7 the table gains an **Environment** column (it follows `showEnvironment`) and sortable **Name**, **Description** and **Environment** headers (`integrations.table.sortable`). Click a header once for ascending, again for descending, and a third time for the default order. Sorting runs on the server across the whole list, not just the visible page, and returns to page 1.
+
+### Sort by
+
+A **Sort by** menu sits left of the grid and table toggle, so the card view can be sorted too (`integrations.sort.show`, which follows `integrations.table.sortable`). It offers **Default order**, which is selected until the user picks another and is the order the list always had, plus Name, Description, Environment, **Created** and **Last viewed**.
+
+- Picking an option starts it in its natural direction: A to Z for text, newest first for Created, most recent first for Last viewed. Picking the same option again reverses it.
+- The menu and the table headers set the same sort, so they always agree. Created and Last viewed have no column, so choosing them leaves every header inactive.
+- **Created** is the date Boomi recorded when the integration was installed. Integrations installed before Boomi recorded a date count as the oldest and keep Boomi's own order.
+- **Last viewed** is the last time the user opened an integration to configure or run it. Integrations never opened come last. It is kept on the EmbedKit server for each user, under the `userId` you pass to `BoomiPlugin()` or, without one, an id kept in the browser (see [BoomiPlugin options](./ConfigurationReference.md#1-boomiplugin--initialization-options)).
+- There is no Updated option: Boomi records no update date for an installed integration.
+- Created and Last viewed need the matching `@boomi/embedkit-sdk` and EmbedKit server. With an older server the list loads in its default order and the two options are not offered.
+- Choose and order the options with `integrations.sort.options`, and start sorted with `integrations.sort.default`, for example `{ by: 'lastViewed', dir: 'desc' }`.
+
+### Going back to the list
+
+Opening an integration replaces the list, and going back builds it again. EmbedKit now remembers where the user was: the page, and (where the filter button shows) the filters, for the length of the browser tab, so a new tab starts on page 1. The search is not remembered: after a search, going back shows page 1 with the same filters and an empty search. If the remembered page no longer exists, the last page is shown. The sort choice is remembered in the browser until it changes, so it also survives a reload.
 
 ### Filter
 
@@ -208,6 +226,9 @@ Defaults depend on the component's `uiVersion`. All paths are under `components[
 | `integrations.integration.connectorIconSize` | `number` | `36` | `36` | Connector icon size in px. |
 | `integrations.filter.show` | `boolean` | `false` | `true` | Filter icon beside the list's search box. |
 | `integrations.table.sortable` | `boolean` | `false` | `true` | Sortable table headers. |
+| `integrations.sort.show` | `boolean` | follows `integrations.table.sortable` | follows `integrations.table.sortable` | Sort by menu beside the grid/table toggle. |
+| `integrations.sort.options` | `string[]` | all five | all five | Options the menu offers, in order: `'name'`, `'description'`, `'environment'`, `'created'`, `'lastViewed'`. |
+| `integrations.sort.default` | `{ by, dir }` | none | none | Starting sort, for example `{ by: 'lastViewed', dir: 'desc' }`. A choice the user already made wins. |
 | `form.addIntegration.layout` | `'catalog' \| 'form'` | `'form'` | `'catalog'` | Add Integration experience. |
 | `form.addIntegration.catalog.showType` | `boolean` | follows `showType` | follows `showType` | Type row on catalog cards. |
 | `form.addIntegration.catalog.installButton.show` | `boolean` | `true` | `true` | Install button on catalog cards; off makes the card start the install. |

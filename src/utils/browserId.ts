@@ -28,3 +28,21 @@ export function getBrowserId(): string {
     return generateId();
   }
 }
+
+/**
+ * Like {@link getBrowserId}, but returns undefined when the id cannot be kept (storage is
+ * unavailable), instead of a throwaway id. Use it where an id that changes on every call
+ * would scatter data, such as the per-browser "Last viewed" list.
+ */
+export function getStableBrowserId(): string | undefined {
+  try {
+    let id = localStorage.getItem(BROWSER_ID_KEY);
+    if (!id) {
+      id = generateId();
+      localStorage.setItem(BROWSER_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return undefined;
+  }
+}

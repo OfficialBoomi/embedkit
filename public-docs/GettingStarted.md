@@ -238,6 +238,7 @@ async function initBoomiFromServer(res) {
     tenantId: res.tenantId,       // Your Boomi Parent Account ID
     nonce: res.nonce,             // One-time-use nonce from the EmbedKit auth endpoint
     boomiConfig: uiConfig,        // Contents of your boomi.config.js file
+    // userId: 'YOUR_USER_ID',    // Optional. Your own id for the signed-in user (an opaque id, not an email address). Gives each user their own "Last viewed" order.
   });
 
   // Wait one animation frame to ensure the plugin has fully mounted before rendering components
