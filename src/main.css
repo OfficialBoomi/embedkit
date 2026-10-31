@@ -4064,7 +4064,8 @@
   font-size: var(--boomi-integration-card-title-font-size, 1.25rem);
   font-weight: var(--boomi-integration-card-title-font-weight, 600);
   line-height: var(--boomi-integration-card-title-line-height, 1.75rem);
-  overflow-wrap: break-word; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  overflow-wrap: break-word; overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; white-space: normal;
 }
 .boomi-integration-card__desc {
   margin: 0.25rem 0 0 0;
