@@ -1,0 +1,355 @@
+/*
+ * Styles for the cross reference table screen and its grid.
+ * Plain CSS only: Tailwind ring, shadow and translate utilities do not work inside
+ * the plugin's shadow root. Every colour comes from an existing theme token with a
+ * fallback, through the local --crt-* properties below.
+ * The sizes --crt-row-h, --crt-header-h and --crt-gutter-w are set by the grid
+ * component (CrtGrid.tsx) on its root, so TypeScript and CSS share one value.
+ */
+
+.boomi-crt-screen,
+.boomi-crt-grid {
+  --crt-fg: var(--boomi-page-fg-color, #374151);
+  --crt-muted: var(--boomi-muted, #6b7280);
+  --crt-surface: var(--boomi-card-bg, #ffffff);
+  --crt-outer-border: var(--boomi-card-border, #d1d5db);
+  --crt-cell-border: var(--boomi-table-header-border, var(--boomi-card-border, #d1d5db));
+  --crt-header-bg: var(--boomi-table-header-bg, #f3f4f6);
+  --crt-header-fg: var(--boomi-table-header-fg, #374151);
+  --crt-row-odd-bg: var(--boomi-table-row-odd-bg, #ffffff);
+  /* The theme's even stripe is nearly white in the light theme, so add a little contrast. */
+  --crt-row-even-bg: color-mix(in srgb, var(--crt-muted) 7%, var(--boomi-table-row-even-bg, #f9fafb));
+  --crt-focus: var(--boomi-input-border-focus, #6366f1);
+  --crt-danger: var(--boomi-danger-fg, #ef4444);
+}
+
+/* ---------- Screen ---------- */
+
+.boomi-crt-picker {
+  max-width: 32rem;
+}
+
+.boomi-crt-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--crt-fg);
+}
+
+.boomi-crt-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border: 1px solid var(--crt-cell-border);
+  border-radius: 9999px;
+  background-color: var(--crt-surface);
+  color: var(--crt-fg);
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
+.boomi-crt-chip--default {
+  color: var(--crt-muted);
+}
+
+.boomi-crt-chip--overridden {
+  border-color: var(--crt-focus);
+  color: var(--crt-focus);
+  font-weight: 600;
+}
+
+.boomi-crt-count {
+  margin-left: auto;
+  color: var(--crt-muted);
+  white-space: nowrap;
+}
+
+.boomi-crt-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--crt-outer-border);
+  border-left: 4px solid var(--crt-focus);
+  border-radius: 0.375rem;
+  background-color: var(--crt-surface);
+  color: var(--crt-fg);
+  font-size: 0.875rem;
+}
+
+.boomi-crt-banner-text {
+  flex: 1 1 18rem;
+}
+
+.boomi-crt-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+.boomi-crt-grid-wrap {
+  height: 60vh;
+  min-height: 320px;
+}
+
+.boomi-crt-statusbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  min-height: 1.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.boomi-crt-help {
+  color: var(--crt-muted);
+}
+
+.boomi-crt-hint {
+  color: var(--crt-danger);
+  font-weight: 600;
+}
+
+.boomi-crt-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--crt-muted);
+}
+
+/* ---------- Grid ---------- */
+
+.boomi-crt-grid,
+.boomi-crt-grid * {
+  box-sizing: border-box;
+}
+
+.boomi-crt-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--crt-outer-border);
+  border-radius: 0.375rem;
+  background-color: var(--crt-surface);
+  color: var(--crt-fg);
+  font-size: 0.875rem;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.boomi-crt-grid:focus,
+.boomi-crt-grid:focus-visible {
+  outline: none;
+}
+
+/* Not overridden: the same stripes, tinted toward the muted colour. */
+.boomi-crt-grid.boomi-crt-grid--readonly {
+  --crt-row-odd-bg: color-mix(in srgb, var(--crt-muted) 14%, var(--boomi-table-row-odd-bg, #ffffff));
+  --crt-row-even-bg: color-mix(in srgb, var(--crt-muted) 20%, var(--boomi-table-row-even-bg, #f9fafb));
+}
+
+.boomi-crt-canvas {
+  position: relative;
+}
+
+/* Header row */
+
+.boomi-crt-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  height: var(--crt-header-h, 32px);
+}
+
+.boomi-crt-corner,
+.boomi-crt-hcell {
+  flex: none;
+  height: 100%;
+  padding: 0 12px;
+  overflow: hidden;
+  background-color: var(--crt-header-bg);
+  border-right: 1px solid var(--crt-cell-border);
+  border-bottom: 1px solid var(--crt-cell-border);
+  color: var(--crt-header-fg);
+  font-weight: 600;
+  line-height: calc(var(--crt-header-h, 32px) - 1px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boomi-crt-corner {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: var(--crt-gutter-w, 64px);
+}
+
+.boomi-crt-hcell--frozen {
+  position: sticky;
+  left: var(--crt-gutter-w, 64px);
+  z-index: 1;
+  border-right-width: 2px;
+}
+
+.boomi-crt-hcell--active {
+  box-shadow: inset 0 -2px 0 var(--crt-focus);
+}
+
+/* Rows. Positioned by the virtualizer through an inline `top`. */
+
+.boomi-crt-row {
+  position: absolute;
+  left: 0;
+  display: flex;
+  height: var(--crt-row-h, 32px);
+  border-bottom: 1px solid var(--crt-cell-border);
+  background-color: var(--crt-row-bg);
+}
+
+.boomi-crt-row--odd {
+  --crt-row-bg: var(--crt-row-odd-bg);
+}
+
+.boomi-crt-row--even {
+  --crt-row-bg: var(--crt-row-even-bg);
+}
+
+/* Cells */
+
+.boomi-crt-cell,
+.boomi-crt-gutter {
+  flex: none;
+  height: 100%;
+  overflow: hidden;
+  line-height: calc(var(--crt-row-h, 32px) - 1px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boomi-crt-cell {
+  padding: 0 12px;
+  border-right: 1px solid var(--crt-cell-border);
+  cursor: cell;
+}
+
+/*
+ * Sticky cells must be opaque or the columns scrolling under them show through.
+ * The surface colour goes underneath and the row stripe on top, so a translucent
+ * theme colour still reads correctly.
+ */
+.boomi-crt-gutter,
+.boomi-crt-cell--frozen {
+  position: sticky;
+  z-index: 2;
+  background-color: var(--crt-surface);
+  background-image: linear-gradient(var(--crt-row-bg), var(--crt-row-bg));
+}
+
+.boomi-crt-gutter {
+  left: 0;
+  width: var(--crt-gutter-w, 64px);
+  padding: 0 10px 0 0;
+  border-right: 1px solid var(--crt-cell-border);
+  color: var(--crt-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.boomi-crt-gutter--active {
+  color: var(--crt-fg);
+  font-weight: 600;
+}
+
+.boomi-crt-cell--frozen {
+  left: var(--crt-gutter-w, 64px);
+  border-right: 2px solid var(--crt-outer-border);
+}
+
+/*
+ * A changed cell gets a light tint and a small corner flag. The row stripe stays as the
+ * lower layer, so frozen (opaque) cells keep their background. The flag is on the right
+ * edge, away from the frozen column divider on the left.
+ */
+.boomi-crt-cell--edited {
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, var(--crt-focus) 16%, transparent),
+      color-mix(in srgb, var(--crt-focus) 16%, transparent)
+    ),
+    linear-gradient(var(--crt-row-bg), var(--crt-row-bg));
+}
+
+.boomi-crt-cell--edited:not(.boomi-crt-cell--frozen) {
+  position: relative;
+}
+
+.boomi-crt-cell--edited::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-style: solid;
+  border-width: 0 8px 8px 0;
+  border-color: transparent var(--crt-focus) transparent transparent;
+}
+
+.boomi-crt-cell--edited.boomi-crt-cell--editing::after {
+  display: none;
+}
+
+/* Inside the cell, so the cell's overflow clip does not cut it. */
+.boomi-crt-cell--active {
+  outline: 2px solid var(--crt-focus);
+  outline-offset: -2px;
+}
+
+.boomi-crt-grid:not(:focus-within) .boomi-crt-cell--active {
+  outline-color: var(--crt-muted);
+}
+
+/* The input draws its own border while editing. */
+.boomi-crt-cell--editing {
+  padding: 0;
+  outline: none;
+}
+
+.boomi-crt-cell--editing:not(.boomi-crt-cell--frozen) {
+  position: relative;
+}
+
+.boomi-crt-grid .boomi-crt-cell-input {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0 10px;
+  border: 2px solid var(--crt-focus);
+  border-radius: 0;
+  background-color: var(--boomi-input-bg, #ffffff);
+  box-shadow: none;
+  color: var(--boomi-input-fg, #111827);
+  font: inherit;
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.boomi-crt-grid .boomi-crt-cell-input:focus {
+  border-color: var(--crt-focus);
+  outline: none;
+}
