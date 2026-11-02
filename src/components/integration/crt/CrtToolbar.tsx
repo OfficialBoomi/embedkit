@@ -23,6 +23,8 @@ import {
   AiOutlineCopy,
   AiOutlineDelete,
   AiOutlineDiff,
+  AiOutlineFullscreen,
+  AiOutlineFullscreenExit,
   AiOutlineInsertRowAbove,
   AiOutlineInsertRowBelow,
   AiOutlinePlus,
@@ -147,9 +149,20 @@ const keepFocus = (e: React.MouseEvent<HTMLElement>) => e.preventDefault();
 export interface CrtToolbarProps {
   info: CrtGridInfo | null;
   onRun: (op: CrtOp) => void;
+  /** Shown at the right end of the first row, for example the Override button. */
+  trailing?: ReactNode;
+  /** When both are given, the second row ends with a Full screen / Exit full screen button. */
+  fullScreen?: boolean;
+  onToggleFullScreen?: () => void;
 }
 
-const CrtToolbar: React.FC<CrtToolbarProps> = ({ info, onRun }) => {
+const CrtToolbar: React.FC<CrtToolbarProps> = ({
+  info,
+  onRun,
+  trailing,
+  fullScreen = false,
+  onToggleFullScreen,
+}) => {
   const renderGroup = (name: string, tools: ToolDef[]) => (
     <div className="boomi-crt-tools-group" role="group" aria-label={name}>
       {tools.map((tool) => (
@@ -173,9 +186,28 @@ const CrtToolbar: React.FC<CrtToolbarProps> = ({ info, onRun }) => {
 
   return (
     <div className="boomi-crt-tools" role="toolbar" aria-label="Table actions" onMouseDown={keepFocus}>
-      {renderGroup('Rows', ROW_TOOLS)}
-      {renderGroup('Clipboard', CLIPBOARD_TOOLS)}
-      <span className="boomi-crt-tools-selection">{info?.selectionLabel ?? ''}</span>
+      <div className="boomi-crt-tools-line">
+        {renderGroup('Rows', ROW_TOOLS)}
+        {trailing && <div className="boomi-crt-tools-trailing">{trailing}</div>}
+      </div>
+      <div className="boomi-crt-tools-line">
+        {renderGroup('Clipboard', CLIPBOARD_TOOLS)}
+        <span className="boomi-crt-tools-selection">{info?.selectionLabel ?? ''}</span>
+        {onToggleFullScreen && (
+          <button
+            type="button"
+            className="boomi-crt-tool boomi-crt-tool--edge"
+            title={fullScreen ? 'Leave full screen (Esc)' : 'Fill the screen with the toolbar and the table'}
+            aria-pressed={fullScreen}
+            onClick={onToggleFullScreen}
+          >
+            <span className="boomi-crt-tool-icon" aria-hidden="true">
+              {fullScreen ? <AiOutlineFullscreenExit /> : <AiOutlineFullscreen />}
+            </span>
+            <span>{fullScreen ? 'Exit full screen' : 'Full screen'}</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 };

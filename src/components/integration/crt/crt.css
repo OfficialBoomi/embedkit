@@ -71,39 +71,12 @@
   white-space: nowrap;
 }
 
-.boomi-crt-banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-  padding: 0.625rem 0.875rem;
-  border: 1px solid var(--crt-outer-border);
-  border-left: 4px solid var(--crt-focus);
-  border-radius: 0.375rem;
-  background-color: var(--crt-surface);
-  color: var(--crt-fg);
-  font-size: 0.875rem;
-}
-
-.boomi-crt-banner-text {
-  flex: 1 1 18rem;
-}
-
-.boomi-crt-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.5rem;
-}
-
 /* Row and clipboard actions above the grid. */
 
 .boomi-crt-tools {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
   margin-bottom: 0.5rem;
   padding: 0.25rem;
   border: 1px solid var(--crt-outer-border);
@@ -111,6 +84,19 @@
   background-color: var(--crt-surface);
   color: var(--crt-fg);
   font-size: 0.8125rem;
+}
+
+/* Two lines: row actions with the Override button at the right, then clipboard actions with the selection text. */
+.boomi-crt-tools-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.boomi-crt-tools-trailing {
+  margin-left: auto;
+  padding-right: 0.25rem;
 }
 
 .boomi-crt-tools-group {
@@ -603,4 +589,61 @@
   margin-left: 1.5rem;
   color: var(--crt-muted);
   font-size: 0.75rem;
+}
+
+/* ---------- Full screen ---------- */
+
+/*
+ * The workspace is the toolbar, the grid and the status line. In full screen it covers the
+ * plugin area (position: fixed is relative to the plugin root, which has a CSS transform)
+ * and the grid takes all the height that is left. Dialogs are not part of it, so they still
+ * show on top.
+ */
+.boomi-crt-workspace--full {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem;
+  overflow: hidden;
+  background-color: var(--boomi-page-bg-color, var(--crt-surface));
+  color: var(--crt-fg);
+}
+
+.boomi-crt-workspace--full .boomi-crt-grid-wrap {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+.boomi-crt-workspace--full .boomi-crt-tools {
+  flex: none;
+}
+
+.boomi-crt-workspace--full .boomi-crt-statusbar {
+  flex: none;
+}
+
+.boomi-crt-fs-caption {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.boomi-crt-fs-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.boomi-crt-fs-sub {
+  color: var(--crt-muted);
+}
+
+.boomi-crt-tool--edge {
+  margin-right: 0.25rem;
 }

@@ -127,6 +127,9 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   const deleteOpen = useRef(false);
   const gridWrapRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<CrtGridHandle>(null);
+  // Full screen fills the plugin area with the toolbar, the grid and the status line.
+  const [fullScreen, setFullScreen] = useState(false);
+  const toggleFullScreen = useCallback(() => setFullScreen((on) => !on), []);
   // The dialog hook may hand back a new function each render; the grid needs a stable callback.
   const confirmRef = useRef(confirm);
   useEffect(() => {
@@ -158,6 +161,15 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     };
     requestAnimationFrame(tick);
   }, [focusGrid]);
+
+  const fullScreenSeen = useRef(false);
+  useEffect(() => {
+    if (!fullScreenSeen.current) {
+      fullScreenSeen.current = true;
+      return;
+    }
+    focusGrid();
+  }, [fullScreen, focusGrid]);
 
   const ensureStore = useCallback((table: CrtTableData): CrtStore => {
     const key = tableKey(table);
@@ -319,6 +331,16 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     [focusGridAfterDialog, blurGrid]
   );
 
+  // The grid, the cell editor and the menu stop the Escape they use, so one that gets this far
+  // belongs to full screen.
+  const handleWorkspaceKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (fullScreen && e.key === 'Escape' && !e.defaultPrevented) {
+      e.preventDefault();
+      e.stopPropagation();
+      setFullScreen(false);
+    }
+  };
+
   const sharedWith = selectedTable
     ? [
         ...new Set(
@@ -359,6 +381,11 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           </span>
           <span
             className={`boomi-crt-chip ${overridden ? 'boomi-crt-chip--overridden' : 'boomi-crt-chip--default'}`}
+            title={
+              overridden
+                ? 'You are editing your own copy of this table.'
+                : "Showing the publisher's default values (read only). Press Override to edit."
+            }
           >
             {overridden ? 'Overridden' : 'Default'}
           </span>
@@ -367,59 +394,81 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           </span>
         </div>
 
-        {overridden ? (
-          <div className="boomi-crt-toolbar">
-            <Button
-              toggle={false}
-              primary={false}
-              showIcon={false}
-              label="Reset to defaults"
-              onClick={handleReset}
-            />
-          </div>
-        ) : (
-          <div className="boomi-crt-banner">
-            <span className="boomi-crt-banner-text">
-              Showing the publisher's default values (read only). Turn on Override to edit your own
-              copy. Your copy will no longer follow later changes to the defaults.
-            </span>
-            <Button
-              toggle={false}
-              primary={true}
-              showIcon={false}
-              label="Override"
-              onClick={handleOverride}
-            />
-          </div>
-        )}
-
-        <CrtToolbar info={gridInfo} onRun={handleRun} />
-
-        <div className="boomi-crt-grid-wrap" ref={gridWrapRef}>
-          <CrtGrid
-            ref={gridRef}
-            store={current}
-            ariaLabel={`${table.name} (${table.processName})`}
-            onBlocked={showHint}
-            onInfo={handleInfo}
-            onNotice={showNotice}
-            confirmDelete={confirmDelete}
+        <div
+          className={fullScreen ? 'boomi-crt-workspace boomi-crt-workspace--full' : 'boomi-crt-workspace'}
+          onKeyDown={handleWorkspaceKeyDown}
+        >
+          {fullScreen && (
+            <div className="boomi-crt-fs-caption">
+              <span className="boomi-crt-fs-title">{table.name}</span>
+              <span className="boomi-crt-fs-sub">{table.processName}</span>
+              <span
+                className={`boomi-crt-chip ${overridden ? 'boomi-crt-chip--overridden' : 'boomi-crt-chip--default'}`}
+              >
+                {overridden ? 'Overridden' : 'Default'}
+              </span>
+              <span className="boomi-crt-count">
+                {plural(current.rowCount(), 'row', 'rows')}, {plural(current.colCount(), 'column', 'columns')}
+              </span>
+            </div>
+          )}
+          <CrtToolbar
+            info={gridInfo}
+            onRun={handleRun}
+            fullScreen={fullScreen}
+            onToggleFullScreen={toggleFullScreen}
+            trailing={
+              // The wrapper carries the tooltip, so it shows over the whole button.
+              overridden ? (
+                <span title="Discard your changes and show the default values again.">
+                  <Button
+                    toggle={false}
+                    primary={false}
+                    showIcon={false}
+                    label="Reset to defaults"
+                    onClick={handleReset}
+                  />
+                </span>
+              ) : (
+                <span title="Edit your own copy. It will no longer follow later changes to the defaults.">
+                  <Button
+                    toggle={false}
+                    primary={true}
+                    showIcon={false}
+                    label="Override"
+                    onClick={handleOverride}
+                  />
+                </span>
+              )
+            }
           />
-        </div>
 
-        <div className="boomi-crt-statusbar">
-          <span className="boomi-crt-help">
-            {overridden
-              ? 'Arrows move, Shift extends. Enter edits. Ctrl+C/X/V copy, cut, paste. Right-click for row actions.'
-              : 'Arrows move, Shift extends. Ctrl+C copies. Press Override to edit.'}
-          </span>
-          <span
-            className={`boomi-crt-hint boomi-crt-hint--${notice?.kind ?? 'info'}`}
-            role="status"
-            aria-live="polite"
-          >
-            {notice?.message}
-          </span>
+          <div className="boomi-crt-grid-wrap" ref={gridWrapRef}>
+            <CrtGrid
+              ref={gridRef}
+              store={current}
+              ariaLabel={`${table.name} (${table.processName})`}
+              onBlocked={showHint}
+              onInfo={handleInfo}
+              onNotice={showNotice}
+              confirmDelete={confirmDelete}
+            />
+          </div>
+
+          <div className="boomi-crt-statusbar">
+            <span className="boomi-crt-help">
+              {overridden
+                ? 'Arrows move, Shift extends. Enter edits. Ctrl+C/X/V copy, cut, paste. Right-click for row actions.'
+                : 'Arrows move, Shift extends. Ctrl+C copies. Press Override to edit.'}
+            </span>
+            <span
+              className={`boomi-crt-hint boomi-crt-hint--${notice?.kind ?? 'info'}`}
+              role="status"
+              aria-live="polite"
+            >
+              {notice?.message}
+            </span>
+          </div>
         </div>
       </>
     );
