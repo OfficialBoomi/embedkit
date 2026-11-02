@@ -13,11 +13,10 @@
 const BOM = 0xfeff;
 const LF = 0x0a;
 const CR = 0x0d;
-const COMMA = 0x2c;
 const QUOTE = 0x22;
 
-function isDelimiter(code: number): boolean {
-  return code === COMMA || code === LF || code === CR;
+function isDelimiter(code: number, delim: number): boolean {
+  return code === delim || code === LF || code === CR;
 }
 
 /**
@@ -31,8 +30,17 @@ function isDelimiter(code: number): boolean {
  * - Malformed quoting is read leniently: text after a closing quote is kept as written, and an
  *   unterminated quote runs to the end of the text.
  * - An empty string gives no records.
+ *
+ * The field separator is `delimiter`, a single character that defaults to a comma. The quoting
+ * rules are the same for any separator, which lets clipboard text from a spreadsheet (tab
+ * separated, with quoted cells) use this reader. A quote, CR or LF cannot be the separator.
  */
-export function parseCsv(text: string): string[][] {
+export function parseCsv(text: string, delimiter = ','): string[][] {
+  const delim = delimiter.length === 1 ? delimiter.charCodeAt(0) : -1;
+  if (delim === -1 || delim === QUOTE || delim === CR || delim === LF) {
+    throw new RangeError('parseCsv: delimiter must be one character and not a quote or line break');
+  }
+
   const records: string[][] = [];
   const n = text.length;
   let i = n > 0 && text.charCodeAt(0) === BOM ? 1 : 0;
@@ -67,12 +75,12 @@ export function parseCsv(text: string): string[][] {
 
       // Anything between the closing quote and the next delimiter is kept as written.
       const tailStart = i;
-      while (i < n && !isDelimiter(text.charCodeAt(i))) i++;
+      while (i < n && !isDelimiter(text.charCodeAt(i), delim)) i++;
       value = out + text.slice(tailStart, i);
     } else {
       // Unquoted field: every character is kept, up to the next delimiter.
       const start = i;
-      while (i < n && !isDelimiter(text.charCodeAt(i))) i++;
+      while (i < n && !isDelimiter(text.charCodeAt(i), delim)) i++;
       value = text.slice(start, i);
     }
 
@@ -83,7 +91,7 @@ export function parseCsv(text: string): string[][] {
       break;
     }
 
-    if (text.charCodeAt(i) === COMMA) {
+    if (text.charCodeAt(i) === delim) {
       i++;
       continue;
     }

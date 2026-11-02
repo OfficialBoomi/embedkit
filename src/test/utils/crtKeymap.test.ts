@@ -486,7 +486,12 @@ describe('resolveNavKey: printable keys', () => {
     expect(resolveNavKey(key(k), ctx({ editable: false }))).toEqual(BLOCKED);
   });
 
-  it.each(['c', 'v', 'x', 'z', 'y', 'a', 'f', '5', ' '])('returns null for ctrl+%s and meta+%s', (k) => {
+  it('types a space when shift is not held, but not with Shift+Space', () => {
+    expect(resolveNavKey(key(' '), ctx())).toEqual({ type: 'edit', mode: 'replace', char: ' ' });
+    expect(resolveNavKey(key(' ', { shiftKey: true }), ctx())).toEqual({ type: 'select-row' });
+  });
+
+  it.each(['c', 'v', 'x', 'z', 'y', 'f', '5', ' '])('returns null for ctrl+%s and meta+%s', (k) => {
     expect(resolveNavKey(key(k, { ctrlKey: true }), ctx())).toBeNull();
     expect(resolveNavKey(key(k, { metaKey: true }), ctx())).toBeNull();
     expect(resolveNavKey(key(k, { ctrlKey: true, shiftKey: true }), ctx())).toBeNull();
@@ -506,7 +511,7 @@ describe('resolveNavKey: keys that are not handled', () => {
     'F5',
     'F12',
     'Insert',
-    'ContextMenu',
+    'F10',
     'CapsLock',
     'NumLock',
     'Shift',
@@ -528,6 +533,160 @@ describe('resolveNavKey: keys that are not handled', () => {
   it('returns null for Escape with modifiers too', () => {
     expect(resolveNavKey(key('Escape', { shiftKey: true }), ctx())).toBeNull();
     expect(resolveNavKey(key('Escape', { ctrlKey: true }), ctx())).toBeNull();
+  });
+});
+
+describe('resolveNavKey: select all (mod+A)', () => {
+  it.each([
+    ['ctrl', { ctrlKey: true }],
+    ['meta', { metaKey: true }],
+    ['ctrl and meta', { ctrlKey: true, metaKey: true }],
+  ])('returns select-all for %s+A', (_name, mod) => {
+    expect(resolveNavKey(key('a', mod), ctx())).toEqual({ type: 'select-all' });
+  });
+
+  it('also matches the capital letter, as reported with Caps Lock on', () => {
+    expect(resolveNavKey(key('A', { ctrlKey: true }), ctx())).toEqual({ type: 'select-all' });
+    expect(resolveNavKey(key('A', { metaKey: true }), ctx())).toEqual({ type: 'select-all' });
+  });
+
+  it('is allowed when the grid is read only', () => {
+    expect(resolveNavKey(key('a', { ctrlKey: true }), ctx({ editable: false }))).toEqual({ type: 'select-all' });
+    expect(resolveNavKey(key('a', { metaKey: true }), ctx({ editable: false }))).toEqual({ type: 'select-all' });
+  });
+
+  it('does not depend on hasSelection', () => {
+    expect(resolveNavKey(key('a', { ctrlKey: true }), ctx({ hasSelection: true }))).toEqual({ type: 'select-all' });
+    expect(resolveNavKey(key('a', { ctrlKey: true }), ctx({ hasSelection: false }))).toEqual({ type: 'select-all' });
+  });
+
+  it('returns null with shift (mod+Shift+A is not select all)', () => {
+    expect(resolveNavKey(key('a', { ctrlKey: true, shiftKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key('A', { metaKey: true, shiftKey: true }), ctx())).toBeNull();
+  });
+
+  it('returns null with alt', () => {
+    expect(resolveNavKey(key('a', { ctrlKey: true, altKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key('a', { metaKey: true, altKey: true }), ctx())).toBeNull();
+  });
+
+  it('a bare letter a still types, and is blocked when read only', () => {
+    expect(resolveNavKey(key('a'), ctx())).toEqual({ type: 'edit', mode: 'replace', char: 'a' });
+    expect(resolveNavKey(key('a'), ctx({ editable: false }))).toEqual(BLOCKED);
+  });
+
+  it('leaves other mod letters unhandled', () => {
+    expect(resolveNavKey(key('b', { ctrlKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key('b', { ctrlKey: true }), ctx({ editable: false }))).toBeNull();
+  });
+});
+
+describe('resolveNavKey: select row (Shift+Space)', () => {
+  it('returns select-row for Shift+Space', () => {
+    expect(resolveNavKey(key(' ', { shiftKey: true }), ctx())).toEqual({ type: 'select-row' });
+  });
+
+  it('is allowed when the grid is read only', () => {
+    expect(resolveNavKey(key(' ', { shiftKey: true }), ctx({ editable: false }))).toEqual({ type: 'select-row' });
+  });
+
+  it('does not depend on hasSelection', () => {
+    expect(resolveNavKey(key(' ', { shiftKey: true }), ctx({ hasSelection: true }))).toEqual({ type: 'select-row' });
+    expect(resolveNavKey(key(' ', { shiftKey: true }), ctx({ hasSelection: false }))).toEqual({ type: 'select-row' });
+  });
+
+  it('returns null with ctrl, meta or alt added', () => {
+    expect(resolveNavKey(key(' ', { shiftKey: true, ctrlKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key(' ', { shiftKey: true, metaKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key(' ', { shiftKey: true, altKey: true }), ctx())).toBeNull();
+  });
+
+  it('a plain space still types when editable and is blocked when read only', () => {
+    expect(resolveNavKey(key(' '), ctx())).toEqual({ type: 'edit', mode: 'replace', char: ' ' });
+    expect(resolveNavKey(key(' '), ctx({ editable: false }))).toEqual(BLOCKED);
+  });
+
+  it('ctrl+Space and meta+Space stay unhandled', () => {
+    expect(resolveNavKey(key(' ', { ctrlKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key(' ', { metaKey: true }), ctx())).toBeNull();
+  });
+});
+
+describe('resolveNavKey: Escape', () => {
+  it('collapses when there is a selection', () => {
+    expect(resolveNavKey(key('Escape'), ctx({ hasSelection: true }))).toEqual({ type: 'collapse' });
+  });
+
+  it('returns null when there is no selection', () => {
+    expect(resolveNavKey(key('Escape'), ctx({ hasSelection: false }))).toBeNull();
+    expect(resolveNavKey(key('Escape'), ctx())).toBeNull();
+  });
+
+  it('collapses in read only mode too', () => {
+    expect(resolveNavKey(key('Escape'), ctx({ editable: false, hasSelection: true }))).toEqual({ type: 'collapse' });
+    expect(resolveNavKey(key('Escape'), ctx({ editable: false, hasSelection: false }))).toBeNull();
+  });
+
+  it.each([
+    ['shift', { shiftKey: true }],
+    ['ctrl', { ctrlKey: true }],
+    ['meta', { metaKey: true }],
+    ['alt', { altKey: true }],
+    ['ctrl and shift', { ctrlKey: true, shiftKey: true }],
+  ])('returns null with %s even when there is a selection', (_name, mod) => {
+    expect(resolveNavKey(key('Escape', mod), ctx({ hasSelection: true }))).toBeNull();
+  });
+});
+
+describe('resolveNavKey: context menu', () => {
+  it('the ContextMenu key opens the menu', () => {
+    expect(resolveNavKey(key('ContextMenu'), ctx())).toEqual({ type: 'context-menu' });
+  });
+
+  it('Shift+F10 opens the menu', () => {
+    expect(resolveNavKey(key('F10', { shiftKey: true }), ctx())).toEqual({ type: 'context-menu' });
+  });
+
+  it('is allowed when the grid is read only', () => {
+    expect(resolveNavKey(key('ContextMenu'), ctx({ editable: false }))).toEqual({ type: 'context-menu' });
+    expect(resolveNavKey(key('F10', { shiftKey: true }), ctx({ editable: false }))).toEqual({ type: 'context-menu' });
+  });
+
+  it('does not depend on hasSelection', () => {
+    expect(resolveNavKey(key('ContextMenu'), ctx({ hasSelection: true }))).toEqual({ type: 'context-menu' });
+    expect(resolveNavKey(key('F10', { shiftKey: true }), ctx({ hasSelection: true }))).toEqual({ type: 'context-menu' });
+  });
+
+  it('plain F10 and F10 with ctrl or meta stay unhandled', () => {
+    expect(resolveNavKey(key('F10'), ctx())).toBeNull();
+    expect(resolveNavKey(key('F10', { ctrlKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key('F10', { metaKey: true, shiftKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key('F10', { ctrlKey: true, shiftKey: true }), ctx())).toBeNull();
+  });
+
+  it('returns null with alt, like every other key', () => {
+    expect(resolveNavKey(key('ContextMenu', { altKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key('F10', { altKey: true, shiftKey: true }), ctx())).toBeNull();
+  });
+});
+
+describe('resolveNavKey: new rules on an empty grid', () => {
+  it.each([
+    ['select-all', key('a', { ctrlKey: true })],
+    ['select-row', key(' ', { shiftKey: true })],
+    ['collapse', key('Escape')],
+    ['context-menu', key('ContextMenu')],
+    ['context-menu via Shift+F10', key('F10', { shiftKey: true })],
+  ])('%s is not offered when there are no rows or columns', (_name, k) => {
+    expect(resolveNavKey(k, ctx({ rowCount: 0, hasSelection: true }))).toBeNull();
+    expect(resolveNavKey(k, ctx({ colCount: 0, hasSelection: true }))).toBeNull();
+  });
+
+  it('the clipboard and undo shortcuts still return null', () => {
+    for (const k of ['c', 'x', 'v', 'z']) {
+      expect(resolveNavKey(key(k, { ctrlKey: true }), ctx({ hasSelection: true }))).toBeNull();
+      expect(resolveNavKey(key(k, { metaKey: true }), ctx({ hasSelection: true }))).toBeNull();
+    }
   });
 });
 

@@ -29,6 +29,12 @@ export interface NavContext {
   /** Rows a PageUp / PageDown press jumps. Values below 1 are treated as 1. */
   pageRows: number;
   editable: boolean;
+  /**
+   * True when a multi-cell range or checked rows exist. Escape only means something
+   * (collapse back to the active cell) in that case; otherwise it is left to bubble.
+   * Omitted means false.
+   */
+  hasSelection?: boolean;
 }
 
 /** What the grid should do after a key press in navigation mode. */
@@ -36,7 +42,11 @@ export type NavAction =
   | { type: 'move'; row: number; col: number; extend: boolean }
   | { type: 'edit'; mode: 'select-all' | 'append' | 'replace'; char?: string }
   | { type: 'clear'; thenEdit: boolean }
-  | { type: 'blocked' };
+  | { type: 'blocked' }
+  | { type: 'select-all' }
+  | { type: 'select-row' }
+  | { type: 'collapse' }
+  | { type: 'context-menu' };
 
 /** What the grid should do after a key press in an open cell input. */
 export type EditAction =
@@ -85,6 +95,13 @@ export function resolveNavKey(k: KeyInput, c: NavContext): NavAction | null {
   const whenEditable = (action: NavAction): NavAction =>
     c.editable ? action : { type: 'blocked' };
 
+  // Selection shortcuts never change data, so they work in read only mode too. They
+  // sit ahead of the printable rule below, which would otherwise swallow the letter
+  // (mod+A) or the space (Shift+Space). The key is compared case-insensitively
+  // because Caps Lock reports 'A' without shift.
+  if (mod && !shift && k.key.toLowerCase() === 'a') return { type: 'select-all' };
+  if (shift && !mod && k.key === ' ') return { type: 'select-row' };
+
   switch (k.key) {
     case 'ArrowUp':
       return move(mod ? 0 : c.row - 1, c.col, shift);
@@ -126,6 +143,16 @@ export function resolveNavKey(k: KeyInput, c: NavContext): NavAction | null {
       return whenEditable({ type: 'clear', thenEdit: false });
     case 'Backspace':
       return whenEditable({ type: 'clear', thenEdit: true });
+
+    case 'Escape':
+      if (shift || mod) return null;
+      return c.hasSelection ? { type: 'collapse' } : null;
+
+    // The dedicated menu key, and Shift+F10 for keyboards without one.
+    case 'ContextMenu':
+      return { type: 'context-menu' };
+    case 'F10':
+      return shift && !mod ? { type: 'context-menu' } : null;
 
     default:
       if (!isPrintableKey(k.key)) return null;
