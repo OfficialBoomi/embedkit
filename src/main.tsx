@@ -30,6 +30,7 @@ import ConfigureIntegration from './components/integration/ConfigureIntegration'
 import ExecutionHistory from './components/integration/ExecutionHistory';
 import UpdateConnections from './components/integration/UpdateConnections';
 import UpdateMaps from './components/integration/UpdateMaps';
+import UpdateCrossReferences from './components/integration/UpdateCrossReferences';
 import UpdateSchedules from './components/integration/UpdateSchedules';
 
 // admin components
@@ -50,6 +51,7 @@ export const componentMap = {
   ExecutionHistory,
   UpdateConnections,
   UpdateMaps,
+  UpdateCrossReferences,
   UpdateSchedules,
   AdminLayout,
   Cors,

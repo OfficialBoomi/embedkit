@@ -128,6 +128,15 @@ const Integration: React.FC<IntegrationProps> = ({
   const cardOpensEdit = !isAgent && showEdit && !showEditButton;
   const openEdit = () => onEditClick('ConfigureIntegration', integration);
 
+  // Cross reference tables entry. Off unless the host sets `crossReferenceTables.enabled`.
+  const crtCfg = boomiConfig?.components?.[componentKey]?.crossReferenceTables;
+  const crtActionProps = crtCfg?.enabled === true
+    ? {
+        onEditCrossReferences: () => onEditClick('UpdateCrossReferences', integration),
+        crossReferencesLabel: crtCfg.menuLabel as string | undefined,
+      }
+    : {};
+
   const handleDelete = async () => {
     if (confirmingRef.current) return;
     confirmingRef.current = true;
@@ -187,6 +196,7 @@ const Integration: React.FC<IntegrationProps> = ({
           onEditMap={() => onEditClick('UpdateMaps', integration)}
           onDeleteIntegration={handleDelete}
           onShowHistory={() => onShowHistory(integration)}
+          {...crtActionProps}
           {...(cardOpensEdit ? { onEdit: openEdit, editLabel: cardCfg.editButton?.label ?? 'Edit' } : {})}
         />
       )}
@@ -280,6 +290,7 @@ const Integration: React.FC<IntegrationProps> = ({
                       onEditMap={() => onEditClick('UpdateMaps', integration)}
                       onDeleteIntegration={handleDelete}
                       onShowHistory={() => onShowHistory(integration)}
+                      {...crtActionProps}
                       {...(cardOpensEdit ? { onEdit: openEdit, editLabel: cardCfg.editButton?.label ?? 'Edit' } : {})}
                     />
                   )}
@@ -329,6 +340,7 @@ const Integration: React.FC<IntegrationProps> = ({
                   onEditMap={() => onEditClick('UpdateMaps', integration)}
                   onDeleteIntegration={handleDelete}
                   onShowHistory={() => onShowHistory(integration)}
+                  {...crtActionProps}
                 />
               )}
 
