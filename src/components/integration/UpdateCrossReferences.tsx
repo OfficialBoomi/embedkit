@@ -8,7 +8,9 @@
  * Renders the cross reference table screen of an integration: pick a lookup table, view the
  * publisher's default values (read only), and turn on Override to edit your own copy in an
  * Excel-like grid. Each table keeps its own edits while you switch between tables.
- * The tables come from the registered data source; nothing is saved from this screen yet.
+ * Rows can be added, inserted, duplicated, moved, deleted, cut, copied and pasted, from the
+ * toolbar, the grid's context menu or the keyboard. The tables come from the registered data
+ * source; nothing is saved from this screen yet.
  *
  * @return {JSX.Element} The rendered UpdateCrossReferences component.
  */
@@ -25,7 +27,8 @@ import Button from '../ui/Button';
 import Dialog from '../ui/Dialog';
 import Dropdown, { type Option } from '../ui/Dropdown';
 import Page from '../core/Page';
-import CrtGrid from './crt/CrtGrid';
+import CrtGrid, { type CrtGridHandle, type CrtGridInfo, type CrtOp } from './crt/CrtGrid';
+import CrtToolbar from './crt/CrtToolbar';
 import crtCss from './crt/crt.css?inline';
 
 /**
@@ -52,6 +55,12 @@ type LoadState =
 const READ_ONLY_HINT = 'Read only. Press Override to edit.';
 const HINT_MS = 3000;
 
+/** A short result message under the grid. Warnings use the danger colour, the rest the muted one. */
+interface Notice {
+  message: string;
+  kind: 'info' | 'warn';
+}
+
 const MATCH_LABEL: Record<CrtMatchType, string> = {
   exact: 'Exact',
   wildcard: 'Wildcard',
@@ -66,6 +75,12 @@ const ZERO_VERSION = () => 0;
 const tableKey = (t: CrtTableData): string => `${t.processId}:${t.id}`;
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+
+/** Re-rendering on an identical report would loop: the grid reports after every render it makes. */
+function sameInfo(a: CrtGridInfo | null, b: CrtGridInfo): boolean {
+  if (!a) return false;
+  return (Object.keys(b) as Array<keyof CrtGridInfo>).every((key) => a[key] === b[key]);
+}
 
 /** Name first, then process name, with numbers sorted by value ("Table 2" before "Table 10"). */
 function sortTables(list: CrtTableData[]): CrtTableData[] {
@@ -103,17 +118,46 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [hint, setHint] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [gridInfo, setGridInfo] = useState<CrtGridInfo | null>(null);
   // One store per table, created the first time the table is selected, so edits survive switching.
   const storesRef = useRef(new Map<string, CrtStore>());
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resetOpen = useRef(false);
+  const deleteOpen = useRef(false);
   const gridWrapRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<CrtGridHandle>(null);
+  // The dialog hook may hand back a new function each render; the grid needs a stable callback.
+  const confirmRef = useRef(confirm);
+  useEffect(() => {
+    confirmRef.current = confirm;
+  });
 
   // The Override button disappears and the Reset dialog steals focus, so hand it back to the grid.
   const focusGrid = useCallback(() => {
     gridWrapRef.current?.querySelector<HTMLElement>('[role="grid"]')?.focus({ preventScroll: true });
   }, []);
+
+  // A dialog marks the rest of the page aria-hidden. If the grid still holds focus at that
+  // moment the browser warns, so let go of focus first; focusGrid() takes it back afterwards.
+  const blurGrid = useCallback(() => {
+    gridWrapRef.current?.querySelector<HTMLElement>('[role="grid"]')?.blur();
+  }, []);
+
+  // The built-in dialog hides over about 200 ms and keeps the page aria-hidden until it is gone.
+  // Taking focus earlier triggers the same warning, so wait for it to leave (at most about 1.5 s).
+  // A host dialog handler has no such container, so focus comes back at once.
+  const focusGridAfterDialog = useCallback(() => {
+    let frames = 0;
+    const tick = () => {
+      if (document.querySelector('.swal2-container') && frames++ < 90) {
+        requestAnimationFrame(tick);
+        return;
+      }
+      focusGrid();
+    };
+    requestAnimationFrame(tick);
+  }, [focusGrid]);
 
   const ensureStore = useCallback((table: CrtTableData): CrtStore => {
     const key = tableKey(table);
@@ -216,6 +260,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     if (!store || resetOpen.current) return;
     resetOpen.current = true;
     const target = store;
+    blurGrid();
     try {
       const confirmed = await confirm({
         title: 'Reset to defaults?',
@@ -229,16 +274,50 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     } finally {
       resetOpen.current = false;
       // After the dialog has finished closing and handing focus back.
-      requestAnimationFrame(focusGrid);
+      focusGridAfterDialog();
     }
   };
 
-  // Stable, so the memoized grid does not re-render when this screen does.
-  const showHint = useCallback(() => {
-    setHint(READ_ONLY_HINT);
+  // The callbacks below are stable, so the memoized grid does not re-render when this screen does.
+  const showNotice = useCallback((message: string, kind: Notice['kind']) => {
+    setNotice({ message, kind });
     if (hintTimer.current) clearTimeout(hintTimer.current);
-    hintTimer.current = setTimeout(() => setHint(null), HINT_MS);
+    hintTimer.current = setTimeout(() => setNotice(null), HINT_MS);
   }, []);
+
+  const showHint = useCallback(() => showNotice(READ_ONLY_HINT, 'warn'), [showNotice]);
+
+  const handleInfo = useCallback((next: CrtGridInfo) => {
+    setGridInfo((prev) => (sameInfo(prev, next) ? prev : next));
+  }, []);
+
+  const handleRun = useCallback((op: CrtOp) => {
+    gridRef.current?.run(op);
+  }, []);
+
+  // Deleting several rows asks first. Guarded like the reset dialog so a double click cannot open two.
+  const confirmDelete = useCallback(
+    async (count: number): Promise<boolean> => {
+      if (deleteOpen.current) return false;
+      deleteOpen.current = true;
+      blurGrid();
+      try {
+        return await confirmRef.current({
+          title: `Delete ${count.toLocaleString('en-US')} rows?`,
+          description:
+            'The rows are removed from this table. Reset to defaults brings the original values back.',
+          confirmLabel: 'Delete',
+          cancelLabel: 'Keep rows',
+          destructive: true,
+        });
+      } finally {
+        deleteOpen.current = false;
+        // After the dialog has finished closing and handing focus back.
+        focusGridAfterDialog();
+      }
+    },
+    [focusGridAfterDialog, blurGrid]
+  );
 
   const sharedWith = selectedTable
     ? [
@@ -314,22 +393,32 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           </div>
         )}
 
+        <CrtToolbar info={gridInfo} onRun={handleRun} />
+
         <div className="boomi-crt-grid-wrap" ref={gridWrapRef}>
           <CrtGrid
+            ref={gridRef}
             store={current}
             ariaLabel={`${table.name} (${table.processName})`}
             onBlocked={showHint}
+            onInfo={handleInfo}
+            onNotice={showNotice}
+            confirmDelete={confirmDelete}
           />
         </div>
 
         <div className="boomi-crt-statusbar">
           <span className="boomi-crt-help">
             {overridden
-              ? 'Arrows move. Enter edits. F2 edits at the end. Esc cancels. Tab moves right. Delete clears.'
-              : 'Arrows move. Press Override to edit.'}
+              ? 'Arrows move, Shift extends. Enter edits. Ctrl+C/X/V copy, cut, paste. Right-click for row actions.'
+              : 'Arrows move, Shift extends. Ctrl+C copies. Press Override to edit.'}
           </span>
-          <span className="boomi-crt-hint" role="status" aria-live="polite">
-            {hint}
+          <span
+            className={`boomi-crt-hint boomi-crt-hint--${notice?.kind ?? 'info'}`}
+            role="status"
+            aria-live="polite"
+          >
+            {notice?.message}
           </span>
         </div>
       </>
