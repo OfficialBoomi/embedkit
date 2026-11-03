@@ -26,6 +26,12 @@ export interface CrtTableData {
   defaultRows: string[][];
   /** The customer's override rows, or null when the table is not overridden. */
   overrideRows: string[][] | null;
+  /**
+   * A non-empty string means the table is listed but cannot be edited here, for example its
+   * definition could not be read or it is runtime specific. The string is the reason shown to
+   * the user. `columns` may then be empty and no rows are needed. Internal to the editor.
+   */
+  unavailableReason?: string;
 }
 
 /** Where the screen gets its tables. Nothing is registered by default, so the screen asks the server. */

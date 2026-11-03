@@ -12,6 +12,12 @@
  * toolbar, the grid's context menu or the keyboard. The tables come from the registered data
  * source; nothing is saved from this screen yet.
  *
+ * A small dot in the picker marks every table with unsaved edits, and leaving the screen (the
+ * Cancel button or the breadcrumb) asks first while any table has some. A table that cannot be
+ * edited is listed as a disabled option with its reason, or hidden, depending on the component's
+ * `crossReferenceTables.unavailableTables` setting ('disabled', the default, or 'hidden'). With
+ * no editable table at all the screen says so.
+ *
  * @return {JSX.Element} The rendered UpdateCrossReferences component.
  */
 
@@ -68,6 +74,7 @@ const MATCH_LABEL: Record<CrtMatchType, string> = {
 };
 
 const NO_TABLES: CrtTableData[] = [];
+const NO_KEYS: ReadonlySet<string> = new Set();
 const NOOP_SUBSCRIBE = () => () => {};
 const ZERO_VERSION = () => 0;
 
@@ -75,6 +82,9 @@ const ZERO_VERSION = () => 0;
 const tableKey = (t: CrtTableData): string => `${t.processId}:${t.id}`;
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+
+/** A table that is listed but cannot be edited here. Only a non-empty reason counts. */
+const isUnavailable = (t: CrtTableData): boolean => Boolean(t.unavailableReason);
 
 /** Re-rendering on an identical report would loop: the grid reports after every render it makes. */
 function sameInfo(a: CrtGridInfo | null, b: CrtGridInfo): boolean {
@@ -125,6 +135,10 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resetOpen = useRef(false);
   const deleteOpen = useRef(false);
+  const leaveOpen = useRef(false);
+  // Tables with unsaved edits, across all tables (not only the selected one), for the picker dots.
+  const [dirtyKeys, setDirtyKeys] = useState<ReadonlySet<string>>(NO_KEYS);
+  const unsubscribesRef = useRef(new Map<string, () => void>());
   const gridWrapRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<CrtGridHandle>(null);
   // Full screen fills the plugin area with the toolbar, the grid and the status line.
@@ -171,14 +185,53 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     focusGrid();
   }, [fullScreen, focusGrid]);
 
-  const ensureStore = useCallback((table: CrtTableData): CrtStore => {
-    const key = tableKey(table);
-    let store = storesRef.current.get(key);
-    if (!store) {
-      store = createCrtStore(table);
-      storesRef.current.set(key, store);
-    }
-    return store;
+  // The set is replaced only when a table gains or loses its dot, so an edit to a table that is
+  // already dirty costs no extra render.
+  const syncDirty = useCallback((key: string, store: CrtStore) => {
+    const dirty = store.isDirty();
+    setDirtyKeys((prev) => {
+      if (prev.has(key) === dirty) return prev;
+      const next = new Set(prev);
+      if (dirty) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }, []);
+
+  const ensureStore = useCallback(
+    (table: CrtTableData): CrtStore => {
+      const key = tableKey(table);
+      let store = storesRef.current.get(key);
+      if (!store) {
+        store = createCrtStore(table);
+        storesRef.current.set(key, store);
+      }
+      if (!unsubscribesRef.current.has(key)) {
+        const watched = store;
+        unsubscribesRef.current.set(
+          key,
+          watched.subscribe(() => syncDirty(key, watched))
+        );
+      }
+      return store;
+    },
+    [syncDirty]
+  );
+
+  // Drops every store and its subscription (a retry starts from nothing).
+  const releaseStores = useCallback(() => {
+    unsubscribesRef.current.forEach((unsubscribe) => unsubscribe());
+    unsubscribesRef.current.clear();
+    storesRef.current.clear();
+    setDirtyKeys(NO_KEYS);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribes = unsubscribesRef.current;
+    return () => {
+      unsubscribes.forEach((unsubscribe) => unsubscribe());
+      unsubscribes.clear();
+    };
   }, []);
 
   useEffect(() => {
@@ -191,9 +244,11 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
       .then((list) => {
         if (!alive) return;
         const tables = sortTables(list);
-        if (tables.length > 0) {
-          ensureStore(tables[0]);
-          setSelectedKey(tableKey(tables[0]));
+        // A table that cannot be edited never gets a store and is never selected.
+        const first = tables.find((t) => !isUnavailable(t));
+        if (first) {
+          ensureStore(first);
+          setSelectedKey(tableKey(first));
         }
         setState({ status: 'ready', tables });
       })
@@ -225,14 +280,30 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   // Live state (override, row count) of the selected table; other tables only change when selected.
   useStoreVersion(store);
 
-  const options: CrtPickerOption[] = tables.map((t) => {
+  const unavailableMode =
+    boomiConfig?.components?.[componentKey]?.crossReferenceTables?.unavailableTables ?? 'disabled';
+  // Any value other than 'hidden' counts as the default, 'disabled'.
+  const listedTables = unavailableMode === 'hidden' ? tables.filter((t) => !isUnavailable(t)) : tables;
+
+  // What the empty state lists: nothing in 'hidden' mode, since those tables are not shown at all.
+  const shownUnavailable = listedTables.filter(isUnavailable);
+
+  const options: CrtPickerOption[] = listedTables.map((t) => {
     const key = tableKey(t);
-    const tableStore = storesRef.current.get(key);
+    if (t.unavailableReason) {
+      return {
+        key,
+        name: t.name,
+        description: `${t.processName} | Unavailable`,
+        dirty: false,
+        disabledReason: t.unavailableReason,
+      };
+    }
     return {
       key,
       name: t.name,
-      description: describeTable(t, tableStore),
-      dirty: tableStore?.isDirty() ?? false,
+      description: describeTable(t, storesRef.current.get(key)),
+      dirty: dirtyKeys.has(key),
     };
   });
 
@@ -247,26 +318,70 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
 
   const handleSelect = (key: string) => {
     const table = tables.find((t) => tableKey(t) === key);
-    if (!table) return;
+    if (!table || isUnavailable(table)) return;
     ensureStore(table);
     setSelectedKey(key);
   };
 
   const handleRetry = () => {
-    storesRef.current.clear();
+    releaseStores();
     setSelectedKey(null);
     setState({ status: 'loading' });
     setLoadAttempt((n) => n + 1);
   };
 
-  const handleCancel = () => {
-    renderComponent?.({
-      component: 'Integrations',
-      props: {
-        componentKey: componentKey || 'integrationsMain',
-      },
+  // Asks before leaving while any table has unsaved edits. Counted from the live stores, so it
+  // cannot lag behind a render. Guarded like the reset dialog so a double click cannot open two.
+  const confirmLeave = async (changed: number): Promise<boolean> => {
+    if (leaveOpen.current) return false;
+    leaveOpen.current = true;
+    blurGrid();
+    let leave = false;
+    try {
+      leave = await confirm({
+        title: 'Discard your changes?',
+        description: `${
+          changed === 1 ? 'One table has' : `${changed.toLocaleString('en-US')} tables have`
+        } unsaved changes. Leaving now discards them.`,
+        confirmLabel: 'Discard changes',
+        cancelLabel: 'Keep editing',
+        destructive: true,
+      });
+      return leave;
+    } finally {
+      leaveOpen.current = false;
+      // Staying: hand focus back once the dialog has finished closing. Leaving needs no focus.
+      if (!leave) focusGridAfterDialog();
+    }
+  };
+
+  // Clean tables leave at once, with no dialog and no wait.
+  const leaveScreen = (go: () => void) => {
+    let changed = 0;
+    storesRef.current.forEach((s) => {
+      if (s.isDirty()) changed += 1;
+    });
+    if (changed === 0) {
+      go();
+      return;
+    }
+    void confirmLeave(changed).then((leave) => {
+      if (leave) go();
     });
   };
+
+  const handleCancel = () =>
+    leaveScreen(() => {
+      renderComponent?.({
+        component: 'Integrations',
+        props: {
+          componentKey: componentKey || 'integrationsMain',
+        },
+      });
+    });
+
+  // With no callback the breadcrumb does nothing, so there is nothing to leave and nothing to ask.
+  const handleBreadcrumb = onBack ? () => leaveScreen(onBack) : undefined;
 
   const handleOverride = () => {
     store?.override();
@@ -349,7 +464,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   const sharedWith = selectedTable
     ? [
         ...new Set(
-          tables
+          listedTables
             .filter((t) => t.id === selectedTable.id && t.processId !== selectedTable.processId)
             .map((t) => t.processName)
         ),
@@ -402,7 +517,6 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
                 selectedKey={selectedKey}
                 onSelect={handleSelect}
               />
-              <span className="boomi-crt-fs-title">{table.name}</span>
               <span className="boomi-crt-fs-sub">{table.processName}</span>
               <span
                 className={`boomi-crt-chip ${overridden ? 'boomi-crt-chip--overridden' : 'boomi-crt-chip--default'}`}
@@ -498,8 +612,28 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
         />
       ) : !selectedTable || !store ? (
         <div className="boomi-update boomi-crt-screen">
+          {showTitle && <div className="boomi-update-title">{title}</div>}
+          {showDescription && <div className="boomi-update-desc">{description}</div>}
           <div className="boomi-crt-empty">
-            <p>No cross reference tables to show.</p>
+            <p>No editable cross reference tables</p>
+            {shownUnavailable.length > 0 && (
+              <ul className="boomi-crt-empty-list">
+                {shownUnavailable.map((t) => (
+                  <li key={tableKey(t)}>
+                    {t.name} ({t.processName}): {t.unavailableReason}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="boomi-update-actions">
+            <Button
+              toggle={false}
+              primary={false}
+              showIcon={false}
+              label="Cancel"
+              onClick={handleCancel}
+            />
           </div>
         </div>
       ) : (
@@ -540,7 +674,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
       bodyContent={bodyContent}
       footerContent={<></>}
       levelOne="My Integrations"
-      callbackOne={onBack}
+      callbackOne={handleBreadcrumb}
     />
   );
 };
