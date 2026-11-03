@@ -647,3 +647,163 @@
 .boomi-crt-tool--edge {
   margin-right: 0.25rem;
 }
+
+/* ---------- Table picker (CrtTablePicker) ---------- */
+
+/*
+ * Looks come from the shared select and option classes (boomi-select, boomi-options,
+ * boomi-option), the same ones the Dropdown uses. This section only places the list, which is
+ * rendered inside the component and positioned absolutely (a portal would lose every style
+ * inside the shadow root), and adds the unsaved dot, the disabled option and the compact form.
+ * The accent is the same colour that flags an edited cell.
+ */
+.boomi-crt-tp,
+.boomi-crt-tp * {
+  box-sizing: border-box;
+}
+
+.boomi-crt-tp {
+  --crt-tp-accent: var(--crt-focus, var(--boomi-input-border-focus, #6366f1));
+  margin-bottom: 1rem;
+}
+
+/* Full screen: one short row, no label, and no bottom margin in the caption row. */
+.boomi-crt-tp--compact {
+  flex: none;
+  width: 16rem;
+  max-width: 100%;
+  margin-bottom: 0;
+}
+
+.boomi-crt-tp-anchor {
+  position: relative;
+  width: 100%;
+}
+
+.boomi-crt-tp-btn {
+  display: block;
+  width: 100%;
+  font: inherit;
+}
+
+.boomi-crt-tp--compact .boomi-crt-tp-btn {
+  padding: 0.125rem 2rem 0.125rem 0.625rem;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.boomi-crt-tp-value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* One line with an ellipsis, for the name and the muted line. */
+.boomi-crt-tp-trunc {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boomi-crt-tp-caret {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-right: 0.5rem;
+  pointer-events: none;
+}
+
+/* The list: a column with the search box on top and the options scrolling underneath. */
+.boomi-crt-tp-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  outline: none;
+}
+
+.boomi-crt-tp--compact .boomi-crt-tp-panel {
+  width: 22rem;
+  max-width: calc(100vw - 2rem);
+}
+
+.boomi-crt-tp-search {
+  flex: none;
+}
+
+.boomi-crt-tp-list {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  outline: none;
+}
+
+.boomi-crt-tp-empty {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.boomi-crt-tp-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.boomi-crt-tp-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.boomi-crt-tp-name--selected {
+  font-weight: 600;
+}
+
+.boomi-crt-tp-desc {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  opacity: 0.8;
+}
+
+.boomi-crt-tp-check {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-right: 0.75rem;
+  font-size: 1.25rem;
+}
+
+/* Unsaved edits. */
+.boomi-crt-tp-dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--crt-tp-accent);
+}
+
+/*
+ * Listed but not choosable. Only the name is dimmed, so the reason stays readable. The
+ * highlight is never put on it, so there is nothing to hover.
+ */
+.boomi-crt-tp-option--disabled {
+  cursor: not-allowed;
+}
+
+.boomi-crt-tp-option--disabled .boomi-crt-tp-name-row {
+  opacity: 0.55;
+}

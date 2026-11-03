@@ -25,9 +25,9 @@ import type { CrtMatchType, CrtTableData } from '../../utils/crt/crtTypes';
 import AjaxLoader from '../ui/AjaxLoader';
 import Button from '../ui/Button';
 import Dialog from '../ui/Dialog';
-import Dropdown, { type Option } from '../ui/Dropdown';
 import Page from '../core/Page';
 import CrtGrid, { type CrtGridHandle, type CrtGridInfo, type CrtOp } from './crt/CrtGrid';
+import CrtTablePicker, { type CrtPickerOption } from './crt/CrtTablePicker';
 import CrtToolbar from './crt/CrtToolbar';
 import crtCss from './crt/crt.css?inline';
 
@@ -225,11 +225,16 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   // Live state (override, row count) of the selected table; other tables only change when selected.
   useStoreVersion(store);
 
-  const options: Option[] = tables.map((t) => {
+  const options: CrtPickerOption[] = tables.map((t) => {
     const key = tableKey(t);
-    return { id: key, name: t.name, description: describeTable(t, storesRef.current.get(key)) };
+    const tableStore = storesRef.current.get(key);
+    return {
+      key,
+      name: t.name,
+      description: describeTable(t, tableStore),
+      dirty: tableStore?.isDirty() ?? false,
+    };
   });
-  const selectedOption = options.find((o) => o.id === selectedKey);
 
   const showTitle = boomiConfig?.components?.[componentKey]?.crossReferenceTables?.showTitle ?? true;
   const title =
@@ -240,11 +245,11 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     boomiConfig?.components?.[componentKey]?.crossReferenceTables?.description ||
     'View the lookup tables of this integration. Turn on Override to edit your own copy.';
 
-  const handleSelect = (option: Option) => {
-    const table = tables.find((t) => tableKey(t) === option.id);
+  const handleSelect = (key: string) => {
+    const table = tables.find((t) => tableKey(t) === key);
     if (!table) return;
     ensureStore(table);
-    setSelectedKey(option.id);
+    setSelectedKey(key);
   };
 
   const handleRetry = () => {
@@ -356,16 +361,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     return (
       <>
         <div className="boomi-crt-picker">
-          <Dropdown
-            formName="cross-reference-tables"
-            label="Table"
-            inputName="table"
-            options={options}
-            selected={selectedOption}
-            onChange={handleSelect}
-            searchable
-            searchPlaceholder="Search tables..."
-          />
+          <CrtTablePicker options={options} selectedKey={selectedKey} onSelect={handleSelect} />
         </div>
 
         <div className="boomi-crt-info">
@@ -400,6 +396,12 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
         >
           {fullScreen && (
             <div className="boomi-crt-fs-caption">
+              <CrtTablePicker
+                compact
+                options={options}
+                selectedKey={selectedKey}
+                onSelect={handleSelect}
+              />
               <span className="boomi-crt-fs-title">{table.name}</span>
               <span className="boomi-crt-fs-sub">{table.processName}</span>
               <span
