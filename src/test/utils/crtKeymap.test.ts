@@ -465,16 +465,16 @@ describe('resolveNavKey: F2, Delete and Backspace', () => {
 });
 
 describe('resolveNavKey: printable keys', () => {
-  it.each(['a', 'Z', '0', '9', '-', '=', '/', '.', '*', ' ', '\u00e9', '\u{1F600}'])(
+  it.each(['a', 'Z', '0', '9', '-', '=', '/', '.', '*', '\u00e9', '\u{1F600}'])(
     'replaces the cell content with %j when editable',
     (k) => {
       expect(resolveNavKey(key(k), ctx())).toEqual({ type: 'edit', mode: 'replace', char: k });
     },
   );
 
-  it('carries the exact character, including the space', () => {
-    const action = resolveNavKey(key(' '), ctx());
-    expect(action).toEqual({ type: 'edit', mode: 'replace', char: ' ' });
+  it('carries the exact character', () => {
+    expect(resolveNavKey(key('\u00e9'), ctx())).toEqual({ type: 'edit', mode: 'replace', char: '\u00e9' });
+    expect(resolveNavKey(key('\u{1F600}'), ctx())).toEqual({ type: 'edit', mode: 'replace', char: '\u{1F600}' });
   });
 
   it('allows shift, so capitals and shifted symbols type normally', () => {
@@ -482,12 +482,12 @@ describe('resolveNavKey: printable keys', () => {
     expect(resolveNavKey(key('!', { shiftKey: true }), ctx())).toEqual({ type: 'edit', mode: 'replace', char: '!' });
   });
 
-  it.each(['a', 'Z', '5', '!', ' ', '\u{1F600}'])('is blocked for %j when not editable', (k) => {
+  it.each(['a', 'Z', '5', '!', '\u{1F600}'])('is blocked for %j when not editable', (k) => {
     expect(resolveNavKey(key(k), ctx({ editable: false }))).toEqual(BLOCKED);
   });
 
-  it('types a space when shift is not held, but not with Shift+Space', () => {
-    expect(resolveNavKey(key(' '), ctx())).toEqual({ type: 'edit', mode: 'replace', char: ' ' });
+  it('never starts an edit from the space: a plain space ticks the row, Shift+Space selects the row range', () => {
+    expect(resolveNavKey(key(' '), ctx())).toEqual({ type: 'tick-row' });
     expect(resolveNavKey(key(' ', { shiftKey: true }), ctx())).toEqual({ type: 'select-row' });
   });
 
@@ -601,14 +601,82 @@ describe('resolveNavKey: select row (Shift+Space)', () => {
     expect(resolveNavKey(key(' ', { shiftKey: true, altKey: true }), ctx())).toBeNull();
   });
 
-  it('a plain space still types when editable and is blocked when read only', () => {
-    expect(resolveNavKey(key(' '), ctx())).toEqual({ type: 'edit', mode: 'replace', char: ' ' });
-    expect(resolveNavKey(key(' '), ctx({ editable: false }))).toEqual(BLOCKED);
+  it('a plain space no longer types: it ticks the row, editable or not', () => {
+    expect(resolveNavKey(key(' '), ctx())).toEqual({ type: 'tick-row' });
+    expect(resolveNavKey(key(' '), ctx({ editable: false }))).toEqual({ type: 'tick-row' });
   });
 
   it('ctrl+Space and meta+Space stay unhandled', () => {
     expect(resolveNavKey(key(' ', { ctrlKey: true }), ctx())).toBeNull();
     expect(resolveNavKey(key(' ', { metaKey: true }), ctx())).toBeNull();
+  });
+});
+
+describe('resolveNavKey: tick row (Space)', () => {
+  it('returns tick-row for a plain space', () => {
+    expect(resolveNavKey(key(' '), ctx())).toEqual({ type: 'tick-row' });
+  });
+
+  it('carries no cell: the grid ticks the active row it already knows', () => {
+    expect(Object.keys(resolveNavKey(key(' '), ctx()) ?? {})).toEqual(['type']);
+  });
+
+  it('is allowed when the grid is read only, because ticking never changes data', () => {
+    expect(resolveNavKey(key(' '), ctx({ editable: false }))).toEqual({ type: 'tick-row' });
+  });
+
+  it('does not depend on hasSelection, the active cell or the grid size', () => {
+    expect(resolveNavKey(key(' '), ctx({ hasSelection: true }))).toEqual({ type: 'tick-row' });
+    expect(resolveNavKey(key(' '), ctx({ hasSelection: false }))).toEqual({ type: 'tick-row' });
+    expect(resolveNavKey(key(' '), ctx({ row: 0, col: 0 }))).toEqual({ type: 'tick-row' });
+    expect(resolveNavKey(key(' '), ctx({ row: 19, col: 9 }))).toEqual({ type: 'tick-row' });
+    expect(resolveNavKey(key(' '), ctx({ rowCount: 1, colCount: 1, row: 0, col: 0 }))).toEqual({ type: 'tick-row' });
+  });
+
+  it('treats missing modifier flags as not pressed', () => {
+    expect(resolveNavKey({ key: ' ' }, ctx())).toEqual({ type: 'tick-row' });
+    expect(
+      resolveNavKey({ key: ' ', shiftKey: false, ctrlKey: false, metaKey: false, altKey: false }, ctx()),
+    ).toEqual({ type: 'tick-row' });
+  });
+
+  it('Shift+Space still selects the row range, not a tick', () => {
+    expect(resolveNavKey(key(' ', { shiftKey: true }), ctx())).toEqual({ type: 'select-row' });
+  });
+
+  it.each([
+    ['ctrl', { ctrlKey: true }],
+    ['meta', { metaKey: true }],
+    ['ctrl and meta', { ctrlKey: true, metaKey: true }],
+    ['ctrl and shift', { ctrlKey: true, shiftKey: true }],
+    ['meta and shift', { metaKey: true, shiftKey: true }],
+    ['alt', { altKey: true }],
+    ['alt and shift', { altKey: true, shiftKey: true }],
+  ])('stays unhandled with %s held', (_name, mod) => {
+    expect(resolveNavKey(key(' ', mod), ctx())).toBeNull();
+    expect(resolveNavKey(key(' ', mod), ctx({ editable: false }))).toBeNull();
+  });
+
+  it('is not offered when there are no rows or no columns', () => {
+    expect(resolveNavKey(key(' '), ctx({ rowCount: 0 }))).toBeNull();
+    expect(resolveNavKey(key(' '), ctx({ colCount: 0 }))).toBeNull();
+  });
+
+  it('does not mutate the context it is given', () => {
+    const c = ctx({ hasSelection: true });
+    const copy = { ...c };
+    resolveNavKey(key(' '), c);
+    expect(c).toEqual(copy);
+  });
+
+  it('editing still starts with Enter, F2 or Backspace, not with the space', () => {
+    expect(resolveNavKey(key('Enter'), ctx())).toEqual({ type: 'edit', mode: 'select-all' });
+    expect(resolveNavKey(key('F2'), ctx())).toEqual({ type: 'edit', mode: 'append' });
+    expect(resolveNavKey(key('Backspace'), ctx())).toEqual({ type: 'clear', thenEdit: true });
+  });
+
+  it('a leading space is typed in the open editor, which leaves it to the text input', () => {
+    expect(resolveEditKey(key(' '))).toBeNull();
   });
 });
 
@@ -674,6 +742,7 @@ describe('resolveNavKey: new rules on an empty grid', () => {
   it.each([
     ['select-all', key('a', { ctrlKey: true })],
     ['select-row', key(' ', { shiftKey: true })],
+    ['tick-row', key(' ')],
     ['collapse', key('Escape')],
     ['context-menu', key('ContextMenu')],
     ['context-menu via Shift+F10', key('F10', { shiftKey: true })],

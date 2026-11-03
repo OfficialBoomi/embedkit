@@ -45,6 +45,7 @@ export type NavAction =
   | { type: 'blocked' }
   | { type: 'select-all' }
   | { type: 'select-row' }
+  | { type: 'tick-row' }
   | { type: 'collapse' }
   | { type: 'context-menu' };
 
@@ -98,7 +99,8 @@ export function resolveNavKey(k: KeyInput, c: NavContext): NavAction | null {
   // Selection shortcuts never change data, so they work in read only mode too. They
   // sit ahead of the printable rule below, which would otherwise swallow the letter
   // (mod+A) or the space (Shift+Space). The key is compared case-insensitively
-  // because Caps Lock reports 'A' without shift.
+  // because Caps Lock reports 'A' without shift. The plain Space is a selection
+  // shortcut as well (see its case below).
   if (mod && !shift && k.key.toLowerCase() === 'a') return { type: 'select-all' };
   if (shift && !mod && k.key === ' ') return { type: 'select-row' };
 
@@ -143,6 +145,14 @@ export function resolveNavKey(k: KeyInput, c: NavContext): NavAction | null {
       return whenEditable({ type: 'clear', thenEdit: false });
     case 'Backspace':
       return whenEditable({ type: 'clear', thenEdit: true });
+
+    // Space ticks or unticks the active row, like its gutter checkbox, so a set of rows that
+    // are not next to each other can be built from the keyboard alone. Typing into a cell
+    // starts with Enter, F2 or Backspace instead, and a leading space is typed once the
+    // editor is open. Shift+Space (the row range) was resolved above, so only Ctrl or Cmd
+    // can be held here, and those are left unhandled.
+    case ' ':
+      return mod ? null : { type: 'tick-row' };
 
     case 'Escape':
       if (shift || mod) return null;

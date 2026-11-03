@@ -4,18 +4,19 @@
  * @support https://bitbucket.org/officialboomi/embedkit
  *
  * @description
- * The operations that change the selection of the lookup table grid: extend the range,
- * select a block of rows, select all, select the rows of the range, collapse, tick rows, and
- * work out which rows an operation applies to. The selection itself (state and the ref that
- * mirrors it) lives in CrtGrid. These are plain closures over the render's context, built on
- * every render exactly as they were inside the component, so nothing here is memoized and
- * re-render timing is unchanged.
+ * The operations that change the selection of the lookup table grid: extend the range, move
+ * the active cell from the keyboard, select a block of rows, select all, select the rows of the
+ * range, collapse, tick rows, and work out which rows an operation applies to. The selection
+ * itself (state and the ref that mirrors it) lives in CrtGrid. These are plain closures over
+ * the render's context, built on every render exactly as they were inside the component, so
+ * nothing here is memoized and re-render timing is unchanged.
  */
 
-import { indexesBetween, targetRows, wholeGrid } from '../../../utils/crt/crtSelection';
+import { indexesBetween, targetRows, toggleIndex, wholeGrid } from '../../../utils/crt/crtSelection';
 import {
   isMultiCell,
   NO_ROWS,
+  plainSelection,
   selectionRange,
   withChecked,
   type GridSelection,
@@ -25,6 +26,8 @@ import { scrollColumnIntoView, scrollRowIntoView } from './gridLayout';
 
 export interface GridSelectionOps {
   extendTo: (row: number, col: number, scroll: boolean) => void;
+  moveActive: (row: number, col: number) => void;
+  toggleActiveRow: () => void;
   selectBlock: (first: number, last: number, scrollRow?: number) => void;
   selectAll: () => void;
   selectRow: () => void;
@@ -46,6 +49,41 @@ export function useGridSelectionOps(ctx: GridContext): GridSelectionOps {
     if (!el || !scroll) return;
     scrollRowIntoView(el, row);
     scrollColumnIntoView(el, layout, col);
+  };
+
+  /**
+   * A plain keyboard move (arrows, Tab, Page keys, Home and End). Ticked rows and the row anchor
+   * stay and only the active cell moves, so rows that are not next to each other can be ticked
+   * from the keyboard: tick, move past some rows, tick again. With no ticked rows it is the
+   * plain move it always was. Committing a cell edit and clicking a cell do not come through
+   * here; they still start over from one plain cell.
+   */
+  const moveActive = (row: number, col: number) => {
+    const s = getSel();
+    const cell = { row, col };
+    applySel(
+      s.checked.length > 0
+        ? { active: cell, anchor: cell, focus: cell, checked: s.checked, rowAnchor: s.rowAnchor }
+        : plainSelection(cell, row)
+    );
+    const el = rootRef.current;
+    if (!el) return;
+    scrollRowIntoView(el, row);
+    scrollColumnIntoView(el, layout, col);
+  };
+
+  /**
+   * Space: ticks or unticks the active row. The same toggle a click on its gutter checkbox
+   * makes (useGridPointer), including the row anchor a later Shift+click extends from. It only
+   * changes the selection, so it also works on a read only table.
+   */
+  const toggleActiveRow = () => {
+    const s = getSel();
+    const row = s.active.row;
+    applySel(withChecked(s, toggleIndex(s.checked, row), row));
+    // The active row can have been scrolled away from with the mouse wheel; show what was ticked.
+    const el = rootRef.current;
+    if (el) scrollRowIntoView(el, row);
   };
 
   /** Selects whole rows first..last, active in the first column of the first row. */
@@ -119,5 +157,16 @@ export function useGridSelectionOps(ctx: GridContext): GridSelectionOps {
   const targetsOf = (s: GridSelection): number[] =>
     store.rowCount() === 0 ? [] : targetRows(s.checked, selectionRange(s), s.active.row);
 
-  return { extendTo, selectBlock, selectAll, selectRow, collapse, selectOnlyRow, toggleAll, targetsOf };
+  return {
+    extendTo,
+    moveActive,
+    toggleActiveRow,
+    selectBlock,
+    selectAll,
+    selectRow,
+    collapse,
+    selectOnlyRow,
+    toggleAll,
+    targetsOf,
+  };
 }

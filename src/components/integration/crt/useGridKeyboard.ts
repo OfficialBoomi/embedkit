@@ -22,7 +22,6 @@ import type { GridSelectionOps } from './useGridSelectionOps';
 export interface GridKeyboardParts {
   editRef: React.RefObject<EditState | null>;
   pending: GridPendingPaste;
-  moveTo: (row: number, col: number) => void;
   startEdit: (row: number, col: number, mode: EditMode, char?: string) => void;
   runOp: (op: CrtOp) => void;
   openMenuAtActive: () => void;
@@ -34,8 +33,8 @@ export function useGridKeyboard(
   selection: GridSelectionOps
 ): (e: React.KeyboardEvent<HTMLDivElement>) => void {
   const { store, rootRef, callbacksRef, getSel } = ctx;
-  const { editRef, pending, moveTo, startEdit, runOp, openMenuAtActive } = parts;
-  const { extendTo, selectAll, selectRow, collapse } = selection;
+  const { editRef, pending, startEdit, runOp, openMenuAtActive } = parts;
+  const { extendTo, moveActive, toggleActiveRow, selectAll, selectRow, collapse } = selection;
   const { pendingPasteRef, clearPending } = pending;
 
   const navContext = (row: number, col: number, hasSelection: boolean): NavContext => {
@@ -84,7 +83,7 @@ export function useGridKeyboard(
     switch (action.type) {
       case 'move':
         if (action.extend) extendTo(action.row, action.col, true);
-        else moveTo(action.row, action.col);
+        else moveActive(action.row, action.col);
         break;
       case 'edit':
         startEdit(s.active.row, s.active.col, action.mode, action.char);
@@ -106,6 +105,9 @@ export function useGridKeyboard(
         break;
       case 'select-row':
         selectRow();
+        break;
+      case 'tick-row':
+        toggleActiveRow();
         break;
       case 'collapse':
         collapse();

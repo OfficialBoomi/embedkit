@@ -254,7 +254,10 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
     scrollColumnIntoView(el, layout, target.col);
   });
 
-  /** A plain move: one active cell, no range, no ticked rows. Scrolls it into view. */
+  /**
+   * A plain move: one active cell, no range, no ticked rows. Scrolls it into view. Only the end of
+   * a cell edit uses it; keyboard navigation goes through moveActive, which keeps ticked rows.
+   */
   const moveTo = useCallback(
     (row: number, col: number) => {
       applySel(plainSelection({ row, col }, row));
@@ -373,7 +376,7 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
   );
   const handleKeyDown = useGridKeyboard(
     ctx,
-    { editRef, pending: pendingPaste, moveTo, startEdit, runOp, openMenuAtActive },
+    { editRef, pending: pendingPaste, startEdit, runOp, openMenuAtActive },
     selection
   );
 
