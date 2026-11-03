@@ -19,6 +19,11 @@
  * Keys and clipboard events are stopped here on purpose: inside a shadow root only text
  * inputs are shielded from host page hotkeys, a div grid has to stop what it handles.
  *
+ * Find and replace lives in the screen. The grid draws what it is given (`find`: a row to
+ * column bit mask map and the current match, so a memoized row gets numbers and not a Set),
+ * hands the find keys to `onFind`, and lets the screen step through matches by the handle
+ * (showCell moves the active cell and scrolls without taking focus).
+ *
  * This file is the composition: it owns every ref and piece of state, the memoized callbacks
  * and effects that reset them, the virtualizer and the markup. The operations and handlers
  * are in the use* hooks beside it, plain per render closures over one context object (see
@@ -88,7 +93,7 @@ import { useGridRun } from './useGridRun';
 import { useGridSelectionOps } from './useGridSelectionOps';
 
 // The types live in crtGridTypes; the toolbar and the screen import them from here.
-export type { CrtGridHandle, CrtGridInfo, CrtGridProps, CrtOp } from './crtGridTypes';
+export type { CrtFindHighlight, CrtGridHandle, CrtGridInfo, CrtGridProps, CrtOp } from './crtGridTypes';
 
 /** After a commit the cell moves like the matching navigation key would. */
 const COMMIT_KEYS: Record<CommitMove, { key: string; shiftKey?: boolean }> = {
@@ -99,7 +104,7 @@ const COMMIT_KEYS: Record<CommitMove, { key: string; shiftKey?: boolean }> = {
 };
 
 const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
-  { store, ariaLabel, onBlocked, onInfo, onNotice, confirmDelete },
+  { store, ariaLabel, onBlocked, onInfo, onNotice, confirmDelete, find, onFind },
   handleRef
 ) {
   const version = useSyncExternalStore(store.subscribe, store.version);
@@ -123,12 +128,15 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
   const scrollTargetRef = useRef<ScrollTarget | null>(null);
   const deleteBusyRef = useRef(false);
   const storeRef = useRef(store);
-  const callbacksRef = useRef({ onBlocked, onNotice, confirmDelete });
+  const callbacksRef = useRef({ onBlocked, onNotice, confirmDelete, onFind });
   const runRef = useRef<(op: CrtOp) => void>(() => {});
+  // The parts of the handle that need this render's closures (the layout, the selection operations).
+  const showCellRef = useRef<(row: number, col: number) => void>(() => {});
+  const commitEditRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     storeRef.current = store;
-    callbacksRef.current = { onBlocked, onNotice, confirmDelete };
+    callbacksRef.current = { onBlocked, onNotice, confirmDelete, onFind };
   });
 
   const rowCount = store.rowCount();
@@ -338,8 +346,21 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
   const clipboard = useGridClipboard(ctx, selection, rowOps, pendingPaste);
   const runOp = useGridRun(ctx, commitEditor, selection, rowOps, clipboard);
 
+  /**
+   * Find steps through matches with this: the cell becomes the active cell and scrolls into view,
+   * and focus stays where it is (usually the find input). It is a keyboard style move, so ticked
+   * rows stay ticked. An open editor is committed first, as every operation does.
+   */
+  const showCell = (row: number, col: number) => {
+    commitEditor();
+    if (row < 0 || col < 0 || row >= store.rowCount() || col >= store.colCount()) return;
+    selection.moveActive(row, col);
+  };
+
   useEffect(() => {
     runRef.current = runOp;
+    showCellRef.current = showCell;
+    commitEditRef.current = commitEditor;
   });
 
   useImperativeHandle(
@@ -347,6 +368,12 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
     () => ({
       run: (op) => runRef.current(op),
       focus: () => rootRef.current?.focus({ preventScroll: true }),
+      showCell: (row, col) => showCellRef.current(row, col),
+      activeCell: () => {
+        const s = storeRef.current;
+        return clampSelection(selRef.current, s.rowCount(), s.colCount()).active;
+      },
+      commitEdit: () => commitEditRef.current(),
     }),
     []
   );
@@ -396,6 +423,8 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
   const range = rowCount > 0 ? selectionRange(cur) : null;
   const multiRange = range !== null && isMultiCell(range) ? range : null;
   const checkedSet = useMemo(() => new Set(cur.checked), [cur.checked]);
+  const findMasks = find?.masks;
+  const findCurrent = find?.current ?? null;
   const allChecked = rowCount > 0 && cur.checked.length === rowCount;
   const someChecked = cur.checked.length > 0 && !allChecked;
   let activeRendered = false;
@@ -424,6 +453,8 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
         selC0={inRangeRow ? multiRange.c0 : -1}
         selC1={inRangeRow ? multiRange.c1 : -1}
         rowNew={store.isRowNew(item.index)}
+        findMask={findMasks?.get(item.index) ?? 0}
+        findCol={findCurrent !== null && findCurrent.row === item.index ? findCurrent.col : -1}
       />
     );
   }

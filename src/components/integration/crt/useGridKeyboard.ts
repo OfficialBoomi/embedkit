@@ -8,10 +8,12 @@
  * key means for the active cell (and, with Shift, for the focus corner of the range) and then
  * calls the matching operation. Keys typed in the open cell editor are handled by the editor
  * itself. Every key the grid handles is stopped here: inside a shadow root only text inputs
- * are shielded from host page hotkeys. A plain closure over the render's context, built on
- * every render as it was inside the component.
+ * are shielded from host page hotkeys. The find keys (Ctrl or Cmd+F, F3, Shift+F3) are handed
+ * to the screen's find row instead of the keymap. A plain closure over the render's context,
+ * built on every render as it was inside the component.
  */
 
+import { resolveFindKey } from '../../../utils/crt/crtFindView';
 import { resolveNavKey, type NavContext } from '../../../utils/crt/crtKeymap';
 import { hasAnySelection } from '../../../utils/crt/crtGridSelection';
 import type { CrtOp, EditMode, EditState, GridContext, GridPendingPaste } from './crtGridTypes';
@@ -59,6 +61,19 @@ export function useGridKeyboard(
       e.preventDefault();
       e.stopPropagation();
       return;
+    }
+    // Find keys (Ctrl or Cmd+F, F3, Shift+F3) are stopped here, so the browser's own find never
+    // opens over the grid and the host page never sees them. Only when the screen listens for
+    // them: a grid used without find leaves them alone. They work on an empty table too.
+    const onFind = callbacksRef.current.onFind;
+    if (onFind) {
+      const findKey = resolveFindKey(e);
+      if (findKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        onFind(findKey);
+        return;
+      }
     }
     if (store.rowCount() === 0) {
       // The keymap has no cell to work from, but the menu key must still reach the menu, and Undo

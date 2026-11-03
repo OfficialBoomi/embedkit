@@ -123,9 +123,16 @@ export function observeGridRect(
 
 export const estimateRowSize = (): number => ROW_HEIGHT;
 
-/** Precomputed class strings: bit 1 frozen, 2 active, 4 edited, 8 editing, 16 in the cell range. */
+/**
+ * Precomputed class strings: bit 1 frozen, 2 active, 4 edited, 8 editing, 16 in the cell range,
+ * 32 matches the find query, 64 is the current find match. The current match is also a match,
+ * so a cell that is current carries both bits (FLAG_MATCH_CURRENT).
+ */
+export const FLAG_MATCH = 32;
+export const FLAG_MATCH_CURRENT = 96;
+
 export const CELL_CLASS: string[] = [];
-for (let flags = 0; flags < 32; flags++) {
+for (let flags = 0; flags < 128; flags++) {
   CELL_CLASS.push(
     [
       'boomi-crt-cell',
@@ -134,6 +141,8 @@ for (let flags = 0; flags < 32; flags++) {
       flags & 4 ? 'boomi-crt-cell--edited' : '',
       flags & 8 ? 'boomi-crt-cell--editing' : '',
       flags & 16 ? 'boomi-crt-cell--selected' : '',
+      flags & 32 ? 'boomi-crt-cell--match' : '',
+      flags & 64 ? 'boomi-crt-cell--match-current' : '',
     ]
       .filter(Boolean)
       .join(' ')

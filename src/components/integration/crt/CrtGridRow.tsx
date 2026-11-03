@@ -14,6 +14,7 @@
  */
 
 import { memo, useCallback, useRef } from 'react';
+import { maskHasCol } from '../../../utils/crt/crtFindView';
 import { resolveEditKey } from '../../../utils/crt/crtKeymap';
 import type { CrtStore } from '../../../utils/crt/crtStore';
 import type { EditState, FinishEdit } from './crtGridTypes';
@@ -22,6 +23,8 @@ import {
   CHECK,
   CHECK_MIXED,
   CHECK_ON,
+  FLAG_MATCH,
+  FLAG_MATCH_CURRENT,
   GUTTER_CLASS,
   ROW_CLASS,
   type GridLayout,
@@ -114,6 +117,10 @@ export interface GridRowProps {
   selC1: number;
   /** The row was inserted or appended since the table was loaded. */
   rowNew: boolean;
+  /** Bit mask of this row's cells that match the find query (bit c is column c), 0 for none. A number, never a Set, so the memo stays cheap. */
+  findMask: number;
+  /** Column of the current find match when it is in this row, otherwise -1. */
+  findCol: number;
 }
 
 /** Memoized (primitive props only) so moving the active cell redraws two rows, not the whole window. */
@@ -131,6 +138,8 @@ const GridRow = memo(function GridRow({
   selC0,
   selC1,
   rowNew,
+  findMask,
+  findCol,
 }: GridRowProps) {
   const cells: React.ReactNode[] = [];
   const cols = layout.widths.length;
@@ -144,7 +153,8 @@ const GridRow = memo(function GridRow({
       (isActive ? 2 : 0) |
       (hasEdits && store.isCellEdited(row, c) ? 4 : 0) |
       (editing ? 8 : 0) |
-      (inSelection && !isActive ? 16 : 0);
+      (inSelection && !isActive ? 16 : 0) |
+      (c === findCol ? FLAG_MATCH_CURRENT : maskHasCol(findMask, c) ? FLAG_MATCH : 0);
     cells.push(
       <div
         key={c}

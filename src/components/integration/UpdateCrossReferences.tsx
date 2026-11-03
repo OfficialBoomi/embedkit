@@ -18,6 +18,10 @@
  * `crossReferenceTables.unavailableTables` setting ('disabled', the default, or 'hidden'). With
  * no editable table at all the screen says so.
  *
+ * Find and replace (Ctrl or Cmd+F, or the Find button) opens a third toolbar row that searches
+ * the selected table as you type. Its state lives here, above the grid, so the query survives
+ * switching tables; see crt/useCrtFind.
+ *
  * @return {JSX.Element} The rendered UpdateCrossReferences component.
  */
 
@@ -32,9 +36,11 @@ import AjaxLoader from '../ui/AjaxLoader';
 import Button from '../ui/Button';
 import Dialog from '../ui/Dialog';
 import Page from '../core/Page';
+import CrtFindBar from './crt/CrtFindBar';
 import CrtGrid, { type CrtGridHandle, type CrtGridInfo, type CrtOp } from './crt/CrtGrid';
 import CrtTablePicker, { type CrtPickerOption } from './crt/CrtTablePicker';
 import CrtToolbar from './crt/CrtToolbar';
+import { useCrtFind } from './crt/useCrtFind';
 import crtCss from './crt/crt.css?inline';
 
 /**
@@ -419,6 +425,8 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
 
   const showHint = useCallback(() => showNotice(READ_ONLY_HINT, 'warn'), [showNotice]);
 
+  const find = useCrtFind(store, gridRef, { onNotice: showNotice, onBlocked: showHint });
+
   const handleInfo = useCallback((next: CrtGridInfo) => {
     setGridInfo((prev) => (sameInfo(prev, next) ? prev : next));
   }, []);
@@ -533,6 +541,12 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
             onRun={handleRun}
             fullScreen={fullScreen}
             onToggleFullScreen={toggleFullScreen}
+            find={{
+              open: find.open,
+              onToggle: find.toggle,
+              onCommand: find.onCommand,
+              bar: <CrtFindBar {...find.bar} />,
+            }}
             trailing={
               // The wrapper carries the tooltip, so it shows over the whole button.
               overridden ? (
@@ -568,6 +582,8 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
               onInfo={handleInfo}
               onNotice={showNotice}
               confirmDelete={confirmDelete}
+              find={find.highlight}
+              onFind={find.onCommand}
             />
           </div>
 

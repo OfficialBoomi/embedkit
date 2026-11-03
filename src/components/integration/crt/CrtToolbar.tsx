@@ -16,6 +16,12 @@
  * The second row starts with the History group (Undo, Redo). Its tooltips name the step they
  * would undo or redo, taken from the grid's report.
  *
+ * Find: when the screen gives it a `find` object, the second row ends with a Find button next to
+ * Full screen, and while find is open the find and replace row (CrtFindBar) is the third line.
+ * Ctrl or Cmd+F, F3 and Shift+F3 pressed on a toolbar button go to the screen's find, the same
+ * keys the grid handles itself. Presses on the find boxes are not kept from taking focus; every
+ * other press in the toolbar is.
+ *
  * @return {JSX.Element} The rendered toolbar.
  */
 
@@ -33,11 +39,13 @@ import {
   AiOutlinePlus,
   AiOutlineRedo,
   AiOutlineScissor,
+  AiOutlineSearch,
   AiOutlineSnippets,
   AiOutlineUndo,
   AiOutlineVerticalAlignBottom,
   AiOutlineVerticalAlignTop,
 } from 'react-icons/ai';
+import { resolveFindKey, type CrtFindCommand } from '../../../utils/crt/crtFindView';
 import { CRT_MAX_ROWS } from '../../../utils/crt/crtStore';
 import type { CrtGridInfo, CrtOp } from './CrtGrid';
 
@@ -175,8 +183,25 @@ function historyTools(info: CrtGridInfo | null): ToolDef[] {
   ];
 }
 
-/** Keeps focus where it is (the grid) when a button is pressed with the mouse. */
-const keepFocus = (e: React.MouseEvent<HTMLElement>) => e.preventDefault();
+/**
+ * Keeps focus where it is (the grid, or a find box) when a button is pressed with the mouse. The
+ * find boxes themselves need the press, to take focus and place the caret.
+ */
+const keepFocus = (e: React.MouseEvent<HTMLElement>) => {
+  if ((e.target as HTMLElement).closest('input')) return;
+  e.preventDefault();
+};
+
+/** What the toolbar needs from the screen's find and replace. */
+export interface CrtToolbarFind {
+  open: boolean;
+  /** The Find button: opens the row, or closes it. */
+  onToggle: () => void;
+  /** A find key pressed on a toolbar button. */
+  onCommand: (command: CrtFindCommand) => void;
+  /** The find and replace row, shown as the third line while `open`. */
+  bar: ReactNode;
+}
 
 export interface CrtToolbarProps {
   info: CrtGridInfo | null;
@@ -186,6 +211,8 @@ export interface CrtToolbarProps {
   /** When both are given, the second row ends with a Full screen / Exit full screen button. */
   fullScreen?: boolean;
   onToggleFullScreen?: () => void;
+  /** When given, the second row has a Find button and the find row can show as a third line. */
+  find?: CrtToolbarFind;
 }
 
 const CrtToolbar: React.FC<CrtToolbarProps> = ({
@@ -194,6 +221,7 @@ const CrtToolbar: React.FC<CrtToolbarProps> = ({
   trailing,
   fullScreen = false,
   onToggleFullScreen,
+  find,
 }) => {
   const renderGroup = (name: string, tools: ToolDef[]) => (
     <div className="boomi-crt-tools-group" role="group" aria-label={name}>
@@ -216,8 +244,23 @@ const CrtToolbar: React.FC<CrtToolbarProps> = ({
     </div>
   );
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!find) return;
+    const command = resolveFindKey(e);
+    if (!command) return;
+    e.preventDefault();
+    e.stopPropagation();
+    find.onCommand(command);
+  };
+
   return (
-    <div className="boomi-crt-tools" role="toolbar" aria-label="Table actions" onMouseDown={keepFocus}>
+    <div
+      className="boomi-crt-tools"
+      role="toolbar"
+      aria-label="Table actions"
+      onMouseDown={keepFocus}
+      onKeyDown={handleKeyDown}
+    >
       <div className="boomi-crt-tools-line">
         {renderGroup('Rows', ROW_TOOLS)}
         {trailing && <div className="boomi-crt-tools-trailing">{trailing}</div>}
@@ -226,6 +269,20 @@ const CrtToolbar: React.FC<CrtToolbarProps> = ({
         {renderGroup('History', historyTools(info))}
         {renderGroup('Clipboard', CLIPBOARD_TOOLS)}
         <span className="boomi-crt-tools-selection">{info?.selectionLabel ?? ''}</span>
+        {find && (
+          <button
+            type="button"
+            className="boomi-crt-tool"
+            title={`Find and replace (${modifierText()}F)`}
+            aria-pressed={find.open}
+            onClick={find.onToggle}
+          >
+            <span className="boomi-crt-tool-icon" aria-hidden="true">
+              <AiOutlineSearch />
+            </span>
+            <span>Find</span>
+          </button>
+        )}
         {onToggleFullScreen && (
           <button
             type="button"
@@ -241,6 +298,7 @@ const CrtToolbar: React.FC<CrtToolbarProps> = ({
           </button>
         )}
       </div>
+      {find?.open && find.bar}
     </div>
   );
 };

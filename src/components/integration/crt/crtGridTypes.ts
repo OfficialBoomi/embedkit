@@ -11,6 +11,9 @@
 
 import type { CrtStore } from '../../../utils/crt/crtStore';
 import type { GridSelection } from '../../../utils/crt/crtGridSelection';
+import type { CrtFindCommand } from '../../../utils/crt/crtFindView';
+import type { CrtMatch } from '../../../utils/crt/crtSearch';
+import type { CrtCell } from '../../../utils/crt/crtTypes';
 import type { GridLayout } from './gridLayout';
 
 /** Everything the grid can do to a table, for the toolbar, the menu and the keyboard alike. */
@@ -36,6 +39,26 @@ export type CrtOp =
 export interface CrtGridHandle {
   run(op: CrtOp): void;
   focus(): void;
+  /**
+   * Makes a cell the active cell and scrolls it into view, without moving focus (find and
+   * replace steps through matches while the cursor stays in its own input). Commits an open
+   * cell editor first. Ticked rows stay ticked, like any keyboard move.
+   */
+  showCell(row: number, col: number): void;
+  /** The active cell, pulled back inside the table. */
+  activeCell(): CrtCell;
+  /** Commits an open cell editor, so a table wide operation never runs under a stale one. */
+  commitEdit(): void;
+}
+
+/**
+ * What the grid draws for find: which cells match and which match is current. `masks` maps a
+ * row index to a bit mask of its matching columns (bit c is column c), so a memoized row is
+ * given one number and a row whose number did not change does not draw again.
+ */
+export interface CrtFindHighlight {
+  masks: ReadonlyMap<number, number>;
+  current: CrtMatch | null;
 }
 
 /** What the toolbar needs to know about the grid. Reported whenever any of it may have changed. */
@@ -86,6 +109,8 @@ export type FinishEdit = (value: string | null, move: CommitMove | null, refocus
  * @property {(info: CrtGridInfo) => void} [onInfo] - Called after render whenever the selection or the table changed.
  * @property {(message: string, kind: 'info' | 'warn') => void} [onNotice] - Short result messages ("Pasted 3 rows").
  * @property {(rowCount: number) => Promise<boolean>} [confirmDelete] - Asked before deleting two or more rows.
+ * @property {CrtFindHighlight} [find] - The matching cells to highlight and the current match. Absent when find is closed.
+ * @property {(command: CrtFindCommand) => void} [onFind] - Ctrl or Cmd+F, F3 and Shift+F3 while the grid has focus. Without it the grid leaves those keys alone.
  */
 export interface CrtGridProps {
   store: CrtStore;
@@ -94,10 +119,12 @@ export interface CrtGridProps {
   onInfo?: (info: CrtGridInfo) => void;
   onNotice?: (message: string, kind: NoticeKind) => void;
   confirmDelete?: (rowCount: number) => Promise<boolean>;
+  find?: CrtFindHighlight;
+  onFind?: (command: CrtFindCommand) => void;
 }
 
 /** The callbacks the grid reads through a ref, so a handler that outlives a render never sees stale ones. */
-export type GridCallbacks = Pick<CrtGridProps, 'onBlocked' | 'onNotice' | 'confirmDelete'>;
+export type GridCallbacks = Pick<CrtGridProps, 'onBlocked' | 'onNotice' | 'confirmDelete' | 'onFind'>;
 
 /** An armed "paste with the keyboard next" request and the timer that expires it. */
 export interface PendingPaste {

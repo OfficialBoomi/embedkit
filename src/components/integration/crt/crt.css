@@ -820,3 +820,146 @@
   border-top: 1px solid var(--crt-cell-border);
   overflow-wrap: anywhere;
 }
+
+/* ---------- Find and replace (CrtFindBar, match highlights) ---------- */
+
+/*
+ * Amber, the warning hue of all three themes (the warning chip tokens), so a match is never
+ * mistaken for the indigo of the selection and edit tints, nor for the green of a new row.
+ * The edge colour is the chip's text colour: dark amber on light, pale amber on dark.
+ */
+.boomi-crt-screen,
+.boomi-crt-gridbox,
+.boomi-crt-grid {
+  --crt-match: var(--boomi-chip-warning-border, #f59e0b);
+  --crt-match-edge: var(--boomi-chip-warning-fg, #92400e);
+}
+
+/* The row is the third line of the toolbar and wraps only when the toolbar gets narrow. */
+.boomi-crt-find {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--crt-cell-border);
+}
+
+.boomi-crt-find-input {
+  box-sizing: border-box;
+  flex: 0 1 14rem;
+  min-width: 8rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  font: inherit;
+  line-height: 1.25rem;
+}
+
+.boomi-crt-find-input[aria-invalid='true'],
+.boomi-crt-find-input[aria-invalid='true']:focus-visible {
+  border-color: var(--crt-danger);
+  outline-color: var(--crt-danger);
+}
+
+.boomi-crt-find-group {
+  display: inline-flex;
+  gap: 0.125rem;
+  padding: 0.125rem;
+  border: 1px solid var(--crt-cell-border);
+  border-radius: 0.375rem;
+}
+
+.boomi-crt-find-toggle,
+.boomi-crt-find-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.boomi-crt-find-toggle:hover,
+.boomi-crt-find-step:hover:not(:disabled) {
+  border-color: var(--crt-cell-border);
+  background-color: color-mix(in srgb, var(--crt-focus) 10%, transparent);
+}
+
+.boomi-crt-find-toggle:focus-visible,
+.boomi-crt-find-step:focus-visible {
+  outline: 2px solid var(--crt-focus);
+  outline-offset: 1px;
+}
+
+/* A toggle that is on keeps the accent, like the full screen button. */
+.boomi-crt-find-toggle[aria-pressed='true'] {
+  border-color: var(--crt-focus);
+  background-color: color-mix(in srgb, var(--crt-focus) 18%, transparent);
+  color: var(--crt-focus);
+  font-weight: 600;
+}
+
+.boomi-crt-find-step:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.boomi-crt-find-count {
+  min-width: 6.5rem;
+  padding: 0 0.25rem;
+  color: var(--crt-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.boomi-crt-find-count--invalid {
+  color: var(--crt-danger);
+  font-weight: 600;
+}
+
+.boomi-crt-find-close {
+  margin-left: auto;
+}
+
+/*
+ * A matching cell gets an amber tint, the current match a stronger one and an outline. The tint
+ * is a pseudo element under the text and over the cell's own background layers, so it blends
+ * with whatever is already there (the row stripe, the edited and range tints, the opaque
+ * frozen column) without a rule for each combination. isolation keeps the element behind the
+ * text but inside the cell. The outline replaces the active cell's outline on the current
+ * match, which is normally also the active cell, and it keeps its colour when the grid has no
+ * focus (the cursor is usually in the find box). An open editor draws its own border.
+ */
+.boomi-crt-cell--match {
+  isolation: isolate;
+}
+
+.boomi-crt-cell--match:not(.boomi-crt-cell--frozen) {
+  position: relative;
+}
+
+.boomi-crt-cell--match::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: color-mix(in srgb, var(--crt-match) 35%, transparent);
+  pointer-events: none;
+}
+
+.boomi-crt-cell--match-current::before {
+  background-color: color-mix(in srgb, var(--crt-match) 55%, transparent);
+}
+
+.boomi-crt-grid .boomi-crt-cell--match-current:not(.boomi-crt-cell--editing),
+.boomi-crt-grid:not(:focus-within) .boomi-crt-cell--match-current:not(.boomi-crt-cell--editing) {
+  outline: 2px solid var(--crt-match-edge);
+  outline-offset: -2px;
+}
