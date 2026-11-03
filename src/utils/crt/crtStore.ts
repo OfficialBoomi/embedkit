@@ -19,12 +19,28 @@
  * Edit tracking is keyed by row id, so it follows a row when rows around it change.
  * Rows created after the rows array was built are "new": the whole row counts as an
  * edit, so their individual cells are not tracked.
+ *
+ * Every change on an override is also written to a sparse change journal (undo and
+ * redo). The journal stores only what changed, never a copy of the table. It is a
+ * stack, so an entry is only ever undone while the table is exactly as that entry
+ * left it; that is why an entry can refer to row ids and positions and be sure they
+ * exist.
  */
 
 import type { CrtTableData } from './crtTypes';
+import type { CrtRange } from './crtSelection';
 
 /** A cross reference table holds at most this many rows. */
 export const CRT_MAX_ROWS = 10000;
+
+/** The history keeps at most this many steps; the oldest step is dropped first. */
+export const CRT_MAX_HISTORY_ENTRIES = 500;
+
+/**
+ * The history keeps at most this many stored cells in total (a cells step counts its
+ * length, an insert or delete step counts rows x columns, a move counts its rows).
+ */
+export const CRT_MAX_HISTORY_CELLS = 1000000;
 
 export interface CrtSetCellsResult {
   /** Cells whose value changed. */
@@ -35,6 +51,17 @@ export interface CrtSetCellsResult {
   cutColumns: boolean;
   /** Growing would pass CRT_MAX_ROWS: nothing was applied. */
   overflow: boolean;
+}
+
+/** What an undo or a redo did, so the grid can show it. */
+export interface CrtHistoryResult {
+  /** The step that was undone or redone, for example 'Delete 3 rows'. */
+  label: string;
+  /**
+   * Bounding box, in the row indexes the table has now, of what the step touched,
+   * clamped to the table. Null when the table is empty.
+   */
+  region: CrtRange | null;
 }
 
 export interface CrtStore {
@@ -56,9 +83,9 @@ export interface CrtStore {
    * false when read only, out of range, or the value is the same.
    */
   setCell(row: number, col: number, value: string): boolean;
-  /** No-op if already overridden; otherwise rows become a deep copy of the default rows. */
+  /** No-op if already overridden; otherwise rows become a deep copy of the default rows. Starts a fresh history. */
   override(): void;
-  /** No-op if not overridden; otherwise rows go back to the default rows (read only). */
+  /** No-op if not overridden; otherwise rows go back to the default rows (read only). Starts a fresh history. */
   reset(): void;
   /**
    * Inserts rows before index `at` (0..rowCount, rowCount appends). Each row is padded
@@ -81,7 +108,8 @@ export interface CrtStore {
   /**
    * Writes `matrix` with its top left corner at (row, col). Columns past the last column
    * are dropped. Rows past the last row are appended when `grow` is true, else dropped.
-   * Returns null when read only or the start is not a cell of the grid.
+   * Returns null when read only or the start is not a cell of the grid. The appended rows
+   * and the written cells are one undo step.
    */
   setCells(row: number, col: number, matrix: readonly (readonly string[])[], grow?: boolean): CrtSetCellsResult | null;
   /**
@@ -91,21 +119,109 @@ export interface CrtStore {
   fillCells(r0: number, c0: number, r1: number, c1: number, value: string): number;
   /** True for a row inserted or appended since the rows were created (load, override, reset). */
   isRowNew(row: number): boolean;
-  /** True when the store differs from how it was loaded. */
+  /**
+   * True when the table differs from how it was loaded. Exact and net: undoing every
+   * change, or moving a row down and back up, makes it false again.
+   */
   isDirty(): boolean;
   /** Number of cells of original rows whose value differs from the value they had when the rows were created. */
   changedCellCount(): number;
   /** Always false for a new row: the whole row is new. */
   isCellEdited(row: number, col: number): boolean;
-  /** Starts at 0 and increments on every change. */
+  /** Starts at 0 and increments on every change (an undo, a redo or a whole batch is one change). */
   version(): number;
   /** Listeners run synchronously after each change. Returns the unsubscribe function. */
   subscribe(listener: () => void): () => void;
+  /**
+   * Reverts the latest step. Null (and no notification) when there is nothing to undo, the
+   * table is read only, or a batch is running.
+   */
+  undo(): CrtHistoryResult | null;
+  /** Re-applies the step the last undo reverted, with the same row ids. Same null rules as undo(). */
+  redo(): CrtHistoryResult | null;
+  canUndo(): boolean;
+  canRedo(): boolean;
+  /** What undo() would revert, for a tooltip (for example 'Delete 3 rows'), or null. */
+  undoLabel(): string | null;
+  redoLabel(): string | null;
+  /**
+   * Runs `fn` and makes every change it makes ONE undo step and ONE notification. Nested
+   * batches join the outermost one, which also decides the label. If `fn` throws, what was
+   * done is kept as one step and the error is rethrown. A batch that changed nothing
+   * journals nothing and does not notify. Undo and redo are not available inside a batch.
+   */
+  batch<T>(fn: () => T, label?: string): T;
 }
 
 interface ListenerEntry {
   fn: () => void;
   active: boolean;
+}
+
+/** Cells written: parallel arrays, one slot per written cell, in the order they were written. */
+interface CellsEntry {
+  kind: 'cells';
+  rowIds: number[];
+  cols: number[];
+  before: string[];
+  after: string[];
+}
+
+/**
+ * Rows inserted at `at`. `rows` are the very arrays the table holds. That is safe because
+ * an entry is only used while the table is exactly as the entry left it, so the arrays hold
+ * the same text then.
+ */
+interface InsertEntry {
+  kind: 'insert';
+  at: number;
+  ids: number[];
+  rows: string[][];
+}
+
+/**
+ * Rows removed from the ascending `positions` they had, with the edit tracking dropped along.
+ * The rows are shared with the table the same way as in InsertEntry.
+ */
+interface DeleteEntry {
+  kind: 'delete';
+  positions: number[];
+  ids: number[];
+  rows: string[][];
+  dropped: Array<[key: string, original: string]>;
+}
+
+/** `indexes` are where the moved rows ended up, so the inverse is the move the other way. */
+interface MoveEntry {
+  kind: 'move';
+  indexes: number[];
+  delta: -1 | 1;
+}
+
+interface GroupEntry {
+  kind: 'group';
+  children: JournalEntry[];
+}
+
+type JournalEntry = CellsEntry | InsertEntry | DeleteEntry | MoveEntry | GroupEntry;
+
+/** One undo step: an entry with the text a tooltip shows and the memory it holds. */
+interface JournalStep {
+  entry: JournalEntry;
+  label: string;
+  cost: number;
+}
+
+interface OpenBatch {
+  children: JournalEntry[];
+  label: string | undefined;
+}
+
+/** Rows (as ids) and columns an undo or redo touched, resolved to a range once it is done. */
+interface Touched {
+  ids: number[];
+  c0: number;
+  c1: number;
 }
 
 /**
@@ -125,9 +241,20 @@ function sequentialIds(count: number): number[] {
   return ids;
 }
 
+const formatCount = (count: number): string => count.toLocaleString('en-US');
+
+const cellsLabel = (count: number): string => (count === 1 ? 'Edit cell' : `Edit ${formatCount(count)} cells`);
+
+const rowsLabel = (verb: string, count: number): string =>
+  count === 1 ? `${verb} row` : `${verb} ${formatCount(count)} rows`;
+
+/** Looking up this few ids is cheaper with a scan than with building an id to index map. */
+const SMALL_LOOKUP = 8;
+
 export function createCrtStore(table: CrtTableData): CrtStore {
   const columns: readonly string[] = table.columns.slice();
   const cols = columns.length;
+  const lastCol = Math.max(cols - 1, 0);
   const loadedOverridden = table.overrideRows !== null && table.overrideRows !== undefined;
 
   /** Rows the store may mutate: always its own arrays. */
@@ -140,30 +267,68 @@ export function createCrtStore(table: CrtTableData): CrtStore {
   let overridden = loadedOverridden;
   let rows: string[][] = loadedOverridden ? ownCopy(table.overrideRows as string[][]) : defaultView();
   let ids: number[] = sequentialIds(rows.length);
-  /** Next id for a new row. Never reused, so a deleted row's id is gone for good. */
+  /** Next id for a new row. Never reused or rewound, not even by an undo. */
   let nextRowId = rows.length;
   /** Ids below this belong to the original rows; ids at or above it are new rows. */
   let newRowLimit = rows.length;
   let rowsReplaced = false;
   /**
-   * True after a row was inserted, deleted, moved or appended. This is a simplification:
-   * it never goes back to false when the change is undone by hand. A later change
-   * journal replaces it with a precise answer.
+   * Whether `ids` differs from 0..newRowLimit-1 in order, or null when it must be computed
+   * again. Every change to `ids` resets it, so the scan runs at most once per structure change.
+   * Dirtiness reads this and never the journal, so trimming old history can not change it.
    */
-  let structureTouched = false;
+  let structureDiffers: boolean | null = false;
+  /** id -> index for the current `ids`, built on demand and dropped whenever `ids` changes. */
+  let idIndex: Map<number, number> | null = null;
   let versionNumber = 0;
   /** `${rowId}:${col}` -> the value the cell had when it was first edited. */
   let edits = new Map<string, string>();
   let listeners: ListenerEntry[] = [];
 
+  /** Oldest step first. Undone steps wait on the redo stack until a new change drops them. */
+  const undoStack: JournalStep[] = [];
+  const redoStack: JournalStep[] = [];
+  /** Cost of every step on both stacks. Undo and redo only move steps, so it only changes on a push, a trim or a drop. */
+  let storedCells = 0;
+  let openBatch: OpenBatch | null = null;
+  /** A change happened inside the running batch: one notification is owed when it ends. */
+  let held = false;
+
   const inRange = (row: number, col: number): boolean =>
     Number.isInteger(row) && Number.isInteger(col) && row >= 0 && row < rows.length && col >= 0 && col < cols;
+
+  /** Call after every change to `ids` (or its order) so the cached answers are recomputed. */
+  const idsChanged = (): void => {
+    structureDiffers = null;
+    idIndex = null;
+  };
 
   /** Fresh ids for the current rows; ids restart at 0..n-1 and every row counts as original. */
   const restartIds = (): void => {
     ids = sequentialIds(rows.length);
     nextRowId = rows.length;
     newRowLimit = rows.length;
+    idsChanged();
+  };
+
+  /** Index of the row with this id, or -1. `lookups` says how many lookups are coming. */
+  const findRow = (id: number, lookups: number): number => {
+    if (idIndex === null) {
+      if (lookups <= SMALL_LOOKUP) return ids.indexOf(id);
+      idIndex = new Map();
+      for (let i = 0; i < ids.length; i++) idIndex.set(ids[i], i);
+    }
+    const index = idIndex.get(id);
+    return index === undefined ? -1 : index;
+  };
+
+  const structureChanged = (): boolean => {
+    if (structureDiffers === null) {
+      let differs = ids.length !== newRowLimit;
+      for (let i = 0; !differs && i < ids.length; i++) differs = ids[i] !== i;
+      structureDiffers = differs;
+    }
+    return structureDiffers;
   };
 
   /** Unique, in range, ascending. Never mutates the caller's array. */
@@ -185,8 +350,53 @@ export function createCrtStore(table: CrtTableData): CrtStore {
     ids[b] = id;
   };
 
-  /** Writes one existing cell with edit tracking and no notification. True when the value changed. */
-  const writeCell = (row: number, col: number, value: string): boolean => {
+  /** Moves rows one place; `selected` is ascending and unique. The caller checked the edges. */
+  const moveSelected = (selected: readonly number[], delta: -1 | 1): void => {
+    if (delta === -1) {
+      // Ascending: a contiguous block moves as a unit, each row hops over the one above it.
+      for (const r of selected) swapRows(r - 1, r);
+    } else {
+      for (let i = selected.length - 1; i >= 0; i--) swapRows(selected[i], selected[i] + 1);
+    }
+    idsChanged();
+  };
+
+  /** Removes the rows at these ascending, unique positions. */
+  const removePositions = (positions: readonly number[]): void => {
+    const keptRows: string[][] = [];
+    const keptIds: number[] = [];
+    let next = 0;
+    for (let r = 0; r < rows.length; r++) {
+      if (next < positions.length && positions[next] === r) {
+        next += 1;
+      } else {
+        keptRows.push(rows[r]);
+        keptIds.push(ids[r]);
+      }
+    }
+    rows = keptRows;
+    ids = keptIds;
+    idsChanged();
+  };
+
+  /** Takes the edit tracking of the rows that are about to go. Returns what was taken, so an undo can put it back. */
+  const dropEdits = (removedIds: readonly number[]): Array<[string, string]> => {
+    const dropped: Array<[string, string]> = [];
+    if (edits.size === 0) return dropped;
+    const gone = new Set(removedIds);
+    // Walk the sparse edits, not every cell of every removed row.
+    for (const [key, original] of edits) {
+      if (gone.has(Number(key.slice(0, key.indexOf(':'))))) dropped.push([key, original]);
+    }
+    for (const [key] of dropped) edits.delete(key);
+    return dropped;
+  };
+
+  /**
+   * Writes one existing cell with edit tracking and no notification. True when the value
+   * changed. A recorder, when given, gets the write for the journal.
+   */
+  const writeCell = (row: number, col: number, value: string, recorder?: CellsEntry): boolean => {
     const current = rows[row][col];
     if (current === value) return false;
     const id = ids[row];
@@ -201,8 +411,16 @@ export function createCrtStore(table: CrtTableData): CrtStore {
       }
     }
     rows[row][col] = value;
+    if (recorder) {
+      recorder.rowIds.push(id);
+      recorder.cols.push(col);
+      recorder.before.push(current);
+      recorder.after.push(value);
+    }
     return true;
   };
+
+  const newCellsEntry = (): CellsEntry => ({ kind: 'cells', rowIds: [], cols: [], before: [], after: [] });
 
   const emit = (): void => {
     versionNumber += 1;
@@ -211,6 +429,274 @@ export function createCrtStore(table: CrtTableData): CrtStore {
       if (entry.active) entry.fn();
     }
   };
+
+  /** Notifies now, or when the running batch ends. */
+  const notify = (): void => {
+    if (openBatch) held = true;
+    else emit();
+  };
+
+  // ---- journal: cost, labels, recording ----
+
+  const entryCost = (entry: JournalEntry): number => {
+    switch (entry.kind) {
+      case 'cells':
+        return entry.rowIds.length;
+      case 'insert':
+      case 'delete':
+        return entry.ids.length * cols;
+      case 'move':
+        return entry.indexes.length;
+      default: {
+        let sum = 0;
+        for (const child of entry.children) sum += entryCost(child);
+        return sum;
+      }
+    }
+  };
+
+  /** Label for a batch that was not given one. */
+  const describeEntry = (entry: JournalEntry): string => {
+    switch (entry.kind) {
+      case 'cells': {
+        const distinct = new Set<number>();
+        for (let i = 0; i < entry.rowIds.length; i++) distinct.add(entry.rowIds[i] * cols + entry.cols[i]);
+        return cellsLabel(distinct.size);
+      }
+      case 'insert':
+        return rowsLabel('Insert', entry.ids.length);
+      case 'delete':
+        return rowsLabel('Delete', entry.ids.length);
+      case 'move':
+        return rowsLabel('Move', entry.indexes.length);
+      default:
+        return `Make ${formatCount(entry.children.length)} changes`;
+    }
+  };
+
+  const dropRedo = (): void => {
+    for (const step of redoStack) storedCells -= step.cost;
+    redoStack.length = 0;
+  };
+
+  /** Puts a finished step on the undo stack, clears redo, and trims the oldest steps past the caps. */
+  const pushStep = (entry: JournalEntry, label: string): void => {
+    dropRedo();
+    const cost = entryCost(entry);
+    undoStack.push({ entry, label, cost });
+    storedCells += cost;
+    // The newest step always stays, so the last change can be undone even when one batch alone is huge.
+    let drop = 0;
+    while (
+      undoStack.length - drop > 1 &&
+      (undoStack.length - drop > CRT_MAX_HISTORY_ENTRIES || storedCells > CRT_MAX_HISTORY_CELLS)
+    ) {
+      storedCells -= undoStack[drop].cost;
+      drop += 1;
+    }
+    if (drop > 0) undoStack.splice(0, drop);
+  };
+
+  /** Adds an entry to a running batch. Writes that follow each other join one cells entry. */
+  const addChild = (children: JournalEntry[], entry: JournalEntry): void => {
+    const last = children[children.length - 1];
+    if (entry.kind === 'cells' && last !== undefined && last.kind === 'cells') {
+      for (let i = 0; i < entry.rowIds.length; i++) {
+        last.rowIds.push(entry.rowIds[i]);
+        last.cols.push(entry.cols[i]);
+        last.before.push(entry.before[i]);
+        last.after.push(entry.after[i]);
+      }
+    } else {
+      children.push(entry);
+    }
+  };
+
+  /**
+   * Records the entries of one change, in the order they were applied. Outside a batch they
+   * become a step (a group when there are several) and listeners are told; inside a batch
+   * they wait for the batch to end.
+   */
+  const journal = (entries: JournalEntry[], label: string): void => {
+    if (entries.length === 0) return;
+    if (openBatch) {
+      for (const entry of entries) addChild(openBatch.children, entry);
+      held = true;
+      return;
+    }
+    pushStep(entries.length === 1 ? entries[0] : { kind: 'group', children: entries }, label);
+    emit();
+  };
+
+  const finishBatch = (finished: OpenBatch): void => {
+    const children = finished.children;
+    if (children.length > 0) {
+      const entry: JournalEntry = children.length === 1 ? children[0] : { kind: 'group', children };
+      pushStep(entry, finished.label || describeEntry(entry));
+    }
+    if (held) {
+      held = false;
+      emit();
+    }
+  };
+
+  const clearHistory = (): void => {
+    undoStack.length = 0;
+    redoStack.length = 0;
+    storedCells = 0;
+    // What a running batch recorded so far belongs to rows that no longer exist.
+    if (openBatch) openBatch.children.length = 0;
+  };
+
+  // ---- journal: undo and redo ----
+
+  const touchRows = (touched: Touched, rowIds: readonly number[]): void => {
+    for (const id of rowIds) touched.ids.push(id);
+    touched.c0 = 0;
+    touched.c1 = lastCol;
+  };
+
+  /** After rows were removed: the row now sitting where they were, clamped. None in an empty table. */
+  const touchAnchor = (touched: Touched, index: number): void => {
+    if (rows.length === 0) return;
+    const id = ids[Math.min(index, rows.length - 1)];
+    if (touched.ids[touched.ids.length - 1] !== id) touched.ids.push(id);
+    touched.c0 = 0;
+    touched.c1 = lastCol;
+  };
+
+  const applyCells = (entry: CellsEntry, undoing: boolean, touched: Touched): void => {
+    const count = entry.rowIds.length;
+    const values = undoing ? entry.before : entry.after;
+    let lastId = -1;
+    for (let k = 0; k < count; k++) {
+      // Undo walks backwards, so a cell written twice ends on its oldest value.
+      const i = undoing ? count - 1 - k : k;
+      const id = entry.rowIds[i];
+      const row = findRow(id, count);
+      if (row < 0) continue;
+      const col = entry.cols[i];
+      writeCell(row, col, values[i]);
+      if (id !== lastId) {
+        touched.ids.push(id);
+        lastId = id;
+      }
+      if (col < touched.c0) touched.c0 = col;
+      if (col > touched.c1) touched.c1 = col;
+    }
+  };
+
+  const reinsertRun = (entry: InsertEntry, touched: Touched): void => {
+    // concat instead of splice(at, 0, ...rows): no argument limit for large inserts.
+    rows = rows.slice(0, entry.at).concat(entry.rows, rows.slice(entry.at));
+    ids = ids.slice(0, entry.at).concat(entry.ids, ids.slice(entry.at));
+    idsChanged();
+    touchRows(touched, entry.ids);
+  };
+
+  const removeRun = (entry: InsertEntry, touched: Touched): void => {
+    rows.splice(entry.at, entry.ids.length);
+    ids.splice(entry.at, entry.ids.length);
+    idsChanged();
+    touchAnchor(touched, entry.at);
+  };
+
+  const restoreRows = (entry: DeleteEntry, touched: Touched): void => {
+    const total = rows.length + entry.ids.length;
+    const mergedRows = new Array<string[]>(total);
+    const mergedIds = new Array<number>(total);
+    let back = 0;
+    let kept = 0;
+    for (let i = 0; i < total; i++) {
+      if (back < entry.positions.length && entry.positions[back] === i) {
+        mergedRows[i] = entry.rows[back];
+        mergedIds[i] = entry.ids[back];
+        back += 1;
+      } else {
+        mergedRows[i] = rows[kept];
+        mergedIds[i] = ids[kept];
+        kept += 1;
+      }
+    }
+    rows = mergedRows;
+    ids = mergedIds;
+    idsChanged();
+    for (const [key, original] of entry.dropped) edits.set(key, original);
+    touchRows(touched, entry.ids);
+  };
+
+  const removeAgain = (entry: DeleteEntry, touched: Touched): void => {
+    for (const [key] of entry.dropped) edits.delete(key);
+    removePositions(entry.positions);
+    // Row positions[i] was followed by the row that now sits at positions[i] - i.
+    for (let i = 0; i < entry.positions.length; i++) touchAnchor(touched, entry.positions[i] - i);
+  };
+
+  const applyMove = (entry: MoveEntry, undoing: boolean, touched: Touched): void => {
+    const shift = undoing ? -entry.delta : entry.delta;
+    // The recorded indexes are where the rows ended up after the original move.
+    const from = undoing ? entry.indexes : entry.indexes.map((r) => r - entry.delta);
+    moveSelected(from, shift as -1 | 1);
+    touchRows(
+      touched,
+      from.map((r) => ids[r + shift]),
+    );
+  };
+
+  /** Applies the inverse of an entry (undoing) or the entry itself (redoing). */
+  const applyEntry = (entry: JournalEntry, undoing: boolean, touched: Touched): void => {
+    switch (entry.kind) {
+      case 'cells':
+        applyCells(entry, undoing, touched);
+        break;
+      case 'insert':
+        if (undoing) removeRun(entry, touched);
+        else reinsertRun(entry, touched);
+        break;
+      case 'delete':
+        if (undoing) restoreRows(entry, touched);
+        else removeAgain(entry, touched);
+        break;
+      case 'move':
+        applyMove(entry, undoing, touched);
+        break;
+      default:
+        if (undoing) {
+          for (let i = entry.children.length - 1; i >= 0; i--) applyEntry(entry.children[i], true, touched);
+        } else {
+          for (const child of entry.children) applyEntry(child, false, touched);
+        }
+    }
+  };
+
+  /** Bounding box of what was touched, in the row indexes the table has after the whole step. */
+  const resolveRegion = (touched: Touched): CrtRange | null => {
+    if (rows.length === 0 || touched.ids.length === 0) return null;
+    let r0 = Number.POSITIVE_INFINITY;
+    let r1 = -1;
+    for (const id of touched.ids) {
+      const row = findRow(id, touched.ids.length);
+      if (row < 0) continue;
+      if (row < r0) r0 = row;
+      if (row > r1) r1 = row;
+    }
+    if (r1 < 0) return null;
+    return { r0, c0: touched.c0, r1, c1: touched.c1 };
+  };
+
+  const stepThrough = (from: JournalStep[], to: JournalStep[], undoing: boolean): CrtHistoryResult | null => {
+    if (!overridden || openBatch !== null) return null;
+    const step = from.pop();
+    if (step === undefined) return null;
+    const touched: Touched = { ids: [], c0: cols, c1: -1 };
+    applyEntry(step.entry, undoing, touched);
+    to.push(step);
+    const region = resolveRegion(touched);
+    emit();
+    return { label: step.label, region };
+  };
+
+  const historyReady = (): boolean => overridden && openBatch === null;
 
   return {
     table,
@@ -227,8 +713,9 @@ export function createCrtStore(table: CrtTableData): CrtStore {
 
     setCell(row, col, value) {
       if (!overridden || !inRange(row, col)) return false;
-      if (!writeCell(row, col, value)) return false;
-      emit();
+      const recorder = newCellsEntry();
+      if (!writeCell(row, col, value, recorder)) return false;
+      journal([recorder], cellsLabel(1));
       return true;
     },
 
@@ -241,8 +728,8 @@ export function createCrtStore(table: CrtTableData): CrtStore {
       // concat instead of splice(at, 0, ...fresh): no argument limit for large inserts.
       rows = rows.slice(0, at).concat(fresh, rows.slice(at));
       ids = ids.slice(0, at).concat(freshIds, ids.slice(at));
-      structureTouched = true;
-      emit();
+      idsChanged();
+      journal([{ kind: 'insert', at, ids: freshIds, rows: fresh }], rowsLabel('Insert', fresh.length));
       return at;
     },
 
@@ -250,26 +737,14 @@ export function createCrtStore(table: CrtTableData): CrtStore {
       if (!overridden) return 0;
       const doomed = normalizeIndexes(indexes);
       if (doomed.length === 0) return 0;
-      const doomedRows = new Set(doomed);
-      const removedIds = new Set<number>();
-      const keptRows: string[][] = [];
-      const keptIds: number[] = [];
-      for (let r = 0; r < rows.length; r++) {
-        if (doomedRows.has(r)) {
-          removedIds.add(ids[r]);
-        } else {
-          keptRows.push(rows[r]);
-          keptIds.push(ids[r]);
-        }
-      }
-      // Walk the sparse edits, not every cell of every removed row.
-      for (const key of Array.from(edits.keys())) {
-        if (removedIds.has(Number(key.slice(0, key.indexOf(':'))))) edits.delete(key);
-      }
-      rows = keptRows;
-      ids = keptIds;
-      structureTouched = true;
-      emit();
+      const removedRows = doomed.map((r) => rows[r]);
+      const removedIds = doomed.map((r) => ids[r]);
+      const dropped = dropEdits(removedIds);
+      removePositions(doomed);
+      journal(
+        [{ kind: 'delete', positions: doomed, ids: removedIds, rows: removedRows, dropped }],
+        rowsLabel('Delete', doomed.length),
+      );
       return doomed.length;
     },
 
@@ -279,15 +754,13 @@ export function createCrtStore(table: CrtTableData): CrtStore {
       if (selected.length === 0) return [];
       if (delta === -1) {
         if (selected[0] === 0) return [];
-        // Ascending: a contiguous block moves as a unit, each row hops over the one above it.
-        for (const r of selected) swapRows(r - 1, r);
-      } else {
-        if (selected[selected.length - 1] === rows.length - 1) return [];
-        for (let i = selected.length - 1; i >= 0; i--) swapRows(selected[i], selected[i] + 1);
+      } else if (selected[selected.length - 1] === rows.length - 1) {
+        return [];
       }
-      structureTouched = true;
-      emit();
-      return selected.map((r) => r + delta);
+      moveSelected(selected, delta);
+      const moved = selected.map((r) => r + delta);
+      journal([{ kind: 'move', indexes: moved, delta }], rowsLabel('Move', moved.length));
+      return moved.slice();
     },
 
     setCells(row, col, matrix, grow) {
@@ -313,15 +786,19 @@ export function createCrtStore(table: CrtTableData): CrtStore {
 
       const existing = Math.min(written, rows.length - row);
       const width = cols - col;
+      const recorder = newCellsEntry();
       let changed = 0;
       for (let i = 0; i < existing; i++) {
         const line = matrix[i];
         const limit = Math.min(line.length, width);
         for (let j = 0; j < limit; j++) {
-          if (writeCell(row + i, col + j, line[j])) changed += 1;
+          if (writeCell(row + i, col + j, line[j], recorder)) changed += 1;
         }
       }
       // Appended rows start blank, so a cell counts as changed when it is not ''.
+      const appendAt = rows.length;
+      const appendedIds: number[] = [];
+      const appendedRows: string[][] = [];
       for (let i = existing; i < written; i++) {
         const line = matrix[i];
         const limit = Math.min(line.length, width);
@@ -331,11 +808,20 @@ export function createCrtStore(table: CrtTableData): CrtStore {
           if (line[j] !== '') changed += 1;
         }
         rows.push(fresh);
-        ids.push(nextRowId++);
+        const id = nextRowId++;
+        ids.push(id);
+        appendedRows.push(fresh);
+        appendedIds.push(id);
       }
       const added = written - existing;
-      if (added > 0) structureTouched = true;
-      if (changed > 0 || added > 0) emit();
+      if (added > 0) idsChanged();
+
+      // The written cells and the appended rows are one step. Undo removes the rows first, then
+      // the cell edits, because it walks the entries backwards.
+      const entries: JournalEntry[] = [];
+      if (recorder.rowIds.length > 0) entries.push(recorder);
+      if (added > 0) entries.push({ kind: 'insert', at: appendAt, ids: appendedIds, rows: appendedRows });
+      journal(entries, changed > 0 ? cellsLabel(changed) : rowsLabel('Insert', added));
       return { changed, added, cutColumns, overflow: false };
     },
 
@@ -346,13 +832,14 @@ export function createCrtStore(table: CrtTableData): CrtStore {
       const bottom = Math.min(rows.length - 1, Math.max(r0, r1));
       const left = Math.max(0, Math.min(c0, c1));
       const right = Math.min(cols - 1, Math.max(c0, c1));
+      const recorder = newCellsEntry();
       let changed = 0;
       for (let r = top; r <= bottom; r++) {
         for (let c = left; c <= right; c++) {
-          if (writeCell(r, c, value)) changed += 1;
+          if (writeCell(r, c, value, recorder)) changed += 1;
         }
       }
-      if (changed > 0) emit();
+      if (changed > 0) journal([recorder], cellsLabel(changed));
       return changed;
     },
 
@@ -365,8 +852,8 @@ export function createCrtStore(table: CrtTableData): CrtStore {
       edits = new Map();
       overridden = true;
       rowsReplaced = true;
-      structureTouched = false;
-      emit();
+      clearHistory();
+      notify();
     },
 
     reset() {
@@ -376,11 +863,11 @@ export function createCrtStore(table: CrtTableData): CrtStore {
       edits = new Map();
       overridden = false;
       rowsReplaced = loadedOverridden;
-      structureTouched = false;
-      emit();
+      clearHistory();
+      notify();
     },
 
-    isDirty: () => rowsReplaced || structureTouched || edits.size > 0,
+    isDirty: () => rowsReplaced || edits.size > 0 || structureChanged(),
     changedCellCount: () => edits.size,
     isCellEdited: (row, col) => {
       const id = Number.isInteger(row) && row >= 0 && row < rows.length ? ids[row] : -1;
@@ -396,6 +883,26 @@ export function createCrtStore(table: CrtTableData): CrtStore {
         entry.active = false;
         listeners = listeners.filter((e) => e !== entry);
       };
+    },
+
+    undo: () => stepThrough(undoStack, redoStack, true),
+    redo: () => stepThrough(redoStack, undoStack, false),
+    canUndo: () => historyReady() && undoStack.length > 0,
+    canRedo: () => historyReady() && redoStack.length > 0,
+    undoLabel: () => (historyReady() && undoStack.length > 0 ? undoStack[undoStack.length - 1].label : null),
+    redoLabel: () => (historyReady() && redoStack.length > 0 ? redoStack[redoStack.length - 1].label : null),
+
+    batch<T>(fn: () => T, label?: string): T {
+      // A nested batch joins the outermost one, which keeps its label.
+      if (openBatch !== null) return fn();
+      const mine: OpenBatch = { children: [], label };
+      openBatch = mine;
+      try {
+        return fn();
+      } finally {
+        openBatch = null;
+        finishBatch(mine);
+      }
     },
   };
 }

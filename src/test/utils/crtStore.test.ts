@@ -6,10 +6,16 @@
  * @description
  * Tests for the cross reference table store: loading, normalization, editing,
  * override and reset, dirty tracking, versioning, subscriptions and row ids, and the
- * row operations (insert, delete, move, block write, fill, new rows).
+ * row operations (insert, delete, move, block write, fill, new rows). The change journal
+ * (undo, redo, batch) has its own file, crtStoreJournal.test.ts.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { CRT_MAX_ROWS, createCrtStore } from '../../utils/crt/crtStore';
+import {
+  CRT_MAX_HISTORY_CELLS,
+  CRT_MAX_HISTORY_ENTRIES,
+  CRT_MAX_ROWS,
+  createCrtStore,
+} from '../../utils/crt/crtStore';
 import type { CrtTableData } from '../../utils/crt/crtTypes';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -838,6 +844,13 @@ const sizedTable = (rowCount: number): CrtTableData =>
 describe('createCrtStore: CRT_MAX_ROWS', () => {
   it('is 10,000', () => {
     expect(CRT_MAX_ROWS).toBe(10000);
+  });
+});
+
+describe('createCrtStore: history limits', () => {
+  it('keeps 500 steps and 1,000,000 stored cells', () => {
+    expect(CRT_MAX_HISTORY_ENTRIES).toBe(500);
+    expect(CRT_MAX_HISTORY_CELLS).toBe(1000000);
   });
 });
 
@@ -1724,12 +1737,63 @@ describe('createCrtStore: dirty with row operations', () => {
     expect(grow.isDirty()).toBe(true);
   });
 
-  it('stays dirty after an insert is deleted again (simplification, not a diff)', () => {
+  it('is clean again after an insert is deleted again: the ids are back to 0..n-1 in order', () => {
     const store = createCrtStore(makeFour());
     store.insertRows(0, [['a', '', '']]);
+    expect(store.isDirty()).toBe(true);
     store.deleteRows([0]);
     expect(allRows(store)).toEqual(makeFour().overrideRows);
+    expect(rowIds(store)).toEqual([0, 1, 2, 3]);
+    expect(store.isDirty()).toBe(false);
+  });
+
+  it('stays dirty after a row is deleted and identical content is inserted (the new row has a new id)', () => {
+    const store = createCrtStore(makeFour());
+    store.deleteRows([1]);
+    store.insertRows(1, [['B0', 'b1', 'b2']]);
+    expect(allRows(store)).toEqual(makeFour().overrideRows);
+    expect(rowIds(store)).toEqual([0, 4, 2, 3]);
     expect(store.isDirty()).toBe(true);
+  });
+
+  it('is clean again after a row is moved down and back up, and after two rows swap and swap back', () => {
+    const store = createCrtStore(makeFour());
+    store.moveRows([1], 1);
+    expect(store.isDirty()).toBe(true);
+    store.moveRows([2], -1);
+    expect(rowIds(store)).toEqual([0, 1, 2, 3]);
+    expect(store.isDirty()).toBe(false);
+
+    store.moveRows([0, 1], 1);
+    expect(store.isDirty()).toBe(true);
+    store.moveRows([1, 2], -1);
+    expect(store.isDirty()).toBe(false);
+  });
+
+  it('is dirty when rows are removed from the end, and clean when they come back through undo', () => {
+    const store = createCrtStore(makeFour());
+    store.deleteRows([3]);
+    expect(rowIds(store)).toEqual([0, 1, 2]);
+    expect(store.isDirty()).toBe(true);
+    store.undo();
+    expect(store.isDirty()).toBe(false);
+  });
+
+  it('stays dirty after an edit is reverted when a row was moved in between', () => {
+    const store = createCrtStore(makeFour());
+    store.setCell(0, 0, 'edited');
+    store.moveRows([0], 1);
+    store.setCell(1, 0, 'A0');
+    expect(store.changedCellCount()).toBe(0);
+    expect(store.isDirty()).toBe(true);
+  });
+
+  it('is exact after an appended row is deleted again', () => {
+    const store = createCrtStore(makeFour());
+    store.setCells(3, 0, [['D0'], ['']], true);
+    expect(store.isDirty()).toBe(true);
+    store.deleteRows([4]);
+    expect(store.isDirty()).toBe(false);
   });
 
   it('is not dirty after refused or empty operations', () => {
