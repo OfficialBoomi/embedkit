@@ -963,3 +963,55 @@
   outline: 2px solid var(--crt-match-edge);
   outline-offset: -2px;
 }
+
+/* ---------- Key warnings and edge space markers (warnings display) ---------- */
+
+/*
+ * The chips in the info row that say a table has blank or duplicate keys. Each is a button that
+ * jumps to the next flagged row, so it keeps the chip shape and adds the danger colour (the one
+ * the warning notice under the grid uses), a pointer and a focus ring. Font properties are set
+ * one by one: the font shorthand would also reset the chip's line height.
+ */
+.boomi-crt-chip--warn {
+  margin: 0;
+  border-color: var(--crt-danger);
+  background-color: color-mix(in srgb, var(--crt-danger) 10%, var(--crt-surface));
+  color: var(--crt-danger);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boomi-crt-chip--warn:hover {
+  background-color: color-mix(in srgb, var(--crt-danger) 20%, var(--crt-surface));
+}
+
+.boomi-crt-chip--warn:focus-visible {
+  outline: 2px solid var(--crt-focus);
+  outline-offset: 1px;
+}
+
+/*
+ * The key cell of a row whose key is blank or appears in another row: a bar on its left edge and
+ * a light tint. Both are inset shadows, so they sit above the cell's own background layers (the
+ * row stripe, the edited and range tints, the opaque frozen column) without a rule for each
+ * combination. The tint is a shadow with a spread larger than any cell, clipped to the cell. The
+ * active cell's outline, the find tint and the open editor are drawn separately and still show.
+ */
+.boomi-crt-cell--warn {
+  box-shadow:
+    inset 3px 0 0 var(--crt-danger),
+    inset 0 0 0 400px color-mix(in srgb, var(--crt-danger) 12%, transparent);
+}
+
+/*
+ * Whitespace at the start or end of a cell, one dot per character. A faint pill behind the dots
+ * makes a trailing run easy to see next to the text.
+ */
+.boomi-crt-ws {
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--crt-muted) 16%, transparent);
+  color: var(--crt-muted);
+  letter-spacing: 1px;
+}

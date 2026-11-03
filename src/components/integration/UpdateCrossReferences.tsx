@@ -22,16 +22,23 @@
  * the selected table as you type. Its state lives here, above the grid, so the query survives
  * switching tables; see crt/useCrtFind.
  *
+ * While a table is editable its key column is checked for blank and duplicate keys after every
+ * change. Each problem shows as a warning chip in the info row (and in the full screen caption);
+ * pressing a chip jumps to the next flagged row. The grid gets the same result to mark the key
+ * cells. A table that is not editable shows no key warnings.
+ *
  * @return {JSX.Element} The rendered UpdateCrossReferences component.
  */
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { IntegrationPackInstance } from '@boomi/embedkit-sdk';
 import { usePlugin } from '../../context/pluginContext';
 import { useDialogs } from '../../hooks/useDialogs';
 import { getCrtDataSource } from '../../utils/crt/crtDataSource';
 import { createCrtStore, type CrtStore } from '../../utils/crt/crtStore';
 import type { CrtMatchType, CrtTableData } from '../../utils/crt/crtTypes';
+import { checkKeys } from '../../utils/crt/crtWarnings';
+import { buildKeyChips, nextFlaggedRow, type CrtKeyChip } from '../../utils/crt/crtWarningsView';
 import AjaxLoader from '../ui/AjaxLoader';
 import Button from '../ui/Button';
 import Dialog from '../ui/Dialog';
@@ -81,6 +88,7 @@ const MATCH_LABEL: Record<CrtMatchType, string> = {
 
 const NO_TABLES: CrtTableData[] = [];
 const NO_KEYS: ReadonlySet<string> = new Set();
+const NO_CHIPS: CrtKeyChip[] = [];
 const NOOP_SUBSCRIBE = () => () => {};
 const ZERO_VERSION = () => 0;
 
@@ -284,7 +292,42 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   const selectedTable = tables.find((t) => tableKey(t) === selectedKey) ?? null;
   const store = selectedTable ? (storesRef.current.get(tableKey(selectedTable)) ?? null) : null;
   // Live state (override, row count) of the selected table; other tables only change when selected.
-  useStoreVersion(store);
+  const storeVersion = useStoreVersion(store);
+
+  // Blank and duplicate keys, only while the table can be edited. The store changes in place, so its
+  // version is what says the rows are not the ones that were checked.
+  const keyWarnings = useMemo(
+    () =>
+      store && store.isEditable() ? checkKeys((r, c) => store.getCell(r, c), store.rowCount()) : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [store, storeVersion]
+  );
+  const keyChips = keyWarnings ? buildKeyChips(keyWarnings) : NO_CHIPS;
+
+  // A chip moves the cursor to column 0 of the next flagged row and gives the grid focus, so the
+  // keys work at once. showCell scrolls the row into view.
+  const jumpToKey = useCallback((rows: readonly number[]) => {
+    const handle = gridRef.current;
+    if (!handle) return;
+    const row = nextFlaggedRow(rows, handle.activeCell().row);
+    if (row < 0) return;
+    handle.showCell(row, 0);
+    handle.focus();
+  }, []);
+
+  // Nothing at all in the markup when the table has nothing to report.
+  const renderKeyChips = () =>
+    keyChips.map((chip) => (
+      <button
+        key={chip.kind}
+        type="button"
+        className="boomi-crt-chip boomi-crt-chip--warn"
+        title={chip.title}
+        onClick={() => jumpToKey(chip.rows)}
+      >
+        {chip.label}
+      </button>
+    ));
 
   const unavailableMode =
     boomiConfig?.components?.[componentKey]?.crossReferenceTables?.unavailableTables ?? 'disabled';
@@ -508,6 +551,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           >
             {overridden ? 'Overridden' : 'Default'}
           </span>
+          {renderKeyChips()}
           <span className="boomi-crt-count">
             {plural(current.rowCount(), 'row', 'rows')}, {plural(current.colCount(), 'column', 'columns')}
           </span>
@@ -531,6 +575,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
               >
                 {overridden ? 'Overridden' : 'Default'}
               </span>
+              {renderKeyChips()}
               <span className="boomi-crt-count">
                 {plural(current.rowCount(), 'row', 'rows')}, {plural(current.colCount(), 'column', 'columns')}
               </span>
@@ -584,6 +629,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
               confirmDelete={confirmDelete}
               find={find.highlight}
               onFind={find.onCommand}
+              keyWarnings={keyWarnings ?? undefined}
             />
           </div>
 

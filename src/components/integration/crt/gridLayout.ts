@@ -125,14 +125,16 @@ export const estimateRowSize = (): number => ROW_HEIGHT;
 
 /**
  * Precomputed class strings: bit 1 frozen, 2 active, 4 edited, 8 editing, 16 in the cell range,
- * 32 matches the find query, 64 is the current find match. The current match is also a match,
- * so a cell that is current carries both bits (FLAG_MATCH_CURRENT).
+ * 32 matches the find query, 64 is the current find match, 128 is a key cell with a warning
+ * (blank or duplicate). The current match is also a match, so a cell that is current carries
+ * both bits (FLAG_MATCH_CURRENT).
  */
 export const FLAG_MATCH = 32;
 export const FLAG_MATCH_CURRENT = 96;
+export const FLAG_KEY_WARN = 128;
 
 export const CELL_CLASS: string[] = [];
-for (let flags = 0; flags < 128; flags++) {
+for (let flags = 0; flags < 256; flags++) {
   CELL_CLASS.push(
     [
       'boomi-crt-cell',
@@ -143,6 +145,7 @@ for (let flags = 0; flags < 128; flags++) {
       flags & 16 ? 'boomi-crt-cell--selected' : '',
       flags & 32 ? 'boomi-crt-cell--match' : '',
       flags & 64 ? 'boomi-crt-cell--match-current' : '',
+      flags & 128 ? 'boomi-crt-cell--warn' : '',
     ]
       .filter(Boolean)
       .join(' ')

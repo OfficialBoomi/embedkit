@@ -24,6 +24,10 @@
  * hands the find keys to `onFind`, and lets the screen step through matches by the handle
  * (showCell moves the active cell and scrolls without taking focus).
  *
+ * Key warnings work the same way: the screen checks the key column and gives the grid the result
+ * (`keyWarnings`). The grid turns it into one small number per row, so a memoized row only has to
+ * know whether its own key is blank or duplicated, and ignores it on a read only table.
+ *
  * This file is the composition: it owns every ref and piece of state, the memoized callbacks
  * and effects that reset them, the virtualizer and the markup. The operations and handlers
  * are in the use* hooks beside it, plain per render closures over one context object (see
@@ -47,6 +51,7 @@ import {
 } from 'react';
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
 import { resolveNavKey } from '../../../utils/crt/crtKeymap';
+import { buildKeyRowFlags } from '../../../utils/crt/crtWarningsView';
 import {
   clampSelection,
   INITIAL_SELECTION,
@@ -104,7 +109,7 @@ const COMMIT_KEYS: Record<CommitMove, { key: string; shiftKey?: boolean }> = {
 };
 
 const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
-  { store, ariaLabel, onBlocked, onInfo, onNotice, confirmDelete, find, onFind },
+  { store, ariaLabel, onBlocked, onInfo, onNotice, confirmDelete, find, onFind, keyWarnings },
   handleRef
 ) {
   const version = useSyncExternalStore(store.subscribe, store.version);
@@ -423,6 +428,11 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
   const range = rowCount > 0 ? selectionRange(cur) : null;
   const multiRange = range !== null && isMultiCell(range) ? range : null;
   const checkedSet = useMemo(() => new Set(cur.checked), [cur.checked]);
+  // Row to key flag, once per set of warnings. A read only table never shows key warnings.
+  const keyFlags = useMemo(
+    () => (keyWarnings && editable ? buildKeyRowFlags(keyWarnings) : null),
+    [keyWarnings, editable]
+  );
   const findMasks = find?.masks;
   const findCurrent = find?.current ?? null;
   const allChecked = rowCount > 0 && cur.checked.length === rowCount;
@@ -455,6 +465,7 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
         rowNew={store.isRowNew(item.index)}
         findMask={findMasks?.get(item.index) ?? 0}
         findCol={findCurrent !== null && findCurrent.row === item.index ? findCurrent.col : -1}
+        keyWarn={keyFlags?.get(item.index) ?? 0}
       />
     );
   }

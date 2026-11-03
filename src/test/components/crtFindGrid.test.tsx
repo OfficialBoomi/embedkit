@@ -39,7 +39,8 @@ const makeTable = (rows: number, overridden = true): CrtTableData => {
 
 describe('the class tables', () => {
   it('keeps every earlier combination exactly as it was', () => {
-    expect(CELL_CLASS).toHaveLength(128);
+    // The key warning flag (128) doubled the table; the first 128 entries are the ones below.
+    expect(CELL_CLASS).toHaveLength(256);
     expect(CELL_CLASS[0]).toBe('boomi-crt-cell');
     expect(CELL_CLASS[1]).toBe('boomi-crt-cell boomi-crt-cell--frozen');
     expect(CELL_CLASS[2]).toBe('boomi-crt-cell boomi-crt-cell--active');

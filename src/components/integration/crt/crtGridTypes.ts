@@ -14,6 +14,7 @@ import type { GridSelection } from '../../../utils/crt/crtGridSelection';
 import type { CrtFindCommand } from '../../../utils/crt/crtFindView';
 import type { CrtMatch } from '../../../utils/crt/crtSearch';
 import type { CrtCell } from '../../../utils/crt/crtTypes';
+import type { CrtKeyWarnings } from '../../../utils/crt/crtWarnings';
 import type { GridLayout } from './gridLayout';
 
 /** Everything the grid can do to a table, for the toolbar, the menu and the keyboard alike. */
@@ -111,6 +112,7 @@ export type FinishEdit = (value: string | null, move: CommitMove | null, refocus
  * @property {(rowCount: number) => Promise<boolean>} [confirmDelete] - Asked before deleting two or more rows.
  * @property {CrtFindHighlight} [find] - The matching cells to highlight and the current match. Absent when find is closed.
  * @property {(command: CrtFindCommand) => void} [onFind] - Ctrl or Cmd+F, F3 and Shift+F3 while the grid has focus. Without it the grid leaves those keys alone.
+ * @property {CrtKeyWarnings} [keyWarnings] - The blank and duplicate keys of the table. The key cell of each flagged row gets a warning style, and only while the table is editable. Absent draws none.
  */
 export interface CrtGridProps {
   store: CrtStore;
@@ -121,6 +123,7 @@ export interface CrtGridProps {
   confirmDelete?: (rowCount: number) => Promise<boolean>;
   find?: CrtFindHighlight;
   onFind?: (command: CrtFindCommand) => void;
+  keyWarnings?: CrtKeyWarnings;
 }
 
 /** The callbacks the grid reads through a ref, so a handler that outlives a render never sees stale ones. */

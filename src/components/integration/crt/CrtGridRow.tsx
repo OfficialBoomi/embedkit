@@ -10,19 +10,27 @@
  * moving the active cell redraws two rows, not the whole window. Class strings come from
  * precomputed tables (see gridLayout) so a cell never builds one while rendering.
  *
+ * Whitespace at the edge of a cell is drawn as visible markers (see crtCellMarkers), in every
+ * table, editable or not. A cell with none keeps a plain text child, as it always had, and the
+ * open editor shows the real characters. The key cell of a row whose key is blank or duplicated
+ * gets a warning style through `keyWarn`, a number so the memo stays cheap.
+ *
  * @return {JSX.Element} The rendered row.
  */
 
 import { memo, useCallback, useRef } from 'react';
+import { markEdgeSpaces, type CrtMarkedText } from '../../../utils/crt/crtCellMarkers';
 import { maskHasCol } from '../../../utils/crt/crtFindView';
 import { resolveEditKey } from '../../../utils/crt/crtKeymap';
 import type { CrtStore } from '../../../utils/crt/crtStore';
+import { cellTooltip, KEY_WARN_NONE } from '../../../utils/crt/crtWarningsView';
 import type { EditState, FinishEdit } from './crtGridTypes';
 import {
   CELL_CLASS,
   CHECK,
   CHECK_MIXED,
   CHECK_ON,
+  FLAG_KEY_WARN,
   FLAG_MATCH,
   FLAG_MATCH_CURRENT,
   GUTTER_CLASS,
@@ -121,6 +129,27 @@ export interface GridRowProps {
   findMask: number;
   /** Column of the current find match when it is in this row, otherwise -1. */
   findCol: number;
+  /** Warning on this row's key (first column): 1 blank, 2 duplicate, 0 none. Absent counts as none. */
+  keyWarn?: number;
+}
+
+/** The text of a cell with edge whitespace: markers, the middle as stored, markers. */
+function markedChildren(marked: CrtMarkedText): React.ReactNode {
+  return (
+    <>
+      {marked.lead !== '' && (
+        <span className="boomi-crt-ws" aria-hidden="true">
+          {marked.lead}
+        </span>
+      )}
+      {marked.middle}
+      {marked.trail !== '' && (
+        <span className="boomi-crt-ws" aria-hidden="true">
+          {marked.trail}
+        </span>
+      )}
+    </>
+  );
 }
 
 /** Memoized (primitive props only) so moving the active cell redraws two rows, not the whole window. */
@@ -140,6 +169,7 @@ const GridRow = memo(function GridRow({
   rowNew,
   findMask,
   findCol,
+  keyWarn = KEY_WARN_NONE,
 }: GridRowProps) {
   const cells: React.ReactNode[] = [];
   const cols = layout.widths.length;
@@ -148,13 +178,17 @@ const GridRow = memo(function GridRow({
     const isActive = c === activeCol;
     const editing = edit !== null && edit.col === c;
     const inSelection = c >= selC0 && c <= selC1;
+    // Null for nearly every cell, which then keeps its plain text child. The editor shows the real text.
+    const marked = editing ? null : markEdgeSpaces(text);
+    const warn = c === 0 ? keyWarn : KEY_WARN_NONE;
     const flags =
       (c === 0 ? 1 : 0) |
       (isActive ? 2 : 0) |
       (hasEdits && store.isCellEdited(row, c) ? 4 : 0) |
       (editing ? 8 : 0) |
       (inSelection && !isActive ? 16 : 0) |
-      (c === findCol ? FLAG_MATCH_CURRENT : maskHasCol(findMask, c) ? FLAG_MATCH : 0);
+      (c === findCol ? FLAG_MATCH_CURRENT : maskHasCol(findMask, c) ? FLAG_MATCH : 0) |
+      (warn !== KEY_WARN_NONE ? FLAG_KEY_WARN : 0);
     cells.push(
       <div
         key={c}
@@ -165,9 +199,15 @@ const GridRow = memo(function GridRow({
         className={CELL_CLASS[flags]}
         style={layout.styles[c]}
         data-c={c}
-        title={!editing && text.length > TITLE_MIN_LENGTH ? text : undefined}
+        title={editing ? undefined : cellTooltip(text.length > TITLE_MIN_LENGTH, text, marked, warn)}
       >
-        {editing ? <CellEditor edit={edit} onFinish={onFinishEdit} /> : text}
+        {editing ? (
+          <CellEditor edit={edit} onFinish={onFinishEdit} />
+        ) : marked === null ? (
+          text
+        ) : (
+          markedChildren(marked)
+        )}
       </div>
     );
   }
