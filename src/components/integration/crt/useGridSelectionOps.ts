@@ -6,14 +6,22 @@
  * @description
  * The operations that change the selection of the lookup table grid: extend the range, move
  * the active cell from the keyboard, select a block of rows, select all, select the rows of the
- * range, collapse, tick rows, and work out which rows an operation applies to. The selection
- * itself (state and the ref that mirrors it) lives in CrtGrid. These are plain closures over
- * the render's context, built on every render exactly as they were inside the component, so
- * nothing here is memoized and re-render timing is unchanged.
+ * range, collapse, tick rows, show what an undo or redo touched, and work out which rows an
+ * operation applies to. The selection itself (state and the ref that mirrors it) lives in
+ * CrtGrid. These are plain closures over the render's context, built on every render exactly
+ * as they were inside the component, so nothing here is memoized and re-render timing is
+ * unchanged.
  */
 
-import { indexesBetween, targetRows, toggleIndex, wholeGrid } from '../../../utils/crt/crtSelection';
 import {
+  indexesBetween,
+  targetRows,
+  toggleIndex,
+  wholeGrid,
+  type CrtRange,
+} from '../../../utils/crt/crtSelection';
+import {
+  INITIAL_SELECTION,
   isMultiCell,
   NO_ROWS,
   plainSelection,
@@ -29,6 +37,7 @@ export interface GridSelectionOps {
   moveActive: (row: number, col: number) => void;
   toggleActiveRow: () => void;
   selectBlock: (first: number, last: number, scrollRow?: number) => void;
+  selectRegion: (region: CrtRange | null) => void;
   selectAll: () => void;
   selectRow: () => void;
   collapse: () => void;
@@ -99,6 +108,34 @@ export function useGridSelectionOps(ctx: GridContext): GridSelectionOps {
     scrollTargetRef.current = { row: scrollRow, col: 0 };
   };
 
+  /**
+   * Shows what an undo or redo changed: the top left of the region is the active cell, the range
+   * spans the region and no row stays ticked (the rows behind the old ticks may have moved or
+   * gone). The scroll waits for the next render, like the row operations, because rows may have
+   * just come back. A null region (an empty table, or nothing to point at) keeps the active cell.
+   */
+  const selectRegion = (region: CrtRange | null) => {
+    if (store.rowCount() === 0) {
+      applySel(INITIAL_SELECTION);
+      return;
+    }
+    if (!region) {
+      const s = getSel();
+      applySel(plainSelection(s.active, s.active.row));
+      scrollTargetRef.current = { row: s.active.row, col: s.active.col };
+      return;
+    }
+    const top = { row: region.r0, col: region.c0 };
+    applySel({
+      active: top,
+      anchor: top,
+      focus: { row: region.r1, col: region.c1 },
+      checked: NO_ROWS,
+      rowAnchor: region.r0,
+    });
+    scrollTargetRef.current = { row: region.r0, col: region.c0 };
+  };
+
   const selectAll = () => {
     const grid = wholeGrid(store.rowCount(), store.colCount());
     if (!grid) return;
@@ -162,6 +199,7 @@ export function useGridSelectionOps(ctx: GridContext): GridSelectionOps {
     moveActive,
     toggleActiveRow,
     selectBlock,
+    selectRegion,
     selectAll,
     selectRow,
     collapse,

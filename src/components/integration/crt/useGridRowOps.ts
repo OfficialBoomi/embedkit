@@ -23,6 +23,9 @@ import type { GridContext } from './crtGridTypes';
 import type { GridSelectionOps } from './useGridSelectionOps';
 import { MAX_ROWS_MESSAGE } from './CrtToolbar';
 
+/** The undo step name for emptying cells (the Clear button, Delete and Backspace). */
+const CLEAR_LABEL = 'Clear contents';
+
 export interface GridRowOps {
   readRow: (row: number) => string[];
   addRow: () => void;
@@ -151,17 +154,24 @@ export function useGridRowOps(
     scrollTargetRef.current = { row: delta < 0 ? first : last, col: 0 };
   };
 
+  /**
+   * Empties the ticked rows, the cell range or the active cell. Ticked rows can be apart, so
+   * clearing them is one store call per run of rows: the batch makes them one undo step, and
+   * gives every case the same label instead of the store's 'Edit 12 cells'.
+   */
   const clearSelected = () => {
     if (store.rowCount() === 0) return;
     const s = getSel();
-    if (s.checked.length > 0) {
-      const lastCol = store.colCount() - 1;
-      for (const [first, last] of contiguousRuns(s.checked)) store.fillCells(first, 0, last, lastCol, '');
-      return;
-    }
-    const r = selectionRange(s);
-    if (isMultiCell(r)) store.fillCells(r.r0, r.c0, r.r1, r.c1, '');
-    else store.setCell(r.r0, r.c0, '');
+    store.batch(() => {
+      if (s.checked.length > 0) {
+        const lastCol = store.colCount() - 1;
+        for (const [first, last] of contiguousRuns(s.checked)) store.fillCells(first, 0, last, lastCol, '');
+        return;
+      }
+      const r = selectionRange(s);
+      if (isMultiCell(r)) store.fillCells(r.r0, r.c0, r.r1, r.c1, '');
+      else store.setCell(r.r0, r.c0, '');
+    }, CLEAR_LABEL);
   };
 
   return {

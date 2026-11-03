@@ -28,7 +28,9 @@ export type CrtOp =
   | 'paste-above'
   | 'paste-below'
   | 'clear'
-  | 'select-all';
+  | 'select-all'
+  | 'undo'
+  | 'redo';
 
 /** The imperative surface the screen uses: the toolbar runs operations through it. */
 export interface CrtGridHandle {
@@ -47,6 +49,12 @@ export interface CrtGridInfo {
   canMoveDown: boolean;
   atMaxRows: boolean;
   rowCount: number;
+  /** The table has a step to undo or redo. Always false on a read only table. */
+  canUndo: boolean;
+  canRedo: boolean;
+  /** What Undo or Redo would do (for example 'Delete 3 rows'), for a tooltip. Null when unavailable. */
+  undoLabel: string | null;
+  redoLabel: string | null;
 }
 
 export type NoticeKind = 'info' | 'warn';

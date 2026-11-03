@@ -34,6 +34,14 @@ import { MAX_ROWS_MESSAGE } from './CrtToolbar';
 /** How long a "paste with the keyboard next" request stays armed. */
 const PENDING_PASTE_MS = 10000;
 
+/**
+ * Undo step names. Every cut and paste makes one store call, so the batch around it does not
+ * change how many steps it is; it gives the step a name that says what the user did, where the
+ * store would name it after its effect ('Delete 3 rows', 'Edit 12 cells').
+ */
+const CUT_LABEL = 'Cut';
+const PASTE_LABEL = 'Paste';
+
 /** What a copy or cut put on the clipboard, and what a cut still has to remove. */
 interface CopyPayload {
   text: string;
@@ -90,12 +98,14 @@ export function useGridClipboard(
       notice(`Copied ${payload.label}`);
       return;
     }
-    if (payload.rows) {
-      removeRows(payload.rows, getSel().active.col);
-    } else if (payload.range) {
-      const r = payload.range;
-      store.fillCells(r.r0, r.c0, r.r1, r.c1, '');
-    }
+    store.batch(() => {
+      if (payload.rows) {
+        removeRows(payload.rows, getSel().active.col);
+      } else if (payload.range) {
+        const r = payload.range;
+        store.fillCells(r.r0, r.c0, r.r1, r.c1, '');
+      }
+    }, CUT_LABEL);
     notice(`Cut ${payload.label}`);
   };
 
@@ -147,7 +157,7 @@ export function useGridClipboard(
     const t = targetsOf(s);
     const at = t.length === 0 ? 0 : where === 'above' ? t[0] : t[t.length - 1] + 1;
     const fit = fitColumns(matrix, store.colCount());
-    const index = store.insertRows(at, fit.rows);
+    const index = store.batch(() => store.insertRows(at, fit.rows), PASTE_LABEL);
     if (index < 0) {
       notice(MAX_ROWS_MESSAGE, 'warn');
       return;
@@ -165,13 +175,13 @@ export function useGridClipboard(
     const single = matrix.length === 1 && matrix[0].length === 1;
     if (single && !ticked && isMultiCell(range)) {
       // One value over a range fills the whole range, like a spreadsheet.
-      store.fillCells(range.r0, range.c0, range.r1, range.c1, matrix[0][0]);
+      store.batch(() => store.fillCells(range.r0, range.c0, range.r1, range.c1, matrix[0][0]), PASTE_LABEL);
       notice(`Pasted ${plural(rangeRows(range) * rangeCols(range), 'cell')}`);
       return;
     }
     const startRow = ticked ? s.checked[0] : range.r0;
     const startCol = ticked ? 0 : range.c0;
-    const result = store.setCells(startRow, startCol, matrix, true);
+    const result = store.batch(() => store.setCells(startRow, startCol, matrix, true), PASTE_LABEL);
     if (!result) return;
     if (result.overflow) {
       notice(MAX_ROWS_MESSAGE, 'warn');

@@ -353,9 +353,12 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
 
   // ---------- Information for the toolbar ----------
 
+  // `version` is not read inside, but a plain cell edit changes nothing else this depends on while
+  // it does change what Undo and Redo can do, so the report would go stale without it.
   const info = useMemo<CrtGridInfo>(
     () => computeGridInfo(cur, store, editable, rowCount),
-    [cur, store, editable, rowCount]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cur, store, editable, rowCount, version]
   );
 
   useEffect(() => {

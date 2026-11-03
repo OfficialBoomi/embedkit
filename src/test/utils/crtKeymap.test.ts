@@ -491,7 +491,8 @@ describe('resolveNavKey: printable keys', () => {
     expect(resolveNavKey(key(' ', { shiftKey: true }), ctx())).toEqual({ type: 'select-row' });
   });
 
-  it.each(['c', 'v', 'x', 'z', 'y', 'f', '5', ' '])('returns null for ctrl+%s and meta+%s', (k) => {
+  // Z and Y are not in this list any more: Ctrl or Cmd with them is undo and redo (see below).
+  it.each(['c', 'v', 'x', 'f', '5', ' '])('returns null for ctrl+%s and meta+%s', (k) => {
     expect(resolveNavKey(key(k, { ctrlKey: true }), ctx())).toBeNull();
     expect(resolveNavKey(key(k, { metaKey: true }), ctx())).toBeNull();
     expect(resolveNavKey(key(k, { ctrlKey: true, shiftKey: true }), ctx())).toBeNull();
@@ -751,11 +752,107 @@ describe('resolveNavKey: new rules on an empty grid', () => {
     expect(resolveNavKey(k, ctx({ colCount: 0, hasSelection: true }))).toBeNull();
   });
 
-  it('the clipboard and undo shortcuts still return null', () => {
-    for (const k of ['c', 'x', 'v', 'z']) {
+  it('the clipboard shortcuts still return null', () => {
+    for (const k of ['c', 'x', 'v']) {
       expect(resolveNavKey(key(k, { ctrlKey: true }), ctx({ hasSelection: true }))).toBeNull();
       expect(resolveNavKey(key(k, { metaKey: true }), ctx({ hasSelection: true }))).toBeNull();
     }
+  });
+
+  it('the undo and redo shortcuts are still offered, so deleted rows can be brought back', () => {
+    for (const over of [{ rowCount: 0 }, { colCount: 0 }, { rowCount: 0, colCount: 0 }]) {
+      expect(resolveNavKey(key('z', { ctrlKey: true }), ctx(over))).toEqual({ type: 'undo' });
+      expect(resolveNavKey(key('z', { metaKey: true }), ctx(over))).toEqual({ type: 'undo' });
+      expect(resolveNavKey(key('y', { ctrlKey: true }), ctx(over))).toEqual({ type: 'redo' });
+      expect(resolveNavKey(key('Z', { ctrlKey: true, shiftKey: true }), ctx(over))).toEqual({ type: 'redo' });
+    }
+  });
+});
+
+describe('resolveNavKey: undo and redo', () => {
+  const UNDO: NavAction = { type: 'undo' };
+  const REDO: NavAction = { type: 'redo' };
+
+  it.each([
+    ['ctrl', { ctrlKey: true }],
+    ['meta', { metaKey: true }],
+    ['ctrl and meta', { ctrlKey: true, metaKey: true }],
+  ])('%s+Z is undo', (_name, mod) => {
+    expect(resolveNavKey(key('z', mod), ctx())).toEqual(UNDO);
+  });
+
+  it.each([
+    ['ctrl', { ctrlKey: true }],
+    ['meta', { metaKey: true }],
+  ])('%s+Y is redo', (_name, mod) => {
+    expect(resolveNavKey(key('y', mod), ctx())).toEqual(REDO);
+  });
+
+  it.each([
+    ['ctrl', { ctrlKey: true, shiftKey: true }],
+    ['meta', { metaKey: true, shiftKey: true }],
+  ])('%s+Shift+Z is redo', (_name, mod) => {
+    expect(resolveNavKey(key('z', mod), ctx())).toEqual(REDO);
+    // With Shift held the browser reports the capital letter.
+    expect(resolveNavKey(key('Z', mod), ctx())).toEqual(REDO);
+  });
+
+  it('matches the capital letter without Shift, as reported with Caps Lock on', () => {
+    expect(resolveNavKey(key('Z', { ctrlKey: true }), ctx())).toEqual(UNDO);
+    expect(resolveNavKey(key('Y', { metaKey: true }), ctx())).toEqual(REDO);
+  });
+
+  it('never reports blocked: a read only table has no history, and the grid says so itself', () => {
+    const c = ctx({ editable: false });
+    expect(resolveNavKey(key('z', { ctrlKey: true }), c)).toEqual(UNDO);
+    expect(resolveNavKey(key('y', { ctrlKey: true }), c)).toEqual(REDO);
+    expect(resolveNavKey(key('z', { metaKey: true, shiftKey: true }), c)).toEqual(REDO);
+  });
+
+  it('does not depend on the selection or the active cell', () => {
+    for (const over of [
+      { hasSelection: true },
+      { hasSelection: false },
+      { row: 0, col: 0 },
+      { row: 19, col: 9 },
+      { rowCount: 1, colCount: 1, row: 0, col: 0 },
+    ]) {
+      expect(resolveNavKey(key('z', { ctrlKey: true }), ctx(over))).toEqual(UNDO);
+      expect(resolveNavKey(key('y', { ctrlKey: true }), ctx(over))).toEqual(REDO);
+    }
+  });
+
+  it('leaves Shift+Y and the Shift and Alt combinations unhandled', () => {
+    expect(resolveNavKey(key('y', { ctrlKey: true, shiftKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key('y', { metaKey: true, shiftKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key('z', { ctrlKey: true, altKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key('y', { ctrlKey: true, altKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key('z', { ctrlKey: true, shiftKey: true, altKey: true }), ctx())).toBeNull();
+  });
+
+  it('a bare Z or Y still types, and is blocked when the grid is read only', () => {
+    expect(resolveNavKey(key('z'), ctx())).toEqual({ type: 'edit', mode: 'replace', char: 'z' });
+    expect(resolveNavKey(key('Y', { shiftKey: true }), ctx())).toEqual({ type: 'edit', mode: 'replace', char: 'Y' });
+    expect(resolveNavKey(key('z'), ctx({ editable: false }))).toEqual(BLOCKED);
+  });
+
+  it('does not take other letters with a modifier', () => {
+    expect(resolveNavKey(key('x', { ctrlKey: true }), ctx())).toBeNull();
+    expect(resolveNavKey(key('w', { metaKey: true }), ctx())).toBeNull();
+  });
+
+  it('does not change the other shortcuts it sits beside', () => {
+    expect(resolveNavKey(key('a', { ctrlKey: true }), ctx())).toEqual({ type: 'select-all' });
+    expect(resolveNavKey(key(' ', { shiftKey: true }), ctx())).toEqual({ type: 'select-row' });
+    expect(resolveNavKey(key(' '), ctx())).toEqual({ type: 'tick-row' });
+  });
+
+  it('does not mutate the context it is given', () => {
+    const c = ctx();
+    const copy = { ...c };
+    resolveNavKey(key('z', { ctrlKey: true }), c);
+    resolveNavKey(key('y', { ctrlKey: true }), c);
+    expect(c).toEqual(copy);
   });
 });
 
@@ -858,6 +955,14 @@ describe('resolveEditKey', () => {
     expect(resolveEditKey(key('a', { ctrlKey: true }))).toBeNull();
     expect(resolveEditKey(key('c', { metaKey: true }))).toBeNull();
     expect(resolveEditKey(key('z', { ctrlKey: true }))).toBeNull();
+  });
+
+  it('leaves undo and redo to the text input, which keeps the browser text undo', () => {
+    for (const mod of [{ ctrlKey: true }, { metaKey: true }]) {
+      expect(resolveEditKey(key('z', mod))).toBeNull();
+      expect(resolveEditKey(key('y', mod))).toBeNull();
+      expect(resolveEditKey(key('z', { ...mod, shiftKey: true }))).toBeNull();
+    }
   });
 
   it('treats missing modifier flags as not pressed', () => {

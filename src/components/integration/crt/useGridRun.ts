@@ -7,7 +7,9 @@
  * The single `run(op)` the toolbar, the context menu and the keyboard share. It commits an
  * open cell editor first, refuses edits on a read only table, dispatches to the matching
  * operation and then puts focus back on the grid. Delete is the one exception: it may open a
- * confirm dialog that hands focus back itself.
+ * confirm dialog that hands focus back itself. Undo and Redo are not edits of the grid but of
+ * the table's history, so they are never refused: on a read only table there is simply nothing
+ * to step through, and they say so.
  */
 
 import type { CrtOp, GridContext } from './crtGridTypes';
@@ -22,14 +24,27 @@ export function useGridRun(
   rowOps: GridRowOps,
   clipboard: GridClipboard
 ): (op: CrtOp) => void {
-  const { store, callbacksRef, focusRoot } = ctx;
-  const { selectAll } = selection;
+  const { store, callbacksRef, focusRoot, notice } = ctx;
+  const { selectAll, selectRegion } = selection;
   const { addRow, insertBlank, duplicate, deleteSelected, moveSelected, clearSelected } = rowOps;
   const { copyWithApi, pasteWithApi } = clipboard;
 
+  /** Steps the table's history one step, says what happened and shows the rows it touched. */
+  const stepHistory = (undoing: boolean) => {
+    const result = undoing ? store.undo() : store.redo();
+    if (!result) {
+      notice(undoing ? 'Nothing to undo' : 'Nothing to redo');
+      return;
+    }
+    notice(`${undoing ? 'Undid' : 'Redid'}: ${result.label}`);
+    selectRegion(result.region);
+  };
+
   const runOp = (op: CrtOp) => {
+    // The editor is committed first, so Undo reverts that commit and no stale editor stays open.
     commitEditor();
-    if (op !== 'copy' && op !== 'select-all' && !store.isEditable()) {
+    const neverBlocked = op === 'copy' || op === 'select-all' || op === 'undo' || op === 'redo';
+    if (!neverBlocked && !store.isEditable()) {
       callbacksRef.current.onBlocked?.();
       focusRoot();
       return;
@@ -78,6 +93,12 @@ export function useGridRun(
         break;
       case 'select-all':
         selectAll();
+        break;
+      case 'undo':
+        stepHistory(true);
+        break;
+      case 'redo':
+        stepHistory(false);
         break;
     }
     focusRoot();

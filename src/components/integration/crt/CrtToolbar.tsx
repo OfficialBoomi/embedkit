@@ -13,6 +13,9 @@
  * A mouse press on a button must not take focus away from the grid, or the selection the
  * action is about to use would visually collapse before the click lands.
  *
+ * The second row starts with the History group (Undo, Redo). Its tooltips name the step they
+ * would undo or redo, taken from the grid's report.
+ *
  * @return {JSX.Element} The rendered toolbar.
  */
 
@@ -28,8 +31,10 @@ import {
   AiOutlineInsertRowAbove,
   AiOutlineInsertRowBelow,
   AiOutlinePlus,
+  AiOutlineRedo,
   AiOutlineScissor,
   AiOutlineSnippets,
+  AiOutlineUndo,
   AiOutlineVerticalAlignBottom,
   AiOutlineVerticalAlignTop,
 } from 'react-icons/ai';
@@ -80,6 +85,10 @@ export function isOpEnabled(op: CrtOp, info: CrtGridInfo | null): boolean {
       return hasRows;
     case 'paste':
       return canEdit;
+    case 'undo':
+      return info.canUndo;
+    case 'redo':
+      return info.canRedo;
   }
 }
 
@@ -143,6 +152,29 @@ const CLIPBOARD_TOOLS: ToolDef[] = [
   },
 ];
 
+/** The modifier text of the shortcuts in tooltips, picked the way the context menu picks it. */
+const modifierText = (): string =>
+  typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '') ? '\u2318' : 'Ctrl+';
+
+/** Undo and Redo, whose tooltips name the step and the shortcut, or say there is nothing to do. */
+function historyTools(info: CrtGridInfo | null): ToolDef[] {
+  const mod = modifierText();
+  return [
+    {
+      op: 'undo',
+      label: 'Undo',
+      title: info?.canUndo ? `Undo: ${info.undoLabel ?? 'last change'} (${mod}Z)` : 'Nothing to undo',
+      icon: <AiOutlineUndo />,
+    },
+    {
+      op: 'redo',
+      label: 'Redo',
+      title: info?.canRedo ? `Redo: ${info.redoLabel ?? 'last undone change'} (${mod}Y)` : 'Nothing to redo',
+      icon: <AiOutlineRedo />,
+    },
+  ];
+}
+
 /** Keeps focus where it is (the grid) when a button is pressed with the mouse. */
 const keepFocus = (e: React.MouseEvent<HTMLElement>) => e.preventDefault();
 
@@ -191,6 +223,7 @@ const CrtToolbar: React.FC<CrtToolbarProps> = ({
         {trailing && <div className="boomi-crt-tools-trailing">{trailing}</div>}
       </div>
       <div className="boomi-crt-tools-line">
+        {renderGroup('History', historyTools(info))}
         {renderGroup('Clipboard', CLIPBOARD_TOOLS)}
         <span className="boomi-crt-tools-selection">{info?.selectionLabel ?? ''}</span>
         {onToggleFullScreen && (

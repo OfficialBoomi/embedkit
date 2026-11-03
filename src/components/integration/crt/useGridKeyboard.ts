@@ -61,11 +61,19 @@ export function useGridKeyboard(
       return;
     }
     if (store.rowCount() === 0) {
-      // The keymap has no cell to work from, but the menu key must still reach the menu.
+      // The keymap has no cell to work from, but the menu key must still reach the menu, and Undo
+      // must still work: deleting every row leaves an empty table that Ctrl+Z has to refill.
       if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
         e.preventDefault();
         e.stopPropagation();
         openMenuAtActive();
+        return;
+      }
+      const empty = resolveNavKey(e, navContext(0, 0, false));
+      if (empty && (empty.type === 'undo' || empty.type === 'redo')) {
+        e.preventDefault();
+        e.stopPropagation();
+        runOp(empty.type);
       }
       return;
     }
@@ -108,6 +116,11 @@ export function useGridKeyboard(
         break;
       case 'tick-row':
         toggleActiveRow();
+        break;
+      case 'undo':
+      case 'redo':
+        // Through run(op), like the toolbar: same notice, same selection of what changed.
+        runOp(action.type);
         break;
       case 'collapse':
         collapse();

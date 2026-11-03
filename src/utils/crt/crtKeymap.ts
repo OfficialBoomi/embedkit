@@ -46,6 +46,8 @@ export type NavAction =
   | { type: 'select-all' }
   | { type: 'select-row' }
   | { type: 'tick-row' }
+  | { type: 'undo' }
+  | { type: 'redo' }
   | { type: 'collapse' }
   | { type: 'context-menu' };
 
@@ -79,11 +81,24 @@ const pageStep = (pageRows: number): number =>
  * Returns null when the key is not handled so the event can bubble.
  */
 export function resolveNavKey(k: KeyInput, c: NavContext): NavAction | null {
-  if (c.rowCount <= 0 || c.colCount <= 0) return null;
   if (k.altKey) return null;
 
   const mod = !!(k.ctrlKey || k.metaKey);
   const shift = !!k.shiftKey;
+
+  // Undo and redo sit ahead of the empty grid check on purpose: deleting every row leaves a
+  // table with no cell, and Ctrl+Z must still be able to bring the rows back. They never ask
+  // for editing rights ('blocked'): a read only table simply has no history to step through.
+  // Redo is Ctrl or Cmd with Y, or with Shift+Z. The key is compared case-insensitively
+  // because the key reads 'Z' with Shift held or with Caps Lock on.
+  if (mod) {
+    const letter = k.key.toLowerCase();
+    if (letter === 'z') return { type: shift ? 'redo' : 'undo' };
+    if (letter === 'y' && !shift) return { type: 'redo' };
+  }
+
+  if (c.rowCount <= 0 || c.colCount <= 0) return null;
+
   const lastRow = c.rowCount - 1;
   const lastCol = c.colCount - 1;
 
