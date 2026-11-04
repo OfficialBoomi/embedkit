@@ -636,8 +636,8 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           <div className="boomi-crt-statusbar">
             <span className="boomi-crt-help">
               {overridden
-                ? 'Arrows move, Shift extends. Enter edits. Ctrl+C/X/V copy, cut, paste. Right-click for row actions.'
-                : 'Arrows move, Shift extends. Ctrl+C copies. Press Override to edit.'}
+                ? 'Arrows move, Space ticks a row, Enter edits. Ctrl+C/X/V copy, cut, paste. Ctrl+Z undo, Ctrl+F find. Right-click for row actions.'
+                : 'Arrows move, Space ticks a row. Ctrl+C copies, Ctrl+F finds. Press Override to edit.'}
             </span>
             <span
               className={`boomi-crt-hint boomi-crt-hint--${notice?.kind ?? 'info'}`}
