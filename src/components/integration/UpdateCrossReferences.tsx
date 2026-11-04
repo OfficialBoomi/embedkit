@@ -9,8 +9,10 @@
  * publisher's default values (read only), and turn on Override to edit your own copy in an
  * Excel-like grid. Each table keeps its own edits while you switch between tables.
  * Rows can be added, inserted, duplicated, moved, deleted, cut, copied and pasted, from the
- * toolbar, the grid's context menu or the keyboard. The tables come from the registered data
- * source; nothing is saved from this screen yet.
+ * toolbar, the grid's context menu or the keyboard. The tables come from the server (read only:
+ * the pack's real headers, default rows and override rows), or from a data source registered with
+ * `registerCrtDataSource`, which tests use. Nothing is saved from this screen yet, and the
+ * Save button says so.
  *
  * A small dot in the picker marks every table with unsaved edits, and leaving the screen (the
  * Cancel button or the breadcrumb) asks first while any table has some. A table that cannot be
@@ -34,7 +36,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import type { IntegrationPackInstance } from '@boomi/embedkit-sdk';
 import { usePlugin } from '../../context/pluginContext';
 import { useDialogs } from '../../hooks/useDialogs';
+import { useCrossReferenceTablesService } from '../../service/crossReferenceTables.service';
+import { HttpError } from '../../service/http';
 import { getCrtDataSource } from '../../utils/crt/crtDataSource';
+import { createLiveCrtDataSource } from '../../utils/crt/crtLiveSource';
 import { createCrtStore, type CrtStore } from '../../utils/crt/crtStore';
 import type { CrtMatchType, CrtTableData } from '../../utils/crt/crtTypes';
 import { checkKeys } from '../../utils/crt/crtWarnings';
@@ -72,6 +77,9 @@ type LoadState =
   | { status: 'ready'; tables: CrtTableData[] };
 
 const READ_ONLY_HINT = 'Read only. Press Override to edit.';
+const SAVE_NOTE = 'Saving is not available yet. Your edits stay on this screen and are not sent to Boomi.';
+const SERVER_TOO_OLD =
+  'This server does not support cross reference tables yet. Update the embedkit server and try again.';
 const HINT_MS = 3000;
 
 /** A short result message under the grid. Warnings use the danger colour, the rest the muted one. */
@@ -163,6 +171,12 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   useEffect(() => {
     confirmRef.current = confirm;
   });
+  // The service hook returns new functions each render; the load effect must not re-run for that.
+  const { fetchCrossReferenceTables } = useCrossReferenceTablesService();
+  const fetchTablesRef = useRef(fetchCrossReferenceTables);
+  useEffect(() => {
+    fetchTablesRef.current = fetchCrossReferenceTables;
+  });
 
   // The Override button disappears and the Reset dialog steals focus, so hand it back to the grid.
   const focusGrid = useCallback(() => {
@@ -248,11 +262,26 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     };
   }, []);
 
+  const packInstanceId = integration.id;
+  const packEnvironmentId = integration.environmentId;
   useEffect(() => {
     let alive = true;
+    const controller = new AbortController();
     const load = async (): Promise<CrtTableData[]> => {
-      const source = getCrtDataSource();
-      return source ? source.listTables() : [];
+      // A registered source wins; otherwise the tables come from the server.
+      const source =
+        getCrtDataSource() ??
+        createLiveCrtDataSource(() => {
+          if (!packInstanceId || !packEnvironmentId) {
+            throw new Error('This integration pack has no environment to read cross reference tables from.');
+          }
+          return fetchTablesRef.current({
+            integrationPackInstanceId: packInstanceId,
+            environmentId: packEnvironmentId,
+            signal: controller.signal,
+          });
+        });
+      return source.listTables();
     };
     load()
       .then((list) => {
@@ -268,18 +297,22 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
       })
       .catch((err: unknown) => {
         if (!alive) return;
+        // A server without the route answers 404 (or 501 when its SDK is too old): say so plainly.
+        const tooOld = err instanceof HttpError && (err.status === 404 || err.status === 501);
         setState({
           status: 'error',
-          message:
-            err instanceof Error && err.message
+          message: tooOld
+            ? SERVER_TOO_OLD
+            : err instanceof Error && err.message
               ? err.message
               : 'The cross reference tables could not be loaded.',
         });
       });
     return () => {
       alive = false;
+      controller.abort();
     };
-  }, [loadAttempt, ensureStore]);
+  }, [loadAttempt, ensureStore, packInstanceId, packEnvironmentId]);
 
   useEffect(
     () => () => {
@@ -703,6 +736,9 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           {showTitle && <div className="boomi-update-title">{title}</div>}
           {showDescription && <div className="boomi-update-desc">{description}</div>}
           {renderTable(selectedTable, store)}
+          <p className="boomi-crt-help" role="note">
+            {SAVE_NOTE}
+          </p>
           <div className="boomi-update-actions">
             <Button
               toggle={false}
@@ -717,7 +753,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
               showIcon={false}
               label="Save"
               disabled
-              hoverText="Saving is not connected in this prototype"
+              hoverText={SAVE_NOTE}
             />
           </div>
         </div>
