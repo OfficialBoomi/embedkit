@@ -223,15 +223,17 @@ const Integration: React.FC<IntegrationProps> = ({
 
           <div className="boomi-integration-card__body">
             <div className={`boomi-integration-card__content${showConnectors ? ' boomi-integration-card__content--connectors' : ''}`}>
-              <div className="boomi-integration-card__title-row">
-                <h3 className="boomi-integration-card__title">
-                  {title}
-                </h3>
-                {menuOnTop && !showType && topMenu}
+              <div>
+                <div className="boomi-integration-card__title-row">
+                  <h3 className="boomi-integration-card__title">
+                    {title}
+                  </h3>
+                  {menuOnTop && !showType && topMenu}
+                </div>
+                <p className="boomi-integration-card__desc">
+                  {integration.integrationPackDescription}
+                </p>
               </div>
-              <p className="boomi-integration-card__desc">
-                {integration.integrationPackDescription}
-              </p>
               {showConnectors && (
                 <ConnectorStack
                   connectors={integration.connectors}
