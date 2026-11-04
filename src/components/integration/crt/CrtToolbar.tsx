@@ -6,9 +6,10 @@
  *
  * @description
  * The row and clipboard actions of the lookup table grid, as labelled buttons above the
- * grid. The toolbar holds no state: the grid reports what is possible through `info` and
+ * grid. The toolbar holds no table state: the grid reports what is possible through `info` and
  * the toolbar only asks the grid to run an operation. The same enabled rules drive the
- * grid's context menu (see isOpEnabled), so the two never disagree.
+ * grid's context menu (see isOpEnabled), so the two never disagree. The one thing it keeps is
+ * whether the Keyboard shortcuts window is open.
  *
  * A mouse press on a button must not take focus away from the grid, or the selection the
  * action is about to use would visually collapse before the click lands.
@@ -22,10 +23,16 @@
  * keys the grid handles itself. Presses on the find boxes are not kept from taking focus; every
  * other press in the toolbar is.
  *
+ * Help: the far end of the second row has a small, muted, icon-only Keyboard shortcuts button
+ * that opens CrtShortcutsModal. It is for first time use, so it stays quiet until hovered or
+ * focused. The window is rendered next to the toolbar, not inside it, so the toolbar's focus
+ * keeping and find keys never see what happens in the window. The tooltips here that name a key
+ * (Undo, Redo, Find, Full screen) repeat what crtShortcuts lists: change both together.
+ *
  * @return {JSX.Element} The rendered toolbar.
  */
 
-import type { ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   AiOutlineArrowDown,
   AiOutlineArrowUp,
@@ -37,6 +44,7 @@ import {
   AiOutlineInsertRowAbove,
   AiOutlineInsertRowBelow,
   AiOutlinePlus,
+  AiOutlineQuestionCircle,
   AiOutlineRedo,
   AiOutlineScissor,
   AiOutlineSearch,
@@ -46,8 +54,10 @@ import {
   AiOutlineVerticalAlignTop,
 } from 'react-icons/ai';
 import { resolveFindKey, type CrtFindCommand } from '../../../utils/crt/crtFindView';
+import { isMacPlatform } from '../../../utils/crt/crtShortcuts';
 import { CRT_MAX_ROWS } from '../../../utils/crt/crtStore';
 import type { CrtGridInfo, CrtOp } from './CrtGrid';
+import CrtShortcutsModal from './CrtShortcutsModal';
 
 /** One wording for the row limit, in the toolbar tooltips and in the grid's notices. */
 export const MAX_ROWS_MESSAGE = `A table can hold at most ${CRT_MAX_ROWS.toLocaleString('en-US')} rows.`;
@@ -161,8 +171,7 @@ const CLIPBOARD_TOOLS: ToolDef[] = [
 ];
 
 /** The modifier text of the shortcuts in tooltips, picked the way the context menu picks it. */
-const modifierText = (): string =>
-  typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '') ? '\u2318' : 'Ctrl+';
+const modifierText = (): string => (isMacPlatform() ? '\u2318' : 'Ctrl+');
 
 /** Undo and Redo, whose tooltips name the step and the shortcut, or say there is nothing to do. */
 function historyTools(info: CrtGridInfo | null): ToolDef[] {
@@ -223,6 +232,13 @@ const CrtToolbar: React.FC<CrtToolbarProps> = ({
   onToggleFullScreen,
   find,
 }) => {
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  /** The table next to the toolbar, where focus goes back when the shortcuts window closes and its opener is gone. */
+  const findGrid = (): HTMLElement | null =>
+    rootRef.current?.parentElement?.querySelector<HTMLElement>('[role="grid"]') ?? null;
+
   const renderGroup = (name: string, tools: ToolDef[]) => (
     <div className="boomi-crt-tools-group" role="group" aria-label={name}>
       {tools.map((tool) => (
@@ -254,52 +270,73 @@ const CrtToolbar: React.FC<CrtToolbarProps> = ({
   };
 
   return (
-    <div
-      className="boomi-crt-tools"
-      role="toolbar"
-      aria-label="Table actions"
-      onMouseDown={keepFocus}
-      onKeyDown={handleKeyDown}
-    >
-      <div className="boomi-crt-tools-line">
-        {renderGroup('Rows', ROW_TOOLS)}
-        {trailing && <div className="boomi-crt-tools-trailing">{trailing}</div>}
+    <>
+      <div
+        ref={rootRef}
+        className="boomi-crt-tools"
+        role="toolbar"
+        aria-label="Table actions"
+        onMouseDown={keepFocus}
+        onKeyDown={handleKeyDown}
+      >
+        <div className="boomi-crt-tools-line">
+          {renderGroup('Rows', ROW_TOOLS)}
+          {trailing && <div className="boomi-crt-tools-trailing">{trailing}</div>}
+        </div>
+        <div className="boomi-crt-tools-line">
+          {renderGroup('History', historyTools(info))}
+          {renderGroup('Clipboard', CLIPBOARD_TOOLS)}
+          <span className="boomi-crt-tools-selection">{info?.selectionLabel ?? ''}</span>
+          {find && (
+            <button
+              type="button"
+              className="boomi-crt-tool"
+              title={`Find and replace (${modifierText()}F)`}
+              aria-pressed={find.open}
+              onClick={find.onToggle}
+            >
+              <span className="boomi-crt-tool-icon" aria-hidden="true">
+                <AiOutlineSearch />
+              </span>
+              <span>Find</span>
+            </button>
+          )}
+          {onToggleFullScreen && (
+            <button
+              type="button"
+              className="boomi-crt-tool boomi-crt-tool--edge"
+              title={fullScreen ? 'Leave full screen (Esc)' : 'Fill the screen with the toolbar and the table'}
+              aria-pressed={fullScreen}
+              onClick={onToggleFullScreen}
+            >
+              <span className="boomi-crt-tool-icon" aria-hidden="true">
+                {fullScreen ? <AiOutlineFullscreenExit /> : <AiOutlineFullscreen />}
+              </span>
+              <span>{fullScreen ? 'Exit full screen' : 'Full screen'}</span>
+            </button>
+          )}
+          {/* Last and quiet: icon only, muted until hovered or focused. The wrapper only gives it its own spacing at the end of the row. */}
+          <span className="boomi-crt-tools-help">
+            <button
+              type="button"
+              className="boomi-crt-shortcuts-btn"
+              title="Keyboard shortcuts"
+              aria-label="Keyboard shortcuts"
+              aria-haspopup="dialog"
+              onClick={() => setShortcutsOpen(true)}
+            >
+              <AiOutlineQuestionCircle aria-hidden="true" />
+            </button>
+          </span>
+        </div>
+        {find?.open && find.bar}
       </div>
-      <div className="boomi-crt-tools-line">
-        {renderGroup('History', historyTools(info))}
-        {renderGroup('Clipboard', CLIPBOARD_TOOLS)}
-        <span className="boomi-crt-tools-selection">{info?.selectionLabel ?? ''}</span>
-        {find && (
-          <button
-            type="button"
-            className="boomi-crt-tool"
-            title={`Find and replace (${modifierText()}F)`}
-            aria-pressed={find.open}
-            onClick={find.onToggle}
-          >
-            <span className="boomi-crt-tool-icon" aria-hidden="true">
-              <AiOutlineSearch />
-            </span>
-            <span>Find</span>
-          </button>
-        )}
-        {onToggleFullScreen && (
-          <button
-            type="button"
-            className="boomi-crt-tool boomi-crt-tool--edge"
-            title={fullScreen ? 'Leave full screen (Esc)' : 'Fill the screen with the toolbar and the table'}
-            aria-pressed={fullScreen}
-            onClick={onToggleFullScreen}
-          >
-            <span className="boomi-crt-tool-icon" aria-hidden="true">
-              {fullScreen ? <AiOutlineFullscreenExit /> : <AiOutlineFullscreen />}
-            </span>
-            <span>{fullScreen ? 'Exit full screen' : 'Full screen'}</span>
-          </button>
-        )}
-      </div>
-      {find?.open && find.bar}
-    </div>
+      <CrtShortcutsModal
+        isOpen={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+        fallbackFocus={findGrid}
+      />
+    </>
   );
 };
 

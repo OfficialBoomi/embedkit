@@ -11,6 +11,9 @@
  * open cell input, let the text input handle the key natively).
  */
 
+// When you add, remove or change a key here, update crtShortcuts.ts (the Keyboard shortcuts
+// window); a test fails when an action has no row.
+
 /** The parts of a keyboard event the rules read. */
 export interface KeyInput {
   key: string;
@@ -55,6 +58,30 @@ export type NavAction =
 export type EditAction =
   | { type: 'commit'; move: 'down' | 'up' | 'right' | 'left' }
   | { type: 'cancel' };
+
+/**
+ * Every action type the two resolvers can return. The compiler checks each record against its
+ * union, so a type added to NavAction or EditAction and left out here (or listed here but not
+ * in the union) is a type error. The shortcuts test reads these lists.
+ */
+export const NAV_ACTION_TYPES = {
+  move: true,
+  edit: true,
+  clear: true,
+  blocked: true,
+  'select-all': true,
+  'select-row': true,
+  'tick-row': true,
+  undo: true,
+  redo: true,
+  collapse: true,
+  'context-menu': true,
+} satisfies Record<NavAction['type'], true>;
+
+export const EDIT_ACTION_TYPES = {
+  commit: true,
+  cancel: true,
+} satisfies Record<EditAction['type'], true>;
 
 const clamp = (n: number, lo: number, hi: number): number => Math.min(Math.max(n, lo), hi);
 
