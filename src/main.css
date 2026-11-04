@@ -3940,12 +3940,11 @@
   position: relative;
   background-color: var(--boomi-connector-icon-solid-bg, var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff))));
   box-shadow: 0 0 0 2px var(--boomi-connector-icon-ring, var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff))));
-  transition: transform 120ms ease;
 }
 .boomi-connector-stack > .boomi-connector-icon + .boomi-connector-icon {
   margin-left: calc(-1 * var(--boomi-connector-icon-overlap, 0.625rem));
 }
-.boomi-connector-stack > .boomi-connector-icon:hover { transform: translateY(-2px); z-index: 5; }
+/* .boomi-connector-stack > .boomi-connector-icon:hover { transform: translateY(-2px); z-index: 5; } */
 @media (prefers-reduced-motion: reduce) {
   .boomi-connector-stack > .boomi-connector-icon { transition: none; }
   .boomi-connector-stack > .boomi-connector-icon:hover { transform: none; }
@@ -4019,7 +4018,7 @@
 }
 .boomi-integration-card__header-extra { flex: 0 0 auto; padding-right: var(--boomi-integration-card-padding-x, 1rem); }
 /* Title row: the actions menu sits at its right when the type row is hidden (1.7 UI). */
-.boomi-integration-card__title-row { display: flex; align-items: center; gap: var(--boomi-integration-card-title-row-gap, 0.5rem); min-width: 0; }
+.boomi-integration-card__title-row { display: flex; align-items: start; gap: var(--boomi-integration-card-title-row-gap, 0.5rem); min-width: 0; }
 .boomi-integration-card__title-row > .boomi-integration-card__title { flex: 1 1 auto; min-width: 0; }
 .boomi-integration-card__menu { flex: 0 0 auto; display: flex; align-items: center; }
 /* 1.7 UI: the Edit / Run Agent button fills the button row (beside the environment chip, if any). */
@@ -4056,8 +4055,8 @@
   outline: 2px solid var(--boomi-integration-card-focus-ring, var(--boomi-accent, #6366f1));
   outline-offset: 2px;
 }
-.boomi-integration-card__body { display: flex; gap: 1rem; padding: var(--boomi-integration-card-body-padding, 1rem); }
-.boomi-integration-card__content { display: flex; flex-direction: column; width: 100%; min-width: 0; }
+.boomi-integration-card__body { display: flex; gap: 1rem; padding: var(--boomi-integration-card-body-padding, 1rem); height: stretch; height: -webkit-fill-available; }
+.boomi-integration-card__content { display: flex; flex-direction: column; width: 100%; min-width: 0; justify-content: space-between; }
 .boomi-integration-card__title {
   margin: 0; padding-right: 0.5rem;
   color: var(--boomi-integration-card-title-fg, inherit);
