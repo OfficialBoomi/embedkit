@@ -1,8 +1,9 @@
 /*
  * Styles for the cross reference table screen and its grid.
  * Plain CSS only: Tailwind ring, shadow and translate utilities do not work inside
- * the plugin's shadow root. Every colour comes from an existing theme token with a
- * fallback, through the local --crt-* properties below.
+ * the plugin's shadow root. Every colour comes from a --boomi-crt-* theme token (set in
+ * all three theme blocks of main.css), falling back to the existing theme token it
+ * aliases and then a literal, through the local --crt-* properties below.
  * The sizes --crt-row-h, --crt-header-h and --crt-gutter-w are set by the grid
  * component (CrtGrid.tsx) on its root, so TypeScript and CSS share one value. The
  * fallbacks written here (32, 32 and 88 px) must stay equal to those constants.
@@ -11,20 +12,20 @@
 .boomi-crt-screen,
 .boomi-crt-gridbox,
 .boomi-crt-grid {
-  --crt-fg: var(--boomi-page-fg-color, #374151);
-  --crt-muted: var(--boomi-muted, #6b7280);
-  --crt-surface: var(--boomi-card-bg, #ffffff);
-  --crt-outer-border: var(--boomi-card-border, #d1d5db);
-  --crt-cell-border: var(--boomi-table-header-border, var(--boomi-card-border, #d1d5db));
-  --crt-header-bg: var(--boomi-table-header-bg, #f3f4f6);
-  --crt-header-fg: var(--boomi-table-header-fg, #374151);
-  --crt-row-odd-bg: var(--boomi-table-row-odd-bg, #ffffff);
+  --crt-fg: var(--boomi-crt-fg, var(--boomi-page-fg-color, #374151));
+  --crt-muted: var(--boomi-crt-muted, var(--boomi-muted, #6b7280));
+  --crt-surface: var(--boomi-crt-surface, var(--boomi-card-bg, #ffffff));
+  --crt-outer-border: var(--boomi-crt-outer-border, var(--boomi-card-border, #d1d5db));
+  --crt-cell-border: var(--boomi-crt-cell-border, var(--boomi-table-header-border, var(--boomi-card-border, #d1d5db)));
+  --crt-header-bg: var(--boomi-crt-header-bg, var(--boomi-table-header-bg, #f3f4f6));
+  --crt-header-fg: var(--boomi-crt-header-fg, var(--boomi-table-header-fg, #374151));
+  --crt-row-odd-bg: var(--boomi-crt-row-odd-bg, var(--boomi-table-row-odd-bg, #ffffff));
   /* The theme's even stripe is nearly white in the light theme, so add a little contrast. */
-  --crt-row-even-bg: color-mix(in srgb, var(--crt-muted) 7%, var(--boomi-table-row-even-bg, #f9fafb));
-  --crt-focus: var(--boomi-input-border-focus, #6366f1);
-  --crt-danger: var(--boomi-danger-fg, #ef4444);
+  --crt-row-even-bg: color-mix(in srgb, var(--crt-muted) 7%, var(--boomi-crt-row-even-bg, var(--boomi-table-row-even-bg, #f9fafb)));
+  --crt-focus: var(--boomi-crt-focus, var(--boomi-input-border-focus, #6366f1));
+  --crt-danger: var(--boomi-crt-danger, var(--boomi-danger-fg, #ef4444));
   /* Marks rows that were inserted since the table was loaded. */
-  --crt-new: var(--boomi-success-bg, #16a34a);
+  --crt-new: var(--boomi-crt-new, var(--boomi-success-bg, #16a34a));
 }
 
 /* ---------- Screen ---------- */
@@ -230,8 +231,8 @@
 
 /* Not overridden: the same stripes, tinted toward the muted colour. */
 .boomi-crt-grid.boomi-crt-grid--readonly {
-  --crt-row-odd-bg: color-mix(in srgb, var(--crt-muted) 14%, var(--boomi-table-row-odd-bg, #ffffff));
-  --crt-row-even-bg: color-mix(in srgb, var(--crt-muted) 20%, var(--boomi-table-row-even-bg, #f9fafb));
+  --crt-row-odd-bg: color-mix(in srgb, var(--crt-muted) 14%, var(--boomi-crt-row-odd-bg, var(--boomi-table-row-odd-bg, #ffffff)));
+  --crt-row-even-bg: color-mix(in srgb, var(--crt-muted) 20%, var(--boomi-crt-row-even-bg, var(--boomi-table-row-even-bg, #f9fafb)));
 }
 
 .boomi-crt-canvas {
@@ -658,7 +659,7 @@
 }
 
 .boomi-crt-tp {
-  --crt-tp-accent: var(--crt-focus, var(--boomi-input-border-focus, #6366f1));
+  --crt-tp-accent: var(--boomi-crt-tp-accent, var(--crt-focus, var(--boomi-input-border-focus, #6366f1)));
   margin-bottom: 1rem;
 }
 
@@ -831,8 +832,8 @@
 .boomi-crt-screen,
 .boomi-crt-gridbox,
 .boomi-crt-grid {
-  --crt-match: var(--boomi-chip-warning-border, #f59e0b);
-  --crt-match-edge: var(--boomi-chip-warning-fg, #92400e);
+  --crt-match: var(--boomi-crt-match, var(--boomi-chip-warning-border, #f59e0b));
+  --crt-match-edge: var(--boomi-crt-match-edge, var(--boomi-chip-warning-fg, #92400e));
 }
 
 /* The row is the third line of the toolbar and wraps only when the toolbar gets narrow. */
