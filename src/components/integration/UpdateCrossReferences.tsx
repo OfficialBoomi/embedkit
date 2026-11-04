@@ -264,6 +264,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
 
   const packInstanceId = integration.id;
   const packEnvironmentId = integration.environmentId;
+  const packName = integration.integrationPackOverrideName || integration.integrationPackName;
   useEffect(() => {
     let alive = true;
     const controller = new AbortController();
@@ -280,7 +281,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
             environmentId: packEnvironmentId,
             signal: controller.signal,
           });
-        });
+        }, { processNamePrefix: packName });
       return source.listTables();
     };
     load()
@@ -312,7 +313,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
       alive = false;
       controller.abort();
     };
-  }, [loadAttempt, ensureStore, packInstanceId, packEnvironmentId]);
+  }, [loadAttempt, ensureStore, packInstanceId, packEnvironmentId, packName]);
 
   useEffect(
     () => () => {

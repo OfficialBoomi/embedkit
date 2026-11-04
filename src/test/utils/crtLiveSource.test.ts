@@ -6,6 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   createLiveCrtDataSource,
+  displayProcessName,
   mapServerTable,
   mapServerTables,
   ROWS_MISSING_REASON,
@@ -139,5 +140,29 @@ describe('createLiveCrtDataSource', () => {
   it('passes a failed fetch on unchanged', async () => {
     const source = createLiveCrtDataSource(() => Promise.reject(new Error('boom')));
     await expect(source.listTables()).rejects.toThrow('boom');
+  });
+});
+
+describe('process names', () => {
+  it('drops the pack name the platform puts in front of an installed process name', () => {
+    expect(displayProcessName('Pack - Main Lookups', 'Pack')).toBe('Main Lookups');
+    expect(displayProcessName('EmbedKit CRT Test - Multi - CRT Test - Second', 'EmbedKit CRT Test - Multi')).toBe('CRT Test - Second');
+  });
+
+  it('keeps a name that does not start with the pack name, or would be left empty', () => {
+    expect(displayProcessName('Other - Main', 'Pack')).toBe('Other - Main');
+    expect(displayProcessName('Pack - ', 'Pack')).toBe('Pack - ');
+    expect(displayProcessName('Pack', 'Pack')).toBe('Pack');
+    expect(displayProcessName('Pack-Main', 'Pack')).toBe('Pack-Main');
+    expect(displayProcessName('Main', undefined)).toBe('Main');
+    expect(displayProcessName('Main', '')).toBe('Main');
+  });
+
+  it('applies to every table of the answer, through the data source too', async () => {
+    const source = createLiveCrtDataSource(
+      async () => ({ tables: [server({ processName: 'Pack - Main' }), server({ processId: 'p2', processName: 'Pack - Second' })] }),
+      { processNamePrefix: 'Pack' }
+    );
+    expect((await source.listTables()).map((t) => t.processName)).toEqual(['Main', 'Second']);
   });
 });

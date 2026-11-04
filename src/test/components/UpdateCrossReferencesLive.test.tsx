@@ -100,6 +100,14 @@ describe('live tables', () => {
     expect(screen.getByRole('grid').getAttribute('aria-label')).toMatch(/Alpha/);
   });
 
+  it('shows a process name without the pack name in front of it', async () => {
+    fetchTables.mockResolvedValue({ tables: [serverTable('Alpha', { processName: 'Pack - Main Lookups' })] });
+    renderScreen();
+    await screen.findByRole('grid');
+    expect(screen.getAllByText(/Main Lookups/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Pack - Main Lookups/)).toBeNull();
+  });
+
   it('says saving is not available, visibly and on the disabled Save button', async () => {
     fetchTables.mockResolvedValue({ tables: [serverTable('Alpha')] });
     renderScreen();

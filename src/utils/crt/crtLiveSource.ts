@@ -75,21 +75,40 @@ export function mapServerTable(t: CrtServerTable): CrtTableData {
   };
 }
 
+export interface MapServerTablesOptions {
+  /**
+   * The pack's name. A multi install pack names each installed process "<pack name> - <process name>",
+   * and the screen already shows the pack name, so it is dropped from the process name for display.
+   * A process name that does not start that way, or would be left empty, is kept as it is.
+   */
+  processNamePrefix?: string;
+}
+
+/** The process name without the pack name that the platform puts in front of it. */
+export function displayProcessName(name: string, packName?: string): string {
+  const prefix = packName ? `${packName} - ` : '';
+  return prefix && name.startsWith(prefix) && name.length > prefix.length ? name.slice(prefix.length) : name;
+}
+
 /** Maps the server's answer. Throws when the answer is not a list of tables at all. */
-export function mapServerTables(response: unknown): CrtTableData[] {
+export function mapServerTables(response: unknown, options: MapServerTablesOptions = {}): CrtTableData[] {
   const tables = (response as { tables?: unknown } | null)?.tables;
   if (!Array.isArray(tables)) throw new Error(UNEXPECTED_ANSWER);
   return tables.map((t) => {
     if (!t || typeof t.id !== 'string' || typeof t.name !== 'string' || typeof t.processId !== 'string') {
       throw new Error(UNEXPECTED_ANSWER);
     }
-    return mapServerTable({ ...t, processName: typeof t.processName === 'string' ? t.processName : '' });
+    const processName = typeof t.processName === 'string' ? t.processName : '';
+    return mapServerTable({ ...t, processName: displayProcessName(processName, options.processNamePrefix) });
   });
 }
 
 /** A data source that asks the server. `fetchTables` does the request. */
-export function createLiveCrtDataSource(fetchTables: () => Promise<unknown>): CrtDataSource {
+export function createLiveCrtDataSource(
+  fetchTables: () => Promise<unknown>,
+  options: MapServerTablesOptions = {}
+): CrtDataSource {
   return {
-    listTables: async () => mapServerTables(await fetchTables()),
+    listTables: async () => mapServerTables(await fetchTables(), options),
   };
 }
