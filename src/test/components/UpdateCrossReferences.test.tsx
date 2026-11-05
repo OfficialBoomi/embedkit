@@ -38,12 +38,15 @@ vi.mock('../../components/core/Page', () => ({
     bodyContent,
     callbackOne,
     levelOne,
+    title,
   }: {
     bodyContent: React.ReactNode;
     callbackOne?: () => void;
     levelOne?: string;
+    title?: string;
   }) => (
     <div>
+      <span data-testid="page-title">{title}</span>
       <button type="button" onClick={() => (callbackOne || (() => {}))()}>
         {levelOne}
       </button>
@@ -521,9 +524,9 @@ describe('empty states', () => {
   const expectEmptyScreen = () => {
     expect(screen.getByText('No editable cross reference tables')).toBeTruthy();
     expect(screen.queryByText('No cross reference tables to show.')).toBeNull();
-    // The normal screen stays around it: title, description, Cancel; and no Save.
-    expect(screen.getByText('Cross Reference Tables')).toBeTruthy();
-    expect(screen.getByText(/View the lookup tables of this integration/)).toBeTruthy();
+    // The normal screen stays around it: Cancel, and no Save. No title or description of its own.
+    expect(screen.queryByText('Cross Reference Tables')).toBeNull();
+    expect(screen.queryByText(/View the lookup tables of this integration/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
     expect(screen.queryByRole('grid')).toBeNull();
@@ -568,11 +571,12 @@ describe('empty states', () => {
     expect(screen.queryByText(/Beta/)).toBeNull();
   });
 
-  it('keeps the configured title and description, and hides them when told to', async () => {
-    ctx.boomiConfig = config({ title: 'Lookup tables', description: 'Pick one.', showDescription: false });
+  it('puts the configured title in the page header only, never inside the screen', async () => {
+    ctx.boomiConfig = config({ title: 'Lookup tables', description: 'Pick one.', showTitle: true, showDescription: true });
     await renderScreen([]);
 
-    expect(screen.getByText('Lookup tables')).toBeTruthy();
+    expect(screen.getByTestId('page-title').textContent).toBe('Lookup tables - Pack');
+    expect(screen.queryByText('Lookup tables')).toBeNull();
     expect(screen.queryByText('Pick one.')).toBeNull();
   });
 });

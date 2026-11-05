@@ -436,14 +436,9 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   // With one process there is nothing to choose: it is shown, not openable.
   const processPickerDisabled = processOptions.length <= 1;
 
-  const showTitle = boomiConfig?.components?.[componentKey]?.crossReferenceTables?.showTitle ?? true;
+  // The page header shows this title; the screen itself does not repeat it.
   const title =
     boomiConfig?.components?.[componentKey]?.crossReferenceTables?.title || 'Cross Reference Tables';
-  const showDescription =
-    boomiConfig?.components?.[componentKey]?.crossReferenceTables?.showDescription ?? true;
-  const description =
-    boomiConfig?.components?.[componentKey]?.crossReferenceTables?.description ||
-    'View the lookup tables of this integration. Turn on Override to edit your own copy.';
 
   const handleSelect = (key: string) => {
     const table = tables.find((t) => tableKey(t) === key);
@@ -784,8 +779,6 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
         />
       ) : !selectedTable || !store ? (
         <div className="boomi-update boomi-crt-screen">
-          {showTitle && <div className="boomi-update-title">{title}</div>}
-          {showDescription && <div className="boomi-update-desc">{description}</div>}
           {allProcesses.length > 0 && (
             <div className="boomi-crt-picker">
               <CrtTablePicker
@@ -822,8 +815,6 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
         </div>
       ) : (
         <div className="boomi-update boomi-crt-screen">
-          {showTitle && <div className="boomi-update-title">{title}</div>}
-          {showDescription && <div className="boomi-update-desc">{description}</div>}
           {renderTable(selectedTable, store)}
           <p className="boomi-crt-note" role="note">
             {SAVE_NOTE}

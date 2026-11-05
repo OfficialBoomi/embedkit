@@ -156,6 +156,17 @@ describe('what opens first', () => {
   });
 });
 
+describe('the top of the screen', () => {
+  it('starts with the two dropdowns: no title or description of its own under the page header', async () => {
+    await renderScreen([tbl('Alpha', PA), tbl('Beta', PB)], [PA, PB]);
+    expect(screen.queryByText('Cross Reference Tables')).toBeNull();
+    expect(screen.queryByText(/View the lookup tables of this integration/)).toBeNull();
+    const first = document.querySelector('.boomi-crt-screen')?.firstElementChild as HTMLElement;
+    expect(first.className).toContain('boomi-crt-picker');
+    expect(within(first).getAllByRole('button')).toHaveLength(2);
+  });
+});
+
 describe('the Process dropdown', () => {
   it('shows one process, disabled', async () => {
     await renderScreen([tbl('Only', PA)], [PA]);
