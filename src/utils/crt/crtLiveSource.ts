@@ -28,12 +28,16 @@ export interface CrtServerTable {
   /** The installation's rows, or null when not overridden. */
   overrideRows?: string[][] | null;
   unavailableReason?: string;
+  /** Fingerprint of the table's state, sent back with a save. Older servers do not send it. */
+  stamp?: string;
 }
 
 export interface CrtServerTablesResponse {
   tables: CrtServerTable[];
   /** Every process of the pack, also those with no table. Older servers do not send it. */
   processes?: Array<{ id: string; name: string }>;
+  /** What saving may send. Older servers do not send it. */
+  limits?: { maxSaveBytes?: number };
 }
 
 const MATCH_TYPES: readonly CrtMatchType[] = ['exact', 'wildcard', 'regex'];
@@ -52,7 +56,14 @@ const fitRows = (rows: unknown[], width: number): string[][] => rows.map((r) => 
 
 /** Maps one server entry to the screen's table. A table that cannot be edited keeps its reason and has no data. */
 export function mapServerTable(t: CrtServerTable): CrtTableData {
-  const head = { id: t.id, name: t.name, processId: t.processId, processName: t.processName };
+  const head = {
+    id: t.id,
+    name: t.name,
+    processId: t.processId,
+    processName: t.processName,
+    // Only a text stamp is meaningful; anything else is left out rather than guessed at.
+    ...(typeof t.stamp === 'string' ? { stamp: t.stamp } : {}),
+  };
   const unavailable = (reason: string): CrtTableData => ({
     ...head,
     matchType: 'exact',
@@ -121,8 +132,18 @@ export function mapServerProcesses(response: unknown, options: MapServerTablesOp
 }
 
 /**
- * A data source that asks the server. `fetchTables` does the request. The tables and the processes
- * come from the same answer, so asking for both makes one request.
+ * The save limits of the server's answer. Only a positive, finite number of bytes is kept; an older
+ * server that sends none, or anything else, gives an empty object.
+ */
+export function mapServerLimits(response: unknown): { maxSaveBytes?: number } {
+  const limits = (response as { limits?: unknown } | null)?.limits as { maxSaveBytes?: unknown } | null | undefined;
+  const bytes = limits?.maxSaveBytes;
+  return typeof bytes === 'number' && Number.isFinite(bytes) && bytes > 0 ? { maxSaveBytes: bytes } : {};
+}
+
+/**
+ * A data source that asks the server. `fetchTables` does the request. The tables, the processes and
+ * the limits come from the same answer, so asking for all of them makes one request.
  */
 export function createLiveCrtDataSource(
   fetchTables: () => Promise<unknown>,
@@ -136,5 +157,6 @@ export function createLiveCrtDataSource(
   return {
     listTables: async () => mapServerTables(await fetchOnce(), options),
     listProcesses: async () => mapServerProcesses(await fetchOnce(), options),
+    limits: async () => mapServerLimits(await fetchOnce()),
   };
 }

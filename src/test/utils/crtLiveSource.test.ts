@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   createLiveCrtDataSource,
   displayProcessName,
+  mapServerLimits,
   mapServerProcesses,
   mapServerTable,
   mapServerTables,
@@ -102,6 +103,27 @@ describe('mapServerTable', () => {
     const t = mapServerTable(server({ defaultRows: [['007', ' padded '], ['', '1E5']] }));
     expect(t.defaultRows).toEqual([['007', ' padded '], ['', '1E5']]);
   });
+
+  it('carries the stamp through, for a table with an override too', () => {
+    expect(mapServerTable(server({ stamp: 'd0.abc' })).stamp).toBe('d0.abc');
+    expect(mapServerTable(server({ overridden: true, overrideRows: [['9', 'nine']], stamp: 'o1.xyz' })).stamp).toBe('o1.xyz');
+  });
+
+  it('has no stamp key at all when the server sent none or sent something that is not text', () => {
+    expect('stamp' in mapServerTable(server())).toBe(false);
+    for (const bad of [7, null, {}, ['d0.abc'], true]) {
+      expect('stamp' in mapServerTable(server({ stamp: bad as never }))).toBe(false);
+    }
+  });
+
+  it('keeps the stamp on a table that cannot be edited and drops it when it is not text', () => {
+    expect(mapServerTable(server({ unavailableReason: 'Runtime specific', stamp: 'd0.abc' })).stamp).toBe('d0.abc');
+    expect('stamp' in mapServerTable(server({ unavailableReason: 'Runtime specific', stamp: 5 as never }))).toBe(false);
+  });
+
+  it('keeps an empty stamp text as it is', () => {
+    expect(mapServerTable(server({ stamp: '' })).stamp).toBe('');
+  });
 });
 
 describe('mapServerTables', () => {
@@ -125,6 +147,31 @@ describe('mapServerTables', () => {
   it('rejects an entry without an id, a name or a process', () => {
     expect(() => mapServerTables({ tables: [{ name: 'x', processId: 'p' }] })).toThrow(UNEXPECTED_ANSWER);
     expect(() => mapServerTables({ tables: [null] })).toThrow(UNEXPECTED_ANSWER);
+  });
+
+  it('carries each stamp to its own table and still works with an older server that sends none', () => {
+    const list = mapServerTables({
+      tables: [server({ stamp: 'd0.aaa' }), server({ processId: 'p2', processName: 'Second' })],
+    });
+    expect(list[0].stamp).toBe('d0.aaa');
+    expect(list[1].stamp).toBeUndefined();
+  });
+});
+
+describe('mapServerLimits', () => {
+  it('reads the largest save the server accepts', () => {
+    expect(mapServerLimits({ tables: [], limits: { maxSaveBytes: 8388608 } })).toEqual({ maxSaveBytes: 8388608 });
+  });
+
+  it('gives an empty object for an older server, or for anything that is not a usable size', () => {
+    expect(mapServerLimits({ tables: [] })).toEqual({});
+    expect(mapServerLimits(null)).toEqual({});
+    expect(mapServerLimits(undefined)).toEqual({});
+    expect(mapServerLimits({ limits: null })).toEqual({});
+    expect(mapServerLimits({ limits: {} })).toEqual({});
+    for (const bad of ['8388608', 0, -1, Number.NaN, Number.POSITIVE_INFINITY, null, {}]) {
+      expect(mapServerLimits({ limits: { maxSaveBytes: bad } })).toEqual({});
+    }
   });
 });
 
@@ -196,5 +243,39 @@ describe('processes', () => {
     const source = createLiveCrtDataSource(() => Promise.reject(new Error('boom')));
     await expect(source.listTables()).rejects.toThrow('boom');
     await expect(source.listProcesses!()).rejects.toThrow('boom');
+  });
+});
+
+describe('limits', () => {
+  it('gives the save limit from the same single answer as the tables and the processes', async () => {
+    const fetchTables = vi.fn().mockResolvedValue({
+      tables: [server({ stamp: 'd0.aaa' })],
+      processes: [{ id: 'p1', name: 'Main' }],
+      limits: { maxSaveBytes: 8388608 },
+    });
+    const source = createLiveCrtDataSource(fetchTables);
+    const [tables, processes, limits] = await Promise.all([source.listTables(), source.listProcesses!(), source.limits!()]);
+    expect(fetchTables).toHaveBeenCalledTimes(1);
+    expect(tables[0].stamp).toBe('d0.aaa');
+    expect(processes).toHaveLength(1);
+    expect(limits).toEqual({ maxSaveBytes: 8388608 });
+  });
+
+  it('asking for the limit first still makes one request in total', async () => {
+    const fetchTables = vi.fn().mockResolvedValue({ tables: [server()], limits: { maxSaveBytes: 1024 } });
+    const source = createLiveCrtDataSource(fetchTables);
+    expect(await source.limits!()).toEqual({ maxSaveBytes: 1024 });
+    await source.listTables();
+    expect(fetchTables).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives no limit when the server sends none', async () => {
+    const source = createLiveCrtDataSource(async () => ({ tables: [server()] }));
+    expect(await source.limits!()).toEqual({});
+  });
+
+  it('a failed request fails the limit call too', async () => {
+    const source = createLiveCrtDataSource(() => Promise.reject(new Error('boom')));
+    await expect(source.limits!()).rejects.toThrow('boom');
   });
 });

@@ -32,6 +32,12 @@ export interface CrtTableData {
    * the user. `columns` may then be empty and no rows are needed. Internal to the editor.
    */
   unavailableReason?: string;
+  /**
+   * A short fingerprint of the table's state on the server (is it overridden, and which rows) when
+   * this was loaded. Sent back with a save so the server can refuse to overwrite a change somebody
+   * else made in between. Absent when the server does not send one.
+   */
+  stamp?: string;
 }
 
 /** A process of the pack. It is listed whether or not it has any table. */
@@ -48,6 +54,12 @@ export interface CrtDataSource {
    * this out and the screen uses the processes of the tables it got.
    */
   listProcesses?(): Promise<CrtProcessData[]>;
+  /**
+   * What the server allows when saving. `maxSaveBytes` is the largest request body it accepts. A
+   * source that cannot tell leaves this out, or leaves a field out, and the screen assumes the
+   * smallest limit a server ever had.
+   */
+  limits?(): Promise<{ maxSaveBytes?: number }>;
 }
 
 /** A cell address, zero based. */

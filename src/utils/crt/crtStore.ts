@@ -64,6 +64,27 @@ export interface CrtHistoryResult {
   region: CrtRange | null;
 }
 
+/**
+ * How the table now differs from how it was loaded, for the save bar and the save request. The
+ * counts compare with the rows the store started from: the rows of the load, or after an override()
+ * or reset() the rows that call put in place (those calls restart the comparison, but
+ * `loadedOverridden` and `overridden` still tell what was loaded and what is showing).
+ */
+export interface CrtChangeSummary {
+  /** The table was loaded with the customer's own rows. */
+  loadedOverridden: boolean;
+  /** The table shows the customer's own rows now. */
+  overridden: boolean;
+  /** Rows that are new. */
+  added: number;
+  /** Original rows with at least one edited cell. */
+  edited: number;
+  /** Original rows that are no longer there. */
+  removed: number;
+  /** The original rows that remain are no longer in their original relative order. */
+  reordered: boolean;
+}
+
 export interface CrtStore {
   /** The table this store was created from. Never mutated by the store. */
   readonly table: CrtTableData;
@@ -124,6 +145,13 @@ export interface CrtStore {
    * change, or moving a row down and back up, makes it false again.
    */
   isDirty(): boolean;
+  /**
+   * A deep copy of the rows as they are now, in order, one string per column. Safe to keep or send:
+   * later edits do not reach it. Works whether or not the table is overridden.
+   */
+  rowsSnapshot(): string[][];
+  /** What changed since the rows were created, in rows. Read only; costs one pass over the rows. */
+  changeSummary(): CrtChangeSummary;
   /** Number of cells of original rows whose value differs from the value they had when the rows were created. */
   changedCellCount(): number;
   /** Always false for a new row: the whole row is new. */
@@ -868,6 +896,37 @@ export function createCrtStore(table: CrtTableData): CrtStore {
     },
 
     isDirty: () => rowsReplaced || edits.size > 0 || structureChanged(),
+
+    rowsSnapshot: () => rows.map((row) => row.slice()),
+
+    changeSummary() {
+      let added = 0;
+      let kept = 0;
+      let reordered = false;
+      // Original ids ascend in the original order, so a drop between two of them is a reorder.
+      let previous = -1;
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i];
+        if (id >= newRowLimit) {
+          added += 1;
+        } else {
+          kept += 1;
+          if (id < previous) reordered = true;
+          previous = id;
+        }
+      }
+      const editedRows = new Set<number>();
+      for (const key of edits.keys()) editedRows.add(Number(key.slice(0, key.indexOf(':'))));
+      return {
+        loadedOverridden,
+        overridden,
+        added,
+        edited: editedRows.size,
+        removed: newRowLimit - kept,
+        reordered,
+      };
+    },
+
     changedCellCount: () => edits.size,
     isCellEdited: (row, col) => {
       const id = Number.isInteger(row) && row >= 0 && row < rows.length ? ids[row] : -1;
