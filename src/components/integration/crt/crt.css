@@ -184,6 +184,13 @@
   color: var(--crt-muted);
 }
 
+/* The "saving is not available" note under the table: quiet, the same size as the status line above it. */
+.boomi-crt-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--crt-muted);
+}
+
 .boomi-crt-hint {
   color: var(--crt-danger);
   font-weight: 600;

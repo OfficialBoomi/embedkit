@@ -38,6 +38,7 @@ import { usePlugin } from '../../context/pluginContext';
 import { useDialogs } from '../../hooks/useDialogs';
 import { useCrossReferenceTablesService } from '../../service/crossReferenceTables.service';
 import { HttpError } from '../../service/http';
+import { isSessionError } from '../../utils/sessionError';
 import { getCrtDataSource } from '../../utils/crt/crtDataSource';
 import { createLiveCrtDataSource } from '../../utils/crt/crtLiveSource';
 import { createCrtStore, type CrtStore } from '../../utils/crt/crtStore';
@@ -79,11 +80,12 @@ export interface UpdateCrossReferencesProps {
 
 type LoadState =
   | { status: 'loading' }
-  | { status: 'error'; message: string }
+  | { status: 'error'; message: string; canRetry: boolean }
   | { status: 'ready'; tables: CrtTableData[]; processes: CrtProcessData[] };
 
 const READ_ONLY_HINT = 'Read only. Press Override to edit.';
 const SAVE_NOTE = 'Saving is not available yet. Your edits stay on this screen and are not sent to Boomi.';
+const SERVER_UNREACHABLE = 'The server could not be reached. Check your connection and try again.';
 const SERVER_TOO_OLD =
   'This server does not support cross reference tables yet. Update the embedkit server and try again.';
 const HINT_MS = 3000;
@@ -317,13 +319,19 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
         if (!alive) return;
         // A server without the route answers 404 (or 501 when its SDK is too old): say so plainly.
         const tooOld = err instanceof HttpError && (err.status === 404 || err.status === 501);
+        // No response at all (status 0) is a network failure; the browser's own text is not helpful.
+        const unreachable = err instanceof HttpError && err.status === 0;
         setState({
           status: 'error',
           message: tooOld
             ? SERVER_TOO_OLD
-            : err instanceof Error && err.message
-              ? err.message
-              : 'The cross reference tables could not be loaded.',
+            : unreachable
+              ? SERVER_UNREACHABLE
+              : err instanceof Error && err.message
+                ? err.message
+                : 'The cross reference tables could not be loaded.',
+          // An ended session cannot be fixed by asking again: its message says to reload the page.
+          canRetry: !isSessionError(err),
         });
       });
     return () => {
@@ -770,7 +778,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
             onClose: onBack ?? (() => {}),
           }}
           origin="maps"
-          showActionButton
+          showActionButton={state.canRetry}
           buttonLabel="Try again"
           onButtonClick={handleRetry}
         />
@@ -817,7 +825,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           {showTitle && <div className="boomi-update-title">{title}</div>}
           {showDescription && <div className="boomi-update-desc">{description}</div>}
           {renderTable(selectedTable, store)}
-          <p className="boomi-crt-help" role="note">
+          <p className="boomi-crt-note" role="note">
             {SAVE_NOTE}
           </p>
           <div className="boomi-update-actions">

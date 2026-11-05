@@ -31,10 +31,12 @@ vi.mock('../../components/core/Page', () => ({
 vi.mock('../../components/ui/Dialog', () => ({
   default: ({
     error,
+    showActionButton,
     buttonLabel,
     onButtonClick,
   }: {
     error?: { header: string; message: string };
+    showActionButton?: boolean;
     buttonLabel?: string;
     onButtonClick?: () => void;
   }) =>
@@ -42,7 +44,7 @@ vi.mock('../../components/ui/Dialog', () => ({
       <div role="alertdialog">
         <h2>{error.header}</h2>
         <p>{error.message}</p>
-        {buttonLabel && (
+        {showActionButton && buttonLabel && (
           <button type="button" onClick={onButtonClick}>
             {buttonLabel}
           </button>
@@ -128,6 +130,7 @@ describe('live tables', () => {
     renderScreen();
     await screen.findByRole('grid');
     expect(screen.getByRole('note').textContent).toMatch(/Saving is not available yet/);
+    expect(screen.getByRole('note').className).toBe('boomi-crt-note');
     expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -192,6 +195,23 @@ describe('load errors', () => {
     await screen.findByRole('alertdialog');
     expect(screen.getByText(/no environment/)).toBeTruthy();
     expect(fetchTables).not.toHaveBeenCalled();
+  });
+
+  it('says the server could not be reached when there was no answer at all', async () => {
+    fetchTables.mockRejectedValue(new HttpError('Failed to fetch', 0));
+    renderScreen();
+    await screen.findByRole('alertdialog');
+    expect(screen.getByText(/could not be reached/)).toBeTruthy();
+    expect(screen.queryByText('Failed to fetch')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
+  });
+
+  it('offers no Try again for an ended session, whose message says to reload the page', async () => {
+    fetchTables.mockRejectedValue(new HttpError('Your connection to this section has timed out. Reload the page to continue.', 401, undefined, 'TOKEN_REJECTED'));
+    renderScreen();
+    await screen.findByRole('alertdialog');
+    expect(screen.getByText(/timed out/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
   });
 
   it('asks again on Try again', async () => {
