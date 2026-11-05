@@ -12,7 +12,7 @@
  * back with a reason and no data; it is passed on as such. An entry that should have rows and does
  * not is treated the same way instead of failing the whole list.
  */
-import type { CrtDataSource, CrtMatchType, CrtTableData } from './crtTypes';
+import type { CrtDataSource, CrtMatchType, CrtProcessData, CrtTableData } from './crtTypes';
 
 /** One table of one process, as the server sends it. */
 export interface CrtServerTable {
@@ -32,6 +32,8 @@ export interface CrtServerTable {
 
 export interface CrtServerTablesResponse {
   tables: CrtServerTable[];
+  /** Every process of the pack, also those with no table. Older servers do not send it. */
+  processes?: Array<{ id: string; name: string }>;
 }
 
 const MATCH_TYPES: readonly CrtMatchType[] = ['exact', 'wildcard', 'regex'];
@@ -103,12 +105,36 @@ export function mapServerTables(response: unknown, options: MapServerTablesOptio
   });
 }
 
-/** A data source that asks the server. `fetchTables` does the request. */
+/**
+ * Maps the process list of the server's answer. An answer without one (an older server) gives an
+ * empty list, and the screen then uses the processes of the tables.
+ */
+export function mapServerProcesses(response: unknown, options: MapServerTablesOptions = {}): CrtProcessData[] {
+  const processes = (response as { processes?: unknown } | null)?.processes;
+  if (!Array.isArray(processes)) return [];
+  return processes
+    .filter((p): p is { id: string; name?: unknown } => !!p && typeof p.id === 'string')
+    .map((p) => ({
+      id: p.id,
+      name: displayProcessName(typeof p.name === 'string' ? p.name : '', options.processNamePrefix),
+    }));
+}
+
+/**
+ * A data source that asks the server. `fetchTables` does the request. The tables and the processes
+ * come from the same answer, so asking for both makes one request.
+ */
 export function createLiveCrtDataSource(
   fetchTables: () => Promise<unknown>,
   options: MapServerTablesOptions = {}
 ): CrtDataSource {
+  let pending: Promise<unknown> | null = null;
+  const fetchOnce = (): Promise<unknown> => {
+    if (!pending) pending = fetchTables();
+    return pending;
+  };
   return {
-    listTables: async () => mapServerTables(await fetchTables(), options),
+    listTables: async () => mapServerTables(await fetchOnce(), options),
+    listProcesses: async () => mapServerProcesses(await fetchOnce(), options),
   };
 }

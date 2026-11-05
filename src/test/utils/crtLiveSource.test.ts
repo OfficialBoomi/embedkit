@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   createLiveCrtDataSource,
   displayProcessName,
+  mapServerProcesses,
   mapServerTable,
   mapServerTables,
   ROWS_MISSING_REASON,
@@ -164,5 +165,36 @@ describe('process names', () => {
       { processNamePrefix: 'Pack' }
     );
     expect((await source.listTables()).map((t) => t.processName)).toEqual(['Main', 'Second']);
+  });
+});
+
+describe('processes', () => {
+  it('maps the process list, also processes with no table, with the pack name dropped for display', () => {
+    const list = mapServerProcesses(
+      { tables: [], processes: [{ id: 'p1', name: 'Pack - Main' }, { id: 'p2', name: 'Pack - Empty' }] },
+      { processNamePrefix: 'Pack' }
+    );
+    expect(list).toEqual([{ id: 'p1', name: 'Main' }, { id: 'p2', name: 'Empty' }]);
+  });
+
+  it('gives an empty list for an older server that sends none, and ignores entries without an id', () => {
+    expect(mapServerProcesses({ tables: [] })).toEqual([]);
+    expect(mapServerProcesses(null)).toEqual([]);
+    expect(mapServerProcesses({ processes: [null, { name: 'no id' }, { id: 'p', name: 7 }] })).toEqual([{ id: 'p', name: '' }]);
+  });
+
+  it('asks the server once for the tables and the processes together', async () => {
+    const fetchTables = vi.fn().mockResolvedValue({ tables: [server()], processes: [{ id: 'p1', name: 'Main' }] });
+    const source = createLiveCrtDataSource(fetchTables);
+    const [tables, processes] = await Promise.all([source.listTables(), source.listProcesses!()]);
+    expect(fetchTables).toHaveBeenCalledTimes(1);
+    expect(tables).toHaveLength(1);
+    expect(processes).toEqual([{ id: 'p1', name: 'Main' }]);
+  });
+
+  it('a failed request fails both calls', async () => {
+    const source = createLiveCrtDataSource(() => Promise.reject(new Error('boom')));
+    await expect(source.listTables()).rejects.toThrow('boom');
+    await expect(source.listProcesses!()).rejects.toThrow('boom');
   });
 });

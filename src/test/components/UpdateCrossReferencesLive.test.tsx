@@ -11,7 +11,8 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { forwardRef, useImperativeHandle } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 const ctx = vi.hoisted(() => ({
   boomiConfig: {} as Record<string, unknown>,
@@ -106,6 +107,20 @@ describe('live tables', () => {
     await screen.findByRole('grid');
     expect(screen.getAllByText(/Main Lookups/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Pack - Main Lookups/)).toBeNull();
+  });
+
+  it('lists a process the server sends with no table, disabled with the reason', async () => {
+    const user = userEvent.setup();
+    fetchTables.mockResolvedValue({
+      tables: [serverTable('Alpha')],
+      processes: [{ id: 'p1', name: 'Main' }, { id: 'p2', name: 'Empty' }],
+    });
+    renderScreen();
+    await screen.findByRole('grid');
+    await user.click(screen.getAllByRole('button', { name: /^Process\b/ })[0]);
+    const empty = screen.getAllByRole('option').find((o) => within(o).queryByText('Empty') !== null) as HTMLElement;
+    expect(empty.getAttribute('aria-disabled')).toBe('true');
+    expect(within(empty).getByText('No tables in this process')).toBeTruthy();
   });
 
   it('says saving is not available, visibly and on the disabled Save button', async () => {

@@ -34,9 +34,20 @@ export interface CrtTableData {
   unavailableReason?: string;
 }
 
+/** A process of the pack. It is listed whether or not it has any table. */
+export interface CrtProcessData {
+  id: string;
+  name: string;
+}
+
 /** Where the screen gets its tables. Nothing is registered by default, so the screen asks the server. */
 export interface CrtDataSource {
   listTables(): Promise<CrtTableData[]>;
+  /**
+   * Every process of the pack, including processes with no table. A source that cannot tell leaves
+   * this out and the screen uses the processes of the tables it got.
+   */
+  listProcesses?(): Promise<CrtProcessData[]>;
 }
 
 /** A cell address, zero based. */

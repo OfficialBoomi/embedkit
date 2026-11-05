@@ -41,7 +41,13 @@ import { HttpError } from '../../service/http';
 import { getCrtDataSource } from '../../utils/crt/crtDataSource';
 import { createLiveCrtDataSource } from '../../utils/crt/crtLiveSource';
 import { createCrtStore, type CrtStore } from '../../utils/crt/crtStore';
-import type { CrtMatchType, CrtTableData } from '../../utils/crt/crtTypes';
+import {
+  mergeProcesses,
+  NO_TABLES_REASON,
+  pickInitial,
+  tableAfterProcessSwitch,
+} from '../../utils/crt/crtProcesses';
+import type { CrtMatchType, CrtProcessData, CrtTableData } from '../../utils/crt/crtTypes';
 import { checkKeys } from '../../utils/crt/crtWarnings';
 import { buildKeyChips, nextFlaggedRow, type CrtKeyChip } from '../../utils/crt/crtWarningsView';
 import AjaxLoader from '../ui/AjaxLoader';
@@ -74,7 +80,7 @@ export interface UpdateCrossReferencesProps {
 type LoadState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'ready'; tables: CrtTableData[] };
+  | { status: 'ready'; tables: CrtTableData[]; processes: CrtProcessData[] };
 
 const READ_ONLY_HINT = 'Read only. Press Override to edit.';
 const SAVE_NOTE = 'Saving is not available yet. Your edits stay on this screen and are not sent to Boomi.';
@@ -95,6 +101,7 @@ const MATCH_LABEL: Record<CrtMatchType, string> = {
 };
 
 const NO_TABLES: CrtTableData[] = [];
+const NO_PROCESSES: CrtProcessData[] = [];
 const NO_KEYS: ReadonlySet<string> = new Set();
 const NO_CHIPS: CrtKeyChip[] = [];
 const NOOP_SUBSCRIBE = () => () => {};
@@ -149,6 +156,9 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   const { confirm } = useDialogs('CrossReferenceTables');
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [loadAttempt, setLoadAttempt] = useState(0);
+  // The process the screen is "in". `selectedKey`, when set, is a table of this process: the three places
+  // that change either one (the first load, a table pick, a process pick) change both together.
+  const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [gridInfo, setGridInfo] = useState<CrtGridInfo | null>(null);
@@ -268,7 +278,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   useEffect(() => {
     let alive = true;
     const controller = new AbortController();
-    const load = async (): Promise<CrtTableData[]> => {
+    const load = async (): Promise<{ list: CrtTableData[]; named: CrtProcessData[] }> => {
       // A registered source wins; otherwise the tables come from the server.
       const source =
         getCrtDataSource() ??
@@ -282,19 +292,26 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
             signal: controller.signal,
           });
         }, { processNamePrefix: packName });
-      return source.listTables();
+      const [list, named] = await Promise.all([
+        source.listTables(),
+        source.listProcesses ? source.listProcesses() : Promise.resolve<CrtProcessData[]>([]),
+      ]);
+      return { list, named };
     };
     load()
-      .then((list) => {
+      .then(({ list, named }) => {
         if (!alive) return;
         const tables = sortTables(list);
-        // A table that cannot be edited never gets a store and is never selected.
-        const first = tables.find((t) => !isUnavailable(t));
-        if (first) {
-          ensureStore(first);
-          setSelectedKey(tableKey(first));
+        const processes = mergeProcesses(named, tables);
+        // The first process with a table that can be edited, and its first such table. A table that
+        // cannot be edited never gets a store and is never selected.
+        const initial = pickInitial(processes, tables);
+        if (initial.table) {
+          ensureStore(initial.table);
+          setSelectedKey(tableKey(initial.table));
         }
-        setState({ status: 'ready', tables });
+        setSelectedProcessId(initial.process?.id ?? null);
+        setState({ status: 'ready', tables, processes });
       })
       .catch((err: unknown) => {
         if (!alive) return;
@@ -323,6 +340,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   );
 
   const tables = state.status === 'ready' ? state.tables : NO_TABLES;
+  const allProcesses = state.status === 'ready' ? state.processes : NO_PROCESSES;
   const selectedTable = tables.find((t) => tableKey(t) === selectedKey) ?? null;
   const store = selectedTable ? (storesRef.current.get(tableKey(selectedTable)) ?? null) : null;
   // Live state (override, row count) of the selected table; other tables only change when selected.
@@ -371,7 +389,9 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   // What the empty state lists: nothing in 'hidden' mode, since those tables are not shown at all.
   const shownUnavailable = listedTables.filter(isUnavailable);
 
-  const options: CrtPickerOption[] = listedTables.map((t) => {
+  // Table dropdown: only the tables of the selected process.
+  const processTables = listedTables.filter((t) => t.processId === selectedProcessId);
+  const options: CrtPickerOption[] = processTables.map((t) => {
     const key = tableKey(t);
     if (t.unavailableReason) {
       return {
@@ -390,6 +410,24 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     };
   });
 
+  // Process dropdown: every process of the pack. One with no table is listed but cannot be chosen, so
+  // nobody wonders where it went; a dot marks a process with unsaved edits in any of its tables.
+  const processOptions: CrtPickerOption[] = allProcesses.map((p) => {
+    const mine = listedTables.filter((t) => t.processId === p.id);
+    if (mine.length === 0) {
+      return { key: p.id, name: p.name, description: '', dirty: false, disabledReason: NO_TABLES_REASON };
+    }
+    const editable = mine.filter((t) => !isUnavailable(t)).length;
+    return {
+      key: p.id,
+      name: p.name,
+      description: editable === 0 ? 'No editable tables' : plural(mine.length, 'table', 'tables'),
+      dirty: mine.some((t) => dirtyKeys.has(tableKey(t))),
+    };
+  });
+  // With one process there is nothing to choose: it is shown, not openable.
+  const processPickerDisabled = processOptions.length <= 1;
+
   const showTitle = boomiConfig?.components?.[componentKey]?.crossReferenceTables?.showTitle ?? true;
   const title =
     boomiConfig?.components?.[componentKey]?.crossReferenceTables?.title || 'Cross Reference Tables';
@@ -403,11 +441,26 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     const table = tables.find((t) => tableKey(t) === key);
     if (!table || isUnavailable(table)) return;
     ensureStore(table);
+    setSelectedProcessId(table.processId);
     setSelectedKey(key);
+  };
+
+  // Switching process keeps the open table when the new process has it too, otherwise opens that
+  // process's first editable table. Edits stay with their own table, so nothing is lost by switching.
+  const handleSelectProcess = (processId: string) => {
+    const next = tableAfterProcessSwitch(listedTables, processId, selectedTable?.id ?? null);
+    setSelectedProcessId(processId);
+    if (next) {
+      ensureStore(next);
+      setSelectedKey(tableKey(next));
+    } else {
+      setSelectedKey(null);
+    }
   };
 
   const handleRetry = () => {
     releaseStores();
+    setSelectedProcessId(null);
     setSelectedKey(null);
     setState({ status: 'loading' });
     setLoadAttempt((n) => n + 1);
@@ -561,11 +614,18 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     return (
       <>
         <div className="boomi-crt-picker">
+          <CrtTablePicker
+            label="Process"
+            searchLabel="Search processes"
+            options={processOptions}
+            selectedKey={selectedProcessId}
+            onSelect={handleSelectProcess}
+            disabled={processPickerDisabled}
+          />
           <CrtTablePicker options={options} selectedKey={selectedKey} onSelect={handleSelect} />
         </div>
 
         <div className="boomi-crt-info">
-          <span className="boomi-crt-chip">Process: {table.processName}</span>
           {sharedWith.length > 0 && (
             <span className="boomi-crt-chip">Shared with: {sharedWith.join(', ')}</span>
           )}
@@ -599,11 +659,19 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
             <div className="boomi-crt-fs-caption">
               <CrtTablePicker
                 compact
+                label="Process"
+                searchLabel="Search processes"
+                options={processOptions}
+                selectedKey={selectedProcessId}
+                onSelect={handleSelectProcess}
+                disabled={processPickerDisabled}
+              />
+              <CrtTablePicker
+                compact
                 options={options}
                 selectedKey={selectedKey}
                 onSelect={handleSelect}
               />
-              <span className="boomi-crt-fs-sub">{table.processName}</span>
               <span
                 className={`boomi-crt-chip ${overridden ? 'boomi-crt-chip--overridden' : 'boomi-crt-chip--default'}`}
               >
@@ -710,6 +778,18 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
         <div className="boomi-update boomi-crt-screen">
           {showTitle && <div className="boomi-update-title">{title}</div>}
           {showDescription && <div className="boomi-update-desc">{description}</div>}
+          {allProcesses.length > 0 && (
+            <div className="boomi-crt-picker">
+              <CrtTablePicker
+                label="Process"
+                searchLabel="Search processes"
+                options={processOptions}
+                selectedKey={selectedProcessId}
+                onSelect={handleSelectProcess}
+                disabled={processPickerDisabled}
+              />
+            </div>
+          )}
           <div className="boomi-crt-empty">
             <p>No editable cross reference tables</p>
             {shownUnavailable.length > 0 && (
