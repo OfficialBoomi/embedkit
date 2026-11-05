@@ -9,7 +9,7 @@
  * Dropdown (same select and option classes) and adds what that one cannot do: a small dot
  * before the name of a table that has unsaved edits, an option that is listed but cannot be
  * chosen (with its reason shown under the name), and a compact form that fits the full
- * screen caption row.
+ * screen caption row. It can also be shown disabled, as a plain read-out of the one choice.
  *
  * The list is rendered inside the component and placed with position: absolute. A portal to
  * document.body is not an option: inside the plugin's shadow root it would lose every style.
@@ -55,6 +55,10 @@ export interface CrtTablePickerProps {
   compact?: boolean;
   /** Visible above the button, and the accessible name when compact. Defaults to "Table". */
   label?: string;
+  /** The accessible name of the search box (and its placeholder, with "..."). Defaults to "Search tables". */
+  searchLabel?: string;
+  /** The button shows the selected name but cannot be opened, for example when there is nothing to choose. */
+  disabled?: boolean;
 }
 
 /** The search box appears when there are more options than this. */
@@ -100,6 +104,8 @@ const CrtTablePicker: React.FC<CrtTablePickerProps> = ({
   onSelect,
   compact = false,
   label = 'Table',
+  searchLabel = 'Search tables',
+  disabled = false,
 }) => {
   const uid = useId();
   const buttonId = `${uid}-button`;
@@ -253,7 +259,7 @@ const CrtTablePicker: React.FC<CrtTablePickerProps> = ({
   };
 
   const selectedName = selected?.name ?? PLACEHOLDER;
-  const rootClass = `boomi-crt-tp${compact ? ' boomi-crt-tp--compact' : ''}`;
+  const rootClass = `boomi-crt-tp${compact ? ' boomi-crt-tp--compact' : ''}${disabled ? ' boomi-crt-tp--disabled' : ''}`;
 
   return (
     <div ref={rootRef} className={rootClass} onKeyDown={handleKeyDown} onBlur={handleBlur}>
@@ -271,6 +277,7 @@ const CrtTablePicker: React.FC<CrtTablePickerProps> = ({
           className="boomi-select boomi-crt-tp-btn"
           aria-haspopup="listbox"
           aria-expanded={open}
+          disabled={disabled}
           aria-controls={open && filtered.length > 0 ? listId : undefined}
           aria-labelledby={compact ? undefined : `${labelId} ${valueId}`}
           aria-label={
@@ -284,9 +291,11 @@ const CrtTablePicker: React.FC<CrtTablePickerProps> = ({
             {selected?.dirty && <UnsavedDot />}
             <span className="boomi-crt-tp-trunc">{selectedName}</span>
           </span>
-          <span className="boomi-crt-tp-caret">
-            <AiOutlineCaretDown className="boomi-select-icon" aria-hidden="true" />
-          </span>
+          {!disabled && (
+            <span className="boomi-crt-tp-caret">
+              <AiOutlineCaretDown className="boomi-select-icon" aria-hidden="true" />
+            </span>
+          )}
         </button>
 
         {open && (
@@ -306,8 +315,8 @@ const CrtTablePicker: React.FC<CrtTablePickerProps> = ({
                   ref={searchRef}
                   type="text"
                   value={search}
-                  placeholder="Search tables..."
-                  aria-label="Search tables"
+                  placeholder={`${searchLabel}...`}
+                  aria-label={searchLabel}
                   aria-controls={filtered.length > 0 ? listId : undefined}
                   aria-activedescendant={activeDescendant}
                   autoComplete="off"

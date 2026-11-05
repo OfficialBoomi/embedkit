@@ -30,8 +30,21 @@
 
 /* ---------- Screen ---------- */
 
+/* The Process and Table pickers share one row and wrap on a narrow screen. */
 .boomi-crt-picker {
-  max-width: 32rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+  max-width: 46rem;
+}
+
+.boomi-crt-picker > .boomi-crt-tp {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.boomi-crt-picker > .boomi-crt-tp:last-child {
+  flex-grow: 2;
 }
 
 .boomi-crt-info {
@@ -636,10 +649,6 @@
   font-size: 0.8125rem;
 }
 
-.boomi-crt-fs-sub {
-  color: var(--crt-muted);
-}
-
 .boomi-crt-tool--edge {
   margin-right: 0.25rem;
 }
@@ -680,6 +689,12 @@
   display: block;
   width: 100%;
   font: inherit;
+}
+
+/* Disabled: still readable, with no caret and no pointer. */
+.boomi-crt-tp--disabled .boomi-crt-tp-btn {
+  cursor: default;
+  opacity: 0.8;
 }
 
 .boomi-crt-tp--compact .boomi-crt-tp-btn {

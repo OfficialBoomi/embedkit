@@ -563,3 +563,35 @@ describe('CrtTablePicker compact', () => {
     expect(screen.queryByRole('listbox')).toBeNull();
   });
 });
+
+describe('CrtTablePicker disabled and search label', () => {
+  it('shows the selected name but cannot be opened when disabled, and has no caret', async () => {
+    const { user, button } = setup({ disabled: true });
+    expect((button() as HTMLButtonElement).disabled).toBe(true);
+    expect(button().textContent).toContain('Orders');
+    await user.click(button());
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(document.querySelector('.boomi-crt-tp-caret')).toBeNull();
+    expect(document.querySelector('.boomi-crt-tp--disabled')).not.toBeNull();
+  });
+
+  it('is openable and has a caret when not disabled', async () => {
+    const { user, button } = setup();
+    expect(document.querySelector('.boomi-crt-tp-caret')).not.toBeNull();
+    await user.click(button());
+    expect(screen.getByRole('listbox')).toBeTruthy();
+  });
+
+  it('names the search box from searchLabel, and keeps "Search tables" by default', async () => {
+    const first = setup({ options: MANY });
+    await first.user.click(first.button());
+    expect(screen.getByRole('textbox', { name: 'Search tables' })).toBeTruthy();
+    first.unmount();
+
+    const second = setup({ options: MANY, label: 'Process', searchLabel: 'Search processes' });
+    await second.user.click(screen.getByRole('button', { name: /Process/ }));
+    const box = screen.getByRole('textbox', { name: 'Search processes' }) as HTMLInputElement;
+    expect(box.placeholder).toBe('Search processes...');
+    second.unmount();
+  });
+});
