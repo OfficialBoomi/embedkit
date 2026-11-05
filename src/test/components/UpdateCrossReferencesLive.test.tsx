@@ -125,12 +125,12 @@ describe('live tables', () => {
     expect(within(empty).getByText('No tables in this process')).toBeTruthy();
   });
 
-  it('says saving is not available, visibly and on the disabled Save button', async () => {
+  it('starts with nothing to save: the bar says so and Save is disabled', async () => {
     fetchTables.mockResolvedValue({ tables: [serverTable('Alpha')] });
     renderScreen();
     await screen.findByRole('grid');
-    expect(screen.getByRole('note').textContent).toMatch(/Saving is not available yet/);
-    expect(screen.getByRole('note').className).toBe('boomi-crt-note');
+    expect(screen.getByText('No changes to save')).toBeTruthy();
+    expect(screen.queryByRole('note')).toBeNull();
     expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(true);
   });
 

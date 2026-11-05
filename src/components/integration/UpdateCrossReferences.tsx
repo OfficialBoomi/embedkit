@@ -11,8 +11,14 @@
  * Rows can be added, inserted, duplicated, moved, deleted, cut, copied and pasted, from the
  * toolbar, the grid's context menu or the keyboard. The tables come from the server (read only:
  * the pack's real headers, default rows and override rows), or from a data source registered with
- * `registerCrtDataSource`, which tests use. Nothing is saved from this screen yet, and the
- * Save button says so.
+ * `registerCrtDataSource`, which tests use.
+ *
+ * Save writes the open table to Boomi (or restores its defaults) and reads it back; the bar above
+ * the buttons says what Save will do. A table that other processes of the pack share gets a split
+ * Save button: the main part saves this process only, and the arrow saves to the other processes
+ * too after a confirmation. If someone else changed the table meanwhile, a prompt offers to
+ * overwrite it, reload it or keep editing. While a save runs the whole screen is disabled. See
+ * crt/useCrtSave.
  *
  * A small dot in the picker marks every table with unsaved edits, and leaving the screen (the
  * Cancel button or the breadcrumb) asks first while any table has some. A table that cannot be
@@ -54,12 +60,17 @@ import { buildKeyChips, nextFlaggedRow, type CrtKeyChip } from '../../utils/crt/
 import AjaxLoader from '../ui/AjaxLoader';
 import Button from '../ui/Button';
 import Dialog from '../ui/Dialog';
+import ToastNotification from '../ui/ToastNotification';
 import Page from '../core/Page';
+import CrtConflictModal from './crt/CrtConflictModal';
 import CrtFindBar from './crt/CrtFindBar';
 import CrtGrid, { type CrtGridHandle, type CrtGridInfo, type CrtOp } from './crt/CrtGrid';
+import CrtSaveButton from './crt/CrtSaveButton';
+import CrtSaveScopeModal from './crt/CrtSaveScopeModal';
 import CrtTablePicker, { type CrtPickerOption } from './crt/CrtTablePicker';
 import CrtToolbar from './crt/CrtToolbar';
 import { useCrtFind } from './crt/useCrtFind';
+import { useCrtSave } from './crt/useCrtSave';
 import crtCss from './crt/crt.css?inline';
 
 /**
@@ -81,10 +92,9 @@ export interface UpdateCrossReferencesProps {
 type LoadState =
   | { status: 'loading' }
   | { status: 'error'; message: string; canRetry: boolean }
-  | { status: 'ready'; tables: CrtTableData[]; processes: CrtProcessData[] };
+  | { status: 'ready'; tables: CrtTableData[]; processes: CrtProcessData[]; maxSaveBytes?: number };
 
 const READ_ONLY_HINT = 'Read only. Press Override to edit.';
-const SAVE_NOTE = 'Saving is not available yet. Your edits stay on this screen and are not sent to Boomi.';
 const SERVER_UNREACHABLE = 'The server could not be reached. Check your connection and try again.';
 const SERVER_TOO_OLD =
   'This server does not support cross reference tables yet. Update the embedkit server and try again.';
@@ -163,6 +173,11 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  // The latest selection, for code that runs after an await (a save that lands while another table is open).
+  const selectedKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedKeyRef.current = selectedKey;
+  });
   const [gridInfo, setGridInfo] = useState<CrtGridInfo | null>(null);
   // One store per table, created the first time the table is selected, so edits survive switching.
   const storesRef = useRef(new Map<string, CrtStore>());
@@ -274,13 +289,37 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     };
   }, []);
 
+  // A table was saved, reset or reloaded: it takes the new data, and its edits (what was just saved, or
+  // what the user chose to throw away) are gone, so its old store and dot go. The open table gets its
+  // new store at once; another one gets it when it is opened.
+  const commitTable = useCallback(
+    (key: string, next: CrtTableData) => {
+      unsubscribesRef.current.get(key)?.();
+      unsubscribesRef.current.delete(key);
+      storesRef.current.delete(key);
+      setDirtyKeys((prev) => {
+        if (!prev.has(key)) return prev;
+        const without = new Set(prev);
+        without.delete(key);
+        return without;
+      });
+      setState((prev) =>
+        prev.status === 'ready'
+          ? { ...prev, tables: prev.tables.map((t) => (tableKey(t) === key ? next : t)) }
+          : prev
+      );
+      if (key === selectedKeyRef.current) ensureStore(next);
+    },
+    [ensureStore]
+  );
+
   const packInstanceId = integration.id;
   const packEnvironmentId = integration.environmentId;
   const packName = integration.integrationPackOverrideName || integration.integrationPackName;
   useEffect(() => {
     let alive = true;
     const controller = new AbortController();
-    const load = async (): Promise<{ list: CrtTableData[]; named: CrtProcessData[] }> => {
+    const load = async (): Promise<{ list: CrtTableData[]; named: CrtProcessData[]; maxSaveBytes?: number }> => {
       // A registered source wins; otherwise the tables come from the server.
       const source =
         getCrtDataSource() ??
@@ -294,14 +333,15 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
             signal: controller.signal,
           });
         }, { processNamePrefix: packName });
-      const [list, named] = await Promise.all([
+      const [list, named, limits] = await Promise.all([
         source.listTables(),
         source.listProcesses ? source.listProcesses() : Promise.resolve<CrtProcessData[]>([]),
+        source.limits ? source.limits() : Promise.resolve<{ maxSaveBytes?: number }>({}),
       ]);
-      return { list, named };
+      return { list, named, maxSaveBytes: limits.maxSaveBytes };
     };
     load()
-      .then(({ list, named }) => {
+      .then(({ list, named, maxSaveBytes }) => {
         if (!alive) return;
         const tables = sortTables(list);
         const processes = mergeProcesses(named, tables);
@@ -313,7 +353,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           setSelectedKey(tableKey(initial.table));
         }
         setSelectedProcessId(initial.process?.id ?? null);
-        setState({ status: 'ready', tables, processes });
+        setState({ status: 'ready', tables, processes, maxSaveBytes });
       })
       .catch((err: unknown) => {
         if (!alive) return;
@@ -353,6 +393,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   const store = selectedTable ? (storesRef.current.get(tableKey(selectedTable)) ?? null) : null;
   // Live state (override, row count) of the selected table; other tables only change when selected.
   const storeVersion = useStoreVersion(store);
+  const maxSaveBytes = state.status === 'ready' ? state.maxSaveBytes : undefined;
 
   // Blank and duplicate keys, only while the table can be edited. The store changes in place, so its
   // version is what says the rows are not the ones that were checked.
@@ -519,8 +560,6 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
       });
     });
 
-  // With no callback the breadcrumb does nothing, so there is nothing to leave and nothing to ask.
-  const handleBreadcrumb = onBack ? () => leaveScreen(onBack) : undefined;
 
   const handleOverride = () => {
     store?.override();
@@ -535,8 +574,9 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     try {
       const confirmed = await confirm({
         title: 'Reset to defaults?',
-        description:
-          'Your changes to this table will be discarded and the default values will show again.',
+        description: target.changeSummary().loadedOverridden
+          ? 'The default values will show again. Your own rows stay in Boomi until you press Save.'
+          : 'Your changes to this table will be discarded and the default values will show again.',
         confirmLabel: 'Reset',
         cancelLabel: 'Keep my values',
         destructive: true,
@@ -559,6 +599,33 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   const showHint = useCallback(() => showNotice(READ_ONLY_HINT, 'warn'), [showNotice]);
 
   const find = useCrtFind(store, gridRef, { onNotice: showNotice, onBlocked: showHint });
+
+  const save = useCrtSave({
+    componentKey,
+    packInstanceId,
+    packId: integration.integrationPackId,
+    packEnvironmentId,
+    packName,
+    tables,
+    selectedTable,
+    getStore: (key) => storesRef.current.get(key),
+    commitTable,
+    maxSaveBytes,
+    onNotice: showNotice,
+  });
+
+  // A save, the shared-table confirmation or the conflict prompt takes focus away (the screen is inert while
+  // a save runs). When the last of them is gone, hand focus back to the grid so the keys work again.
+  const saveBusy = save.saving || save.scope !== null || save.conflict;
+  const saveBusySeen = useRef(false);
+  useEffect(() => {
+    if (saveBusySeen.current && !saveBusy) focusGridAfterDialog();
+    saveBusySeen.current = saveBusy;
+  }, [saveBusy, focusGridAfterDialog]);
+
+  // With no callback the breadcrumb does nothing, so there is nothing to leave and nothing to ask.
+  // It is also dead while a save runs: leaving then would hide whether the save landed.
+  const handleBreadcrumb = onBack && !save.saving ? () => leaveScreen(onBack) : undefined;
 
   const handleInfo = useCallback((next: CrtGridInfo) => {
     setGridInfo((prev) => (sameInfo(prev, next) ? prev : next));
@@ -814,28 +881,84 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           </div>
         </div>
       ) : (
-        <div className="boomi-update boomi-crt-screen">
-          {renderTable(selectedTable, store)}
-          <p className="boomi-crt-note" role="note">
-            {SAVE_NOTE}
-          </p>
-          <div className="boomi-update-actions">
-            <Button
-              toggle={false}
-              primary={false}
-              showIcon={false}
-              label="Cancel"
-              onClick={handleCancel}
-            />
-            <Button
-              toggle={false}
-              primary={true}
-              showIcon={false}
-              label="Save"
-              disabled
-              hoverText={SAVE_NOTE}
-            />
+        <div className="boomi-crt-busy">
+          {/* While a save runs nothing under the cover can be clicked, typed into or tabbed to. */}
+          <div className="boomi-update boomi-crt-screen" inert={save.saving} aria-busy={save.saving}>
+            {renderTable(selectedTable, store)}
+            {save.error && (
+              <Dialog
+                error={{
+                  header: 'Could not save',
+                  message: save.error,
+                  errorType: 'error',
+                  onClose: save.dismissError,
+                }}
+                origin="maps"
+              />
+            )}
+            <div className="boomi-crt-savebar">
+              <span
+                className={`boomi-crt-summary${save.action.mode === 'none' ? '' : ' boomi-crt-summary--dirty'}`}
+                role="status"
+                aria-live="polite"
+              >
+                {save.action.text}
+              </span>
+              <div className="boomi-update-actions">
+                <Button
+                  toggle={false}
+                  primary={false}
+                  showIcon={false}
+                  label="Cancel"
+                  onClick={handleCancel}
+                />
+                <CrtSaveButton
+                  shared={save.shared}
+                  disabled={save.action.mode === 'none' || save.saving}
+                  label={save.action.mode === 'reset' ? 'Restore defaults' : 'Save'}
+                  sharedLabel={
+                    save.action.mode === 'reset' ? 'Restore defaults in this process' : 'Save to this process'
+                  }
+                  menuLabel={
+                    save.action.mode === 'reset'
+                      ? 'Restore defaults in other processes that share this table...'
+                      : 'Save to other processes that share this table...'
+                  }
+                  onSave={save.save}
+                  onSaveOthers={save.openScope}
+                />
+              </div>
+            </div>
           </div>
+          {save.saving && !save.scope && (
+            <div className="boomi-crt-busy-cover" role="status">
+              <span className="boomi-crt-spin" aria-hidden="true" />
+              Saving...
+            </div>
+          )}
+          {save.scope && (
+            <CrtSaveScopeModal
+              isOpen
+              mode={save.scope.mode}
+              tableName={selectedTable.name}
+              thisProcessName={selectedTable.processName}
+              targets={save.scope.targets}
+              stage={save.scope.stage}
+              progress={save.scope.progress}
+              onConfirm={save.confirmScope}
+              onRetryFailed={save.retryScope}
+              onClose={save.closeScope}
+            />
+          )}
+          <CrtConflictModal
+            isOpen={save.conflict}
+            tableName={selectedTable.name}
+            processName={selectedTable.processName}
+            onOverwrite={save.overwriteConflict}
+            onReload={save.reloadConflict}
+            onKeepEditing={save.keepEditing}
+          />
+          {save.toast && <ToastNotification key={save.toast.id} type="success" content={save.toast.content} />}
         </div>
       )}
     </>

@@ -184,13 +184,6 @@
   color: var(--crt-muted);
 }
 
-/* The "saving is not available" note under the table: quiet, the same size as the status line above it. */
-.boomi-crt-note {
-  margin: 0.25rem 0 0;
-  font-size: 0.75rem;
-  color: var(--crt-muted);
-}
-
 .boomi-crt-hint {
   color: var(--crt-danger);
   font-weight: 600;
@@ -1178,4 +1171,219 @@
   display: flex;
   justify-content: flex-end;
   margin-top: 0.5rem;
+}
+
+/* ---------- Save bar, split Save button, shared-table confirmation ---------- */
+
+/* What Save will do ("3 rows changed"), on the left; Cancel and Save stay on the right as before. */
+.boomi-crt-savebar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.boomi-crt-savebar .boomi-update-actions {
+  margin-top: 0;
+}
+
+.boomi-crt-summary {
+  font-size: 0.875rem;
+  color: var(--crt-muted);
+}
+
+.boomi-crt-summary--dirty {
+  color: var(--crt-fg);
+  font-weight: 600;
+}
+
+/* A save runs: nothing under the overlay can be clicked or tabbed to. */
+.boomi-crt-busy {
+  position: relative;
+}
+
+.boomi-crt-busy-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background-color: color-mix(in srgb, var(--crt-surface) 70%, transparent);
+  color: var(--crt-fg);
+  font-weight: 600;
+}
+
+/* The split button: the main part and the arrow share one outline. */
+.boomi-crt-split {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.boomi-crt-split .boomi-crt-split-main {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.boomi-crt-split-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.625rem;
+  border: 1px solid var(--boomi-btn-primary-border);
+  border-left-color: color-mix(in srgb, var(--boomi-btn-primary-fg) 35%, transparent);
+  border-top-right-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.boomi-crt-split-arrow:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boomi-crt-split-arrow:focus-visible {
+  outline: 2px solid var(--boomi-btn-primary-border);
+  outline-offset: 2px;
+}
+
+.boomi-crt-split-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.25rem);
+  z-index: 40;
+  min-width: max-content;
+  padding: 0.25rem;
+  border: 1px solid var(--crt-outer-border);
+  border-radius: 0.375rem;
+  background-color: var(--crt-surface);
+  color: var(--crt-fg);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.boomi-crt-split-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.boomi-crt-split-item:hover,
+.boomi-crt-split-item:focus-visible {
+  background-color: color-mix(in srgb, var(--crt-muted) 14%, transparent);
+  outline: none;
+}
+
+/* The confirmation lists the processes that share the table. */
+.boomi-crt-scope-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 50vh;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.boomi-crt-scope-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--crt-outer-border);
+  border-radius: 0.375rem;
+}
+
+.boomi-crt-scope-item input[type='checkbox'] {
+  margin-top: 0.25rem;
+  accent-color: var(--crt-focus);
+}
+
+.boomi-crt-scope-item label,
+.boomi-crt-scope-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.boomi-crt-scope-item label {
+  cursor: pointer;
+}
+
+.boomi-crt-scope-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.boomi-crt-scope-text {
+  font-size: 0.8125rem;
+  color: var(--crt-muted);
+  overflow-wrap: anywhere;
+}
+
+.boomi-crt-scope-item--failed {
+  border-color: var(--crt-danger);
+}
+
+.boomi-crt-scope-item--failed .boomi-crt-scope-text,
+.boomi-crt-scope-item--failed .boomi-crt-scope-state {
+  color: var(--crt-danger);
+}
+
+.boomi-crt-scope-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  font-weight: 700;
+}
+
+.boomi-crt-scope-item--saved .boomi-crt-scope-state {
+  color: var(--crt-new);
+}
+
+.boomi-crt-scope-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* A small spinner for one line of progress (the shared Spinner is a full overlay). */
+.boomi-crt-spin {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: boomi-crt-spin 0.8s linear infinite;
+}
+
+@keyframes boomi-crt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boomi-crt-spin {
+    animation-duration: 2.4s;
+  }
 }
