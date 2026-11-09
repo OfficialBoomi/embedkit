@@ -76,6 +76,8 @@ export interface CrtScopeState {
 export interface CrtSaveApi {
   /** A save is running: the screen must not be used until it ends. */
   saving: boolean;
+  /** What the running work is, for the wait window: "Saving...", "Restoring defaults..." or "Reloading...". */
+  busyLabel: string;
   /** What Save does for the open table, from its store. */
   action: SaveAction;
   /** The open table is also used by other processes (that can be written): Save is a split button. */
@@ -126,6 +128,7 @@ export function useCrtSave(args: UseCrtSaveArgs): CrtSaveApi {
 
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const [busyLabel, setBusyLabel] = useState('Saving...');
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<{ key: string; currentStamp?: string } | null>(null);
   const [scope, setScope] = useState<CrtScopeState | null>(null);
@@ -233,9 +236,10 @@ export function useCrtSave(args: UseCrtSaveArgs): CrtSaveApi {
   );
 
   // One save at a time: a second request while one runs is refused.
-  const begin = useCallback((): boolean => {
+  const begin = useCallback((label = 'Saving...'): boolean => {
     if (savingRef.current) return false;
     savingRef.current = true;
+    setBusyLabel(label);
     setSaving(true);
     return true;
   }, []);
@@ -248,7 +252,7 @@ export function useCrtSave(args: UseCrtSaveArgs): CrtSaveApi {
 
   const runOpen = useCallback(
     async (job: Job) => {
-      if (!begin()) return;
+      if (!begin(job.mode === 'reset' ? 'Restoring defaults...' : 'Saving...')) return;
       setError(null);
       try {
         const result = await write(job);
@@ -286,7 +290,7 @@ export function useCrtSave(args: UseCrtSaveArgs): CrtSaveApi {
     const { packInstanceId, packEnvironmentId, packName, tables, commitTable, onNotice } = argsRef.current;
     const table = tables.find((t) => keyOf(t) === pending?.key);
     if (!pending || !table || !packInstanceId || !packEnvironmentId) return;
-    if (!begin()) return;
+    if (!begin('Reloading...')) return;
     try {
       const response = await serviceRef.current.fetchCrossReferenceTables({
         integrationPackInstanceId: packInstanceId,
@@ -420,6 +424,7 @@ export function useCrtSave(args: UseCrtSaveArgs): CrtSaveApi {
 
   return {
     saving,
+    busyLabel,
     action,
     shared,
     save,

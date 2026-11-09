@@ -1204,17 +1204,45 @@
   position: relative;
 }
 
-.boomi-crt-busy-cover {
-  position: absolute;
-  inset: 0;
-  z-index: 30;
+.boomi-crt-busy-overlay {
+  align-items: center;
+  padding-top: 0;
+}
+
+/* A small card in the middle of the dimmed backdrop. */
+.boomi-crt-busy-card {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  background-color: color-mix(in srgb, var(--crt-surface) 70%, transparent);
-  color: var(--crt-fg);
-  font-weight: 600;
+  gap: 1rem;
+  min-width: 16rem;
+  max-width: 90%;
+  padding: 1.25rem 1.75rem;
+  border-radius: 0.75rem;
+  background-color: var(--boomi-modal-bg, var(--crt-surface));
+  color: var(--boomi-modal-fg, var(--crt-fg));
+  box-shadow: var(--boomi-modal-shadow, 0 4px 20px rgba(0, 0, 0, 0.25));
+}
+
+.boomi-crt-busy-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.boomi-crt-busy-text strong {
+  font-size: 1.125rem;
+}
+
+.boomi-crt-busy-text span {
+  font-size: 0.8125rem;
+  color: var(--crt-muted);
+}
+
+.boomi-crt-spin--large {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-width: 3px;
+  flex: none;
 }
 
 /* The split button: the main part and the arrow share one outline. */

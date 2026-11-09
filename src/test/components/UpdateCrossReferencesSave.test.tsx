@@ -266,10 +266,14 @@ describe('saving the open table', () => {
     await edit(user);
     await user.click(saveButton());
     await screen.findByText('Saving...');
+    // The wait is a small window of its own, not text floating over the table.
+    expect(screen.getByRole('alertdialog').getAttribute('aria-busy')).toBe('true');
+    expect(document.querySelector('.boomi-crt-busy-card')?.textContent).toMatch(/Saving\.\.\./);
     expect(document.querySelector('.boomi-crt-screen')?.hasAttribute('inert')).toBe(true);
     expect((screen.getByRole('button', { name: 'My Integrations' }) as HTMLButtonElement).disabled).toBe(true);
     await act(async () => finish({ processId: 'p1', tableId: 'id-alpha', overridden: true, rowCount: 1, stamp: 'o1.next' }));
     await screen.findByText('Table saved.');
+    expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(document.querySelector('.boomi-crt-screen')?.hasAttribute('inert')).toBe(false);
     expect((screen.getByRole('button', { name: 'My Integrations' }) as HTMLButtonElement).disabled).toBe(false);
   });

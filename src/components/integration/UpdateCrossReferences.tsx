@@ -62,6 +62,7 @@ import Button from '../ui/Button';
 import Dialog from '../ui/Dialog';
 import ToastNotification from '../ui/ToastNotification';
 import Page from '../core/Page';
+import CrtBusyModal from './crt/CrtBusyModal';
 import CrtConflictModal from './crt/CrtConflictModal';
 import CrtFindBar from './crt/CrtFindBar';
 import CrtGrid, { type CrtGridHandle, type CrtGridInfo, type CrtOp } from './crt/CrtGrid';
@@ -930,12 +931,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
               </div>
             </div>
           </div>
-          {save.saving && !save.scope && (
-            <div className="boomi-crt-busy-cover" role="status">
-              <span className="boomi-crt-spin" aria-hidden="true" />
-              Saving...
-            </div>
-          )}
+          {save.saving && !save.scope && <CrtBusyModal message={save.busyLabel} />}
           {save.scope && (
             <CrtSaveScopeModal
               isOpen
