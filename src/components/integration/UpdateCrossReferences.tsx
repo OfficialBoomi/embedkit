@@ -48,6 +48,12 @@
  * through its ref (`UpdateCrossReferencesRef`), before it moves away from the step: nothing is saved
  * by moving on, and unsaved edits are only dropped when the user chooses Discard and continue.
  *
+ * A caller can ask for a table to be open (`initialTableId`, and `initialProcessId` for the process). It is
+ * opened on the first load, and again whenever the request changes while the screen is shown (the wizard
+ * keeps the screen mounted), with the edits of the other tables kept. A request that cannot be met (an
+ * unknown or non editable table) leaves the usual first table open and says so in a short line under the grid.
+ * The rule is `pickRequested` in crt/crtProcesses.
+ *
  * @return {JSX.Element} The rendered UpdateCrossReferences component.
  */
 
@@ -79,8 +85,10 @@ import { createCrtStore, type CrtStore } from '../../utils/crt/crtStore';
 import {
   mergeProcesses,
   NO_TABLES_REASON,
-  pickInitial,
+  pickRequested,
+  requestKey,
   tableAfterProcessSwitch,
+  type InitialRequest,
 } from '../../utils/crt/crtProcesses';
 import type { CrtMatchType, CrtProcessData, CrtTableData } from '../../utils/crt/crtTypes';
 import { checkKeys } from '../../utils/crt/crtWarnings';
@@ -114,6 +122,10 @@ import crtCss from './crt/crt.css?inline';
  * @property {() => void} [onBack] - Optional callback invoked to navigate back.
  * @property {boolean} [active] - Wizard mode: whether this step is the one shown. Defaults to true.
  * @property {boolean} [wizard] - Whether the screen is a step of the Edit wizard (body only, no Cancel button).
+ * @property {string} [initialTableId] - The table to open, by its component id. It is opened in `initialProcessId`
+ * when that process has it, otherwise in the first process that has it. Without it the first editable table opens.
+ * @property {string} [initialProcessId] - The process to open (the id the Process dropdown uses). With no
+ * `initialTableId`, its first editable table opens.
  */
 export interface UpdateCrossReferencesProps {
   componentKey: string;
@@ -121,6 +133,8 @@ export interface UpdateCrossReferencesProps {
   onBack?: () => void;
   active?: boolean;
   wizard?: boolean;
+  initialTableId?: string;
+  initialProcessId?: string;
 }
 
 /**
@@ -156,6 +170,7 @@ const SERVER_UNREACHABLE = 'The server could not be reached. Check your connecti
 const SERVER_TOO_OLD =
   'This server does not support cross reference tables yet. Update the embedkit server and try again.';
 const HINT_MS = 3000;
+const REQUEST_NOT_MET = 'That table cannot be opened here, so the first table is shown.';
 
 /** A short result message under the grid. Warnings use the danger colour, the rest the muted one. */
 interface Notice {
@@ -241,6 +256,8 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
   onBack,
   active = true,
   wizard = false,
+  initialTableId,
+  initialProcessId,
 }, ref) => {
   const { boomiConfig, renderComponent } = usePlugin();
   // In the wizard the screen is mounted from the start but loads only when its step is first shown.
@@ -288,6 +305,23 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
   useEffect(() => {
     fetchTablesRef.current = fetchCrossReferenceTables;
   });
+
+  // The table and process the caller asked for, for code that runs after an await (the first load). The key of
+  // the last request already handled keeps one request from being applied twice, and is cleared when the
+  // request goes away so that asking for the same table again later is a new request.
+  const request: InitialRequest = { tableId: initialTableId, processId: initialProcessId };
+  const requestRef = useRef(request);
+  useEffect(() => {
+    requestRef.current = request;
+  });
+  const handledRequestRef = useRef<string | null>(null);
+
+  // A short result message under the grid. Stable, so the memoized grid does not re-render when this screen does.
+  const showNotice = useCallback((message: string, kind: Notice['kind']) => {
+    setNotice({ message, kind });
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setNotice(null), HINT_MS);
+  }, []);
 
   // The Override button disappears and the Reset dialog steals focus, so hand it back to the grid.
   const focusGrid = useCallback(() => {
@@ -437,9 +471,12 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
         if (!alive) return;
         const tables = sortTables(list);
         const processes = mergeProcesses(named, tables);
-        // The first process with a table that can be edited, and its first such table. A table that
-        // cannot be edited never gets a store and is never selected.
-        const initial = pickInitial(processes, tables);
+        // The table the caller asked for, otherwise the first process with a table that can be edited and its
+        // first such table. A table that cannot be edited never gets a store and is never selected.
+        const asked = requestRef.current;
+        const initial = pickRequested(processes, tables, asked);
+        handledRequestRef.current = requestKey(asked);
+        if (!initial.honored) showNotice(REQUEST_NOT_MET, 'info');
         if (initial.table) {
           ensureStore(initial.table);
           setSelectedKey(tableKey(initial.table));
@@ -470,7 +507,7 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
       alive = false;
       controller.abort();
     };
-  }, [loadEnabled, loadAttempt, ensureStore, packInstanceId, packEnvironmentId, packName]);
+  }, [loadEnabled, loadAttempt, ensureStore, showNotice, packInstanceId, packEnvironmentId, packName]);
 
   useEffect(
     () => () => {
@@ -599,6 +636,28 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
     }
   };
 
+  // The caller asks for another table while the screen is up (the wizard keeps it mounted); the first load
+  // handles the request that was there from the start. The edits of other tables stay, as each table keeps its
+  // own store. A request that cannot be met leaves the open table alone and says so.
+  const wantedKey = requestKey(request);
+  useEffect(() => {
+    if (state.status !== 'ready') return;
+    if (wantedKey === null) {
+      handledRequestRef.current = null;
+      return;
+    }
+    if (handledRequestRef.current === wantedKey) return;
+    handledRequestRef.current = wantedKey;
+    const picked = pickRequested(allProcesses, tables, requestRef.current);
+    if (!picked.honored || !picked.table) {
+      showNotice(REQUEST_NOT_MET, 'info');
+      return;
+    }
+    ensureStore(picked.table);
+    setSelectedProcessId(picked.table.processId);
+    setSelectedKey(tableKey(picked.table));
+  }, [state.status, wantedKey, allProcesses, tables, ensureStore, showNotice]);
+
   const handleRetry = () => {
     releaseStores();
     setSelectedProcessId(null);
@@ -702,12 +761,6 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
   };
 
   // The callbacks below are stable, so the memoized grid does not re-render when this screen does.
-  const showNotice = useCallback((message: string, kind: Notice['kind']) => {
-    setNotice({ message, kind });
-    if (hintTimer.current) clearTimeout(hintTimer.current);
-    hintTimer.current = setTimeout(() => setNotice(null), HINT_MS);
-  }, []);
-
   const showHint = useCallback(() => showNotice(READ_ONLY_HINT, 'warn'), [showNotice]);
 
   const find = useCrtFind(store, gridRef, { onNotice: showNotice, onBlocked: showHint });

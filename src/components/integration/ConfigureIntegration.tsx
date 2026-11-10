@@ -32,6 +32,7 @@ import AjaxLoader from '../ui/AjaxLoader';
 import { useEnvironmentExtensionsService } from '../../service/environmentExtensions.service';
 import { useMapExtensionsService } from '../../service/mapExtensions.service';
 import { BrowseSessionStore } from '../../utils/browseSessionStore';
+import type { InitialRequest } from '../../utils/crt/crtProcesses';
 import logger from '../../logger.service';
 
 type WizardStep = 'connections' | 'maps' | 'crossReferences' | 'schedule';
@@ -110,6 +111,9 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
   const step: WizardStep = steps?.[currentStep] ?? 'schedule';
   const updateConnectionsRef = useRef<UpdateConnectionsRef>(null);
   const crossReferencesRef = useRef<UpdateCrossReferencesRef>(null);
+  // The table a Cross Reference Lookup card on the maps step asked to open. It is handed to the step while the step
+  // is shown and cleared when the step is left, so asking for the same table again later is a new request.
+  const [crtRequest, setCrtRequest] = useState<InitialRequest | null>(null);
   const updateScheduleRef = useRef<UpdateScheduleRef>(null);
   const [showUpdateToast, setShowUpdateToast] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('Integration updated successfully!');
@@ -119,6 +123,18 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
   } = useRunAllProcesses();
   const connStepKey = `${integration.id}:${step === 'connections' ? 'active' : 'hidden'}`;
   const schedStepKey = `${integration.id}:${step === 'schedule' ? 'active' : 'hidden'}`;
+
+  // Moves to the cross reference step with the table open. Leaving the maps step needs no question: map edits are saved
+  // as they are made. Without the step there is nothing to move to (the maps step is then given no callback).
+  const openCrossReference = (target: { tableId: string; processId?: string }) => {
+    const index = steps?.indexOf('crossReferences') ?? -1;
+    if (index < 0) return;
+    setCrtRequest(target);
+    setCurrentStep(index);
+  };
+  useEffect(() => {
+    if (step !== 'crossReferences') setCrtRequest(null);
+  }, [step]);
 
   const pageFor: Record<WizardStep, React.ReactElement> = {
     connections: (
@@ -140,6 +156,7 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
         setIsLoading={setPageIsLoading}
         active={step === 'maps'}
         wizard={true}
+        onOpenCrossReference={showCrtStep ? openCrossReference : undefined}
       />
     ),
     crossReferences: (
@@ -150,6 +167,8 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
         integration={integration}
         active={step === 'crossReferences'}
         wizard={true}
+        initialTableId={crtRequest?.tableId}
+        initialProcessId={crtRequest?.processId}
       />
     ),
     schedule: (

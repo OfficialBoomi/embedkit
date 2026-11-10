@@ -36,6 +36,7 @@ interface FieldMappingCanvasProps {
   onEditTransformation?: (fn: PositionedFunction) => void;
   onDeleteTransformation?: (fn: PositionedFunction) => void;
   onAddTransformation?: (fn: PositionedFunction) => void;
+  onOpenCrossReference?: (tableId: string) => void;
 }
 
 type TreeNode = {
@@ -148,6 +149,7 @@ const FieldMappingCanvasTree = forwardRef((
     onEditTransformation,
     onDeleteTransformation,
     onAddTransformation,
+    onOpenCrossReference,
   }: FieldMappingCanvasProps,
   _ref
 ) => {
@@ -737,6 +739,7 @@ const FieldMappingCanvasTree = forwardRef((
             onReorder={(updated) => onTransformationUpdate?.(updated)}
             onEditTransformation={onEditTransformation}
             onDeleteTransformation={handleDeleteTransformation}
+            onOpenCrossReference={onOpenCrossReference}
             onAddTransformation={() =>
               onAddTransformation?.({
                 id: `temp-${Date.now()}`,

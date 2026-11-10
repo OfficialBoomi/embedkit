@@ -58,6 +58,61 @@ export function pickInitial(processes: readonly CrtProcessData[], tables: readon
   return { process: withTables ?? processes[0] ?? null, table: null };
 }
 
+/** What a caller asks the screen to open: a table, a process, or both. Empty strings count as not given. */
+export interface InitialRequest {
+  tableId?: string;
+  processId?: string;
+}
+
+/** What is open, and whether it is what was asked for. */
+export interface RequestedSelection extends InitialSelection {
+  /**
+   * False when something was asked for and could not be opened (nothing like it can be edited here), so the
+   * default selection is returned instead. True when nothing was asked for, or the request was met.
+   */
+  honored: boolean;
+}
+
+/** True when the request names a table or a process. */
+export const hasRequest = (request: InitialRequest): boolean => Boolean(request.tableId || request.processId);
+
+/** A short stable text for a request, to tell one request from another. Null when nothing was asked for. */
+export const requestKey = (request: InitialRequest): string | null =>
+  hasRequest(request) ? `${request.processId ?? ''}\u0000${request.tableId ?? ''}` : null;
+
+/**
+ * What to open when the caller asked for something. Only tables that can be edited are ever chosen.
+ *
+ * - A table: its copy in the requested process when that process has it, otherwise its copy in the first
+ *   process (in the order of `processes`) that has it.
+ * - A process with no table: that process and its first editable table.
+ * - Nothing asked for, or nothing that matches (an unknown or non editable table, or a process with no
+ *   editable table): the same as `pickInitial`, with `honored` false when something was asked for.
+ */
+export function pickRequested(
+  processes: readonly CrtProcessData[],
+  tables: readonly CrtTableData[],
+  request: InitialRequest
+): RequestedSelection {
+  const tableId = request.tableId || undefined;
+  const processId = request.processId || undefined;
+  if (!tableId && !processId) return { ...pickInitial(processes, tables), honored: true };
+
+  if (tableId) {
+    // The requested process is tried first, then every process in the screen's own order.
+    const requested = processId ? processes.find((p) => p.id === processId) : undefined;
+    for (const process of requested ? [requested, ...processes] : processes) {
+      const table = tables.find((t) => t.processId === process.id && t.id === tableId && isEditable(t));
+      if (table) return { process, table, honored: true };
+    }
+  } else {
+    const process = processes.find((p) => p.id === processId);
+    const first = process ? tablesOfProcess(tables, process.id).find(isEditable) : undefined;
+    if (process && first) return { process, table: first, honored: true };
+  }
+  return { ...pickInitial(processes, tables), honored: false };
+}
+
 /**
  * The table to open after the user picks a process: the table that is open now if the new process
  * has it too and it can be edited there (handy for comparing a shared table), otherwise the first

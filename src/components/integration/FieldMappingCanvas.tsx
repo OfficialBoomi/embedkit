@@ -58,6 +58,7 @@ import logger from '../../logger.service';
  * @property {(fn: PositionedFunction) => void} [onEditTransformation] - Called to edit a transformation function.
  * @property {(fn: PositionedFunction) => void} [onDeleteTransformation] - Called to delete a transformation function.
  * @property {(fn: PositionedFunction) => void} [onAddTransformation] - Called to add a new transformation function.
+ * @property {(tableId: string) => void} [onOpenCrossReference] - Called to open the cross reference table of a lookup function.
  */
 interface FieldMappingCanvasProps {
   sourceFields: MapExtensionsNode[];
@@ -69,6 +70,7 @@ interface FieldMappingCanvasProps {
   onEditTransformation?: (fn: PositionedFunction) => void;
   onDeleteTransformation?: (fn: PositionedFunction) => void;
   onAddTransformation?: (fn: PositionedFunction) => void;
+  onOpenCrossReference?: (tableId: string) => void;
 }
 
 const FieldMappingCanvas = forwardRef((
@@ -82,6 +84,7 @@ const FieldMappingCanvas = forwardRef((
     onEditTransformation,
     onDeleteTransformation,
     onAddTransformation,
+    onOpenCrossReference,
   }: FieldMappingCanvasProps,
   ref
 ) => {
@@ -399,6 +402,7 @@ const FieldMappingCanvas = forwardRef((
             onReorder={(updated) => onTransformationUpdate?.(updated)}
             onEditTransformation={onEditTransformation}
             onDeleteTransformation={handleDeleteTransformation}
+            onOpenCrossReference={onOpenCrossReference}
             onAddTransformation={() =>
               onAddTransformation?.({
                 id: `temp-${Date.now()}`,

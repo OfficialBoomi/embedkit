@@ -8,13 +8,15 @@
  * `wizardStep` is not false, even for a pack with no tables), its label and its place between Map Fields and
  * Set Schedule / Run, Next, Back, Cancel and the breadcrumb (no dialog when nothing is unsaved, the standard
  * dialog otherwise, Keep editing stays and Discard and continue goes on), nothing loaded before the step is
- * first shown or loaded again when it is shown again, and a save in progress blocking the way out. The other
- * steps are small stand-ins; the Wizard and the cross reference screen are the real ones, with the same grid
- * and toolbar stand-ins as the other screen tests (the stand-in grid has one button that edits the first cell
- * of the open table).
+ * first shown or loaded again when it is shown again, and a save in progress blocking the way out. A lookup card
+ * on the maps step can ask for its table: the maps step gets the callback only when the cross reference step is
+ * there, and using it moves the wizard to that step with the table open, with no question and nothing lost. The
+ * other steps are small stand-ins (the maps stand-in has one button that makes that request); the Wizard and the
+ * cross reference screen are the real ones, with the same grid and toolbar stand-ins as the other screen tests
+ * (the stand-in grid has one button that edits the first cell of the open table).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { forwardRef, useImperativeHandle } from 'react';
+import { forwardRef, useEffect, useImperativeHandle } from 'react';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -32,6 +34,8 @@ const fetchExtensions = vi.hoisted(() => vi.fn());
 const getMaps = vi.hoisted(() => vi.fn());
 const submits = vi.hoisted(() => ({ connections: vi.fn(), schedule: vi.fn() }));
 const toasts = vi.hoisted(() => ({ shown: [] as string[] }));
+/** What the maps stand-in asks for when its button is pressed, and how often the stand-in was mounted. */
+const maps = vi.hoisted(() => ({ target: { tableId: 'id-beta', processId: 'p2' } as { tableId: string; processId?: string }, mounts: 0 }));
 
 vi.mock('../../context/pluginContext', () => ({ usePlugin: () => ctx }));
 vi.mock('../../hooks/useDialogs', () => ({ useDialogs: () => ({ confirm, alert: vi.fn() }) }));
@@ -97,7 +101,27 @@ vi.mock('../../components/integration/UpdateConnections', () => ({
   }),
 }));
 vi.mock('../../components/integration/UpdateMaps', () => ({
-  default: ({ active }: { active: boolean }) => (active ? <div data-testid="step-maps">maps step</div> : null),
+  default: function MapsStepStandIn({
+    active,
+    onOpenCrossReference,
+  }: {
+    active: boolean;
+    onOpenCrossReference?: (target: { tableId: string; processId?: string }) => void;
+  }) {
+    useEffect(() => {
+      maps.mounts += 1;
+    }, []);
+    return active ? (
+      <div data-testid="step-maps">
+        maps step
+        {onOpenCrossReference && (
+          <button type="button" onClick={() => onOpenCrossReference(maps.target)}>
+            open lookup table
+          </button>
+        )}
+      </div>
+    ) : null;
+  },
 }));
 vi.mock('../../components/integration/UpdateSchedules', () => ({
   default: forwardRef(({ active }: { active: boolean }, ref) => {
@@ -205,6 +229,8 @@ beforeEach(() => {
   fetchHistory.mockResolvedValue({ environment: null, tables: [] });
   fetchTables.mockResolvedValue({ tables: [serverTable('Alpha')] });
   toasts.shown.length = 0;
+  maps.target = { tableId: 'id-beta', processId: 'p2' };
+  maps.mounts = 0;
 });
 afterEach(() => {
   registerCrtDataSource(null);
@@ -576,5 +602,131 @@ describe('the other steps', () => {
     await clickBack(user);
     await waitFor(() => expect(onBack).toHaveBeenCalledTimes(1));
     expect(confirm).not.toHaveBeenCalled();
+  });
+});
+
+describe('opening a table from a lookup card on the maps step', () => {
+  const tableIn = (name: string, processId: string, processName: string) => ({
+    ...serverTable(name),
+    processId,
+    processName,
+  });
+  const TWO_PROCESSES = {
+    tables: [tableIn('Alpha', 'p1', 'Pack - Main'), tableIn('Beta', 'p2', 'Pack - Second'), tableIn('Gamma', 'p2', 'Pack - Second')],
+    processes: [
+      { id: 'p1', name: 'Pack - Main' },
+      { id: 'p2', name: 'Pack - Second' },
+    ],
+  };
+  const OPEN_LOOKUP = 'open lookup table';
+  const openLookup = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole('button', { name: OPEN_LOOKUP }));
+  const gridName = () => screen.getByRole('grid').getAttribute('aria-label');
+  const tableButton = () => screen.getAllByRole('button', { name: /^Table\b/ })[0];
+  const toMaps = async (user: ReturnType<typeof userEvent.setup>) => {
+    await clickNext(user);
+    await screen.findByTestId('step-maps');
+  };
+
+  beforeEach(() => {
+    fetchTables.mockResolvedValue(TWO_PROCESSES);
+  });
+
+  it('gives the maps step the callback only when the cross reference step is there', async () => {
+    const user = userEvent.setup();
+    for (const config of [undefined, { enabled: false }, { enabled: true, wizardStep: false }, { enabled: true }]) {
+      if (config) crt(config);
+      else ctx.boomiConfig = {};
+      const { unmount } = await mountWizard();
+      await toMaps(user);
+      expect(screen.queryByRole('button', { name: OPEN_LOOKUP }) !== null).toBe(config?.enabled === true && config?.wizardStep !== false);
+      unmount();
+    }
+  });
+
+  it('moves to the cross reference step with the table open, in the process asked for', async () => {
+    const user = userEvent.setup();
+    crt();
+    await mountWizard();
+    await toMaps(user);
+    await openLookup(user);
+
+    await screen.findByRole('grid');
+    expect(activeLabel()).toBe('Cross Reference Tables');
+    expect(gridName()).toBe('Beta (Second)');
+    expect(fetchTables).toHaveBeenCalledTimes(1);
+    expect(confirm).not.toHaveBeenCalled();
+    // The wizard itself did not leave, and no new screen was rendered.
+    expect(ctx.renderComponent).not.toHaveBeenCalled();
+    // The maps step is hidden, not unmounted.
+    expect(screen.queryByTestId('step-maps')).toBeNull();
+    expect(maps.mounts).toBe(1);
+  });
+
+  it('opens the table in another process when the one asked for does not have it, and with only a table', async () => {
+    const user = userEvent.setup();
+    crt();
+    maps.target = { tableId: 'id-gamma', processId: 'p1' };
+    await mountWizard();
+    await toMaps(user);
+    await openLookup(user);
+    await screen.findByRole('grid');
+    expect(gridName()).toBe('Gamma (Second)');
+
+    // Back to the maps step, and ask for a table with no process.
+    await clickBack(user);
+    await screen.findByTestId('step-maps');
+    maps.target = { tableId: 'id-alpha' };
+    await openLookup(user);
+    await waitFor(() => expect(gridName()).toBe('Alpha (Main)'));
+    expect(fetchTables).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the place of the step in a pack without connections', async () => {
+    const user = userEvent.setup();
+    crt();
+    await mountWizard({ connections: false });
+    expect(labels()).toEqual(['Map Fields', 'Cross Reference Tables', 'Set Schedule / Run']);
+    await openLookup(user);
+    await screen.findByRole('grid');
+    expect(activeLabel()).toBe('Cross Reference Tables');
+    expect(gridName()).toBe('Beta (Second)');
+  });
+
+  it('asks for the same table again after the step was left, and the user is taken back to it', async () => {
+    const user = userEvent.setup();
+    crt();
+    await mountWizard();
+    await toMaps(user);
+    await openLookup(user);
+    await screen.findByRole('grid');
+    expect(gridName()).toBe('Beta (Second)');
+
+    // The user opens another table, then goes back to the maps step and asks again.
+    await user.click(tableButton());
+    await user.click(screen.getAllByRole('option').find((o) => within(o).queryByText('Gamma') !== null) as HTMLElement);
+    expect(gridName()).toBe('Gamma (Second)');
+    await clickBack(user);
+    await screen.findByTestId('step-maps');
+    await openLookup(user);
+    await waitFor(() => expect(gridName()).toBe('Beta (Second)'));
+    expect(fetchTables).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the table the user opened when the step is entered with Next, not from a card', async () => {
+    const user = userEvent.setup();
+    crt();
+    await mountWizard();
+    await toMaps(user);
+    await openLookup(user);
+    await screen.findByRole('grid');
+    await user.click(tableButton());
+    await user.click(screen.getAllByRole('option').find((o) => within(o).queryByText('Gamma') !== null) as HTMLElement);
+
+    // Next, then Back: the step is shown again as the user left it, not as the card asked.
+    await clickNext(user);
+    await screen.findByTestId('step-schedule');
+    await clickBack(user);
+    await screen.findByRole('grid');
+    expect(gridName()).toBe('Gamma (Second)');
   });
 });

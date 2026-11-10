@@ -21,6 +21,10 @@
  * highlights every function whose label, name, type or input/output names contain
  * the query, and Prev / Next expand and scroll to each match in turn.
  *
+ * A Cross Reference Lookup that does its own lookup (its table id is on the function) gets an
+ * "Open Cross Reference Table" item in its menu when `onOpenCrossReference` is given. A lookup
+ * inside a User Defined function carries no table id and gets no item.
+ *
  * @return {JSX.Element} The ordered, collapsible list of transformation functions.
  */
 
@@ -60,6 +64,8 @@ export interface FunctionStackProps {
   onReorder: (functions: PositionedFunction[]) => void;
   onEditTransformation?: (fn: PositionedFunction) => void;
   onDeleteTransformation: (fn: PositionedFunction) => void;
+  /** When set, a direct Cross Reference Lookup card gets an item that opens its table (the table's component id). */
+  onOpenCrossReference?: (tableId: string) => void;
   /** Shows the Add button in the column header. */
   onAddTransformation?: () => void;
   /** Called whenever cards move or change height, so the canvas can redraw its lines. */
@@ -72,6 +78,12 @@ const functionLabel = (fn: PositionedFunction): string => {
   if (/^userdefined$/i.test(type)) return 'User Defined';
   if (/scripting/i.test(type)) return 'Script';
   return type.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').trim() || 'Transformation';
+};
+
+/** The table a Cross Reference Lookup function reads, or undefined for any other function (or a lookup that carries none). */
+const lookupTableId = (fn: PositionedFunction): string | undefined => {
+  const id = fn.raw?.Configuration?.CrossReferenceLookup?.lookupTableId;
+  return typeof id === 'string' && id.trim() ? id : undefined;
 };
 
 /** Everything a function search matches against, lowercased. */
@@ -304,11 +316,13 @@ const FunctionCard: React.FC<FunctionCardProps> = ({
   onConnectInput,
   onRemoveMapping,
   onRemoveOutputMappings,
+  onOpenCrossReference,
   onEditTransformation,
   onDeleteTransformation,
   onLayoutChange,
 }) => {
   const dragControls = useDragControls();
+  const tableId = onOpenCrossReference ? lookupTableId(fn) : undefined;
   const inputKeys = fn.inputs.map((i) => `${fn.id}.in.${i.key}`);
   const outputKeys = fn.outputs.map((o) => `${fn.id}.out.${o.key}`);
   const inputMapping = (key: number) =>
@@ -381,6 +395,7 @@ const FunctionCard: React.FC<FunctionCardProps> = ({
           </button>
         </div>
         <TranformationActions
+          onOpenCrossReference={tableId && onOpenCrossReference ? () => onOpenCrossReference(tableId) : undefined}
           onEditTransformation={fn.editable === false ? undefined : () => onEditTransformation?.(fn)}
           onDeleteTransformation={() => onDeleteTransformation(fn)}
         />
