@@ -3,7 +3,7 @@
  * @license BSD-2-Clause
  * @support https://bitbucket.org/officialboomi/embedkit
  */
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import {
   isPrintableKey,
   resolveNavKey,
@@ -155,7 +155,10 @@ describe('resolveNavKey: guards', () => {
     '7',
     ' ',
   ])('returns null for %s when alt is held', (name) => {
+    // Plain Alt is a shortcut key everywhere but on a Mac, where Option types characters (below).
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Win32');
     expect(resolveNavKey(key(name, { altKey: true }), ctx())).toBeNull();
+    vi.restoreAllMocks();
   });
 
   it('returns null for alt combined with other modifiers', () => {
@@ -504,6 +507,121 @@ describe('resolveNavKey: printable keys', () => {
   });
 });
 
+/** Pretends to be a Mac or another platform for the code that asks navigator.platform. */
+const onPlatform = (platform: string) => vi.spyOn(navigator, 'platform', 'get').mockReturnValue(platform);
+
+describe('resolveNavKey: characters typed with Alt', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const EDIT = (char: string): NavAction => ({ type: 'edit', mode: 'replace', char });
+
+  describe('AltGr (Windows and Linux report it as Ctrl and Alt together)', () => {
+    it.each(['@', '{', '}', '[', ']', '\\', '|', '\u20ac', '~', '\u00b5', 'q'])('starts an edit with %j', (k) => {
+      onPlatform('Win32');
+      expect(resolveNavKey(key(k, { ctrlKey: true, altKey: true }), ctx())).toEqual(EDIT(k));
+    });
+
+    it('also when the browser says AltGraph is down, with or without Ctrl', () => {
+      onPlatform('Win32');
+      const altGraph = { getModifierState: (name: string) => name === 'AltGraph' };
+      expect(resolveNavKey({ key: '@', altKey: true, ...altGraph }, ctx())).toEqual(EDIT('@'));
+      expect(resolveNavKey({ key: '\u20ac', ctrlKey: true, altKey: true, ...altGraph }, ctx())).toEqual(EDIT('\u20ac'));
+      // The modifier alone, with no altKey, is not Alt at all.
+      expect(resolveNavKey({ key: 'a', ...altGraph }, ctx())).toEqual(EDIT('a'));
+    });
+
+    it('asks only about AltGraph', () => {
+      onPlatform('Linux x86_64');
+      const ask = vi.fn(() => false);
+      resolveNavKey({ key: '@', altKey: true, getModifierState: ask }, ctx());
+      expect(ask).toHaveBeenCalledTimes(1);
+      expect(ask).toHaveBeenCalledWith('AltGraph');
+    });
+
+    it('is blocked, like any typed character, when the table cannot be edited', () => {
+      onPlatform('Win32');
+      expect(resolveNavKey(key('@', { ctrlKey: true, altKey: true }), ctx({ editable: false }))).toEqual(BLOCKED);
+    });
+
+    it('does nothing on a table with no cells', () => {
+      onPlatform('Win32');
+      expect(resolveNavKey(key('@', { ctrlKey: true, altKey: true }), ctx({ rowCount: 0 }))).toBeNull();
+      expect(resolveNavKey(key('@', { ctrlKey: true, altKey: true }), ctx({ colCount: 0 }))).toBeNull();
+    });
+
+    it('is never undo, redo, select all or a shortcut, whatever letter it carries', () => {
+      onPlatform('Win32');
+      for (const k of ['z', 'y', 'a', 'c', 'v', 'x', 'f']) {
+        expect(resolveNavKey(key(k, { ctrlKey: true, altKey: true }), ctx())).toEqual(EDIT(k));
+      }
+    });
+
+    it('Alt with a key that is not a character stays unhandled, AltGr or not', () => {
+      onPlatform('Win32');
+      for (const k of ['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Home', 'F2', 'Delete', 'Backspace', 'PageDown', 'Dead', 'AltGraph', 'Alt']) {
+        expect(resolveNavKey(key(k, { ctrlKey: true, altKey: true }), ctx())).toBeNull();
+        expect(resolveNavKey(key(k, { altKey: true }), ctx())).toBeNull();
+      }
+    });
+  });
+
+  describe('Option on a Mac', () => {
+    it.each(['@', '\u20ac', '\u00e5', '\u00df', '\u2211', '{', '|'])('starts an edit with %j', (k) => {
+      onPlatform('MacIntel');
+      expect(resolveNavKey(key(k, { altKey: true }), ctx())).toEqual(EDIT(k));
+    });
+
+    it('is blocked when the table cannot be edited', () => {
+      onPlatform('MacIntel');
+      expect(resolveNavKey(key('@', { altKey: true }), ctx({ editable: false }))).toEqual(BLOCKED);
+    });
+
+    it('Option with an arrow, Enter and the other named keys stays unhandled', () => {
+      onPlatform('MacIntel');
+      for (const k of ['ArrowDown', 'ArrowLeft', 'Enter', 'Tab', 'Backspace', 'Delete', 'Escape', 'Dead']) {
+        expect(resolveNavKey(key(k, { altKey: true }), ctx())).toBeNull();
+      }
+    });
+
+    it('Command with Option is a browser or system shortcut and never starts an edit', () => {
+      onPlatform('MacIntel');
+      expect(resolveNavKey(key('i', { altKey: true, metaKey: true }), ctx())).toBeNull();
+      expect(resolveNavKey(key('\u00e5', { altKey: true, metaKey: true }), ctx())).toBeNull();
+      expect(resolveNavKey(key('@', { altKey: true, metaKey: true, ctrlKey: true }), ctx())).toBeNull();
+    });
+  });
+
+  describe('plain Alt elsewhere', () => {
+    it.each(['a', 'f', 'e', '7', ' ', '@'])('does nothing for Alt+%j on Windows or Linux', (k) => {
+      for (const platform of ['Win32', 'Linux x86_64']) {
+        onPlatform(platform);
+        expect(resolveNavKey(key(k, { altKey: true }), ctx())).toBeNull();
+        expect(resolveNavKey(key(k, { altKey: true, shiftKey: true }), ctx())).toBeNull();
+      }
+    });
+
+    it('does nothing for Alt with Meta, and for a getModifierState that says no', () => {
+      onPlatform('Win32');
+      expect(resolveNavKey(key('a', { altKey: true, metaKey: true }), ctx())).toBeNull();
+      expect(resolveNavKey({ key: 'a', altKey: true, getModifierState: () => false }, ctx())).toBeNull();
+    });
+
+    it('does not change Ctrl or Cmd without Alt', () => {
+      onPlatform('Win32');
+      expect(resolveNavKey(key('z', { ctrlKey: true }), ctx())).toEqual({ type: 'undo' });
+      expect(resolveNavKey(key('a', { ctrlKey: true }), ctx())).toEqual({ type: 'select-all' });
+      expect(resolveNavKey(key('c', { ctrlKey: true }), ctx())).toBeNull();
+    });
+  });
+
+  it('AltGr in an open cell is for the text input, as every character is', () => {
+    expect(resolveEditKey(key('@', { ctrlKey: true, altKey: true }))).toBeNull();
+    expect(resolveEditKey(key('\u20ac', { altKey: true }))).toBeNull();
+  });
+});
+
 describe('resolveNavKey: keys that are not handled', () => {
   it.each([
     'Escape',
@@ -566,9 +684,11 @@ describe('resolveNavKey: select all (mod+A)', () => {
     expect(resolveNavKey(key('A', { metaKey: true, shiftKey: true }), ctx())).toBeNull();
   });
 
-  it('returns null with alt', () => {
-    expect(resolveNavKey(key('a', { ctrlKey: true, altKey: true }), ctx())).toBeNull();
+  it('is not select all with alt: Ctrl and Alt together is AltGr, which types, and Cmd with Option does nothing', () => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Win32');
+    expect(resolveNavKey(key('a', { ctrlKey: true, altKey: true }), ctx())).toEqual({ type: 'edit', mode: 'replace', char: 'a' });
     expect(resolveNavKey(key('a', { metaKey: true, altKey: true }), ctx())).toBeNull();
+    vi.restoreAllMocks();
   });
 
   it('a bare letter a still types, and is blocked when read only', () => {
@@ -822,12 +942,17 @@ describe('resolveNavKey: undo and redo', () => {
     }
   });
 
-  it('leaves Shift+Y and the Shift and Alt combinations unhandled', () => {
+  it('leaves Shift+Y and the Shift combinations unhandled, and never turns Alt into undo or redo', () => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Win32');
     expect(resolveNavKey(key('y', { ctrlKey: true, shiftKey: true }), ctx())).toBeNull();
     expect(resolveNavKey(key('y', { metaKey: true, shiftKey: true }), ctx())).toBeNull();
-    expect(resolveNavKey(key('z', { ctrlKey: true, altKey: true }), ctx())).toBeNull();
-    expect(resolveNavKey(key('y', { ctrlKey: true, altKey: true }), ctx())).toBeNull();
-    expect(resolveNavKey(key('z', { ctrlKey: true, shiftKey: true, altKey: true }), ctx())).toBeNull();
+    // Ctrl and Alt together is AltGr: a typed character, not undo or redo.
+    for (const alt of [{}, { shiftKey: true }]) {
+      expect(resolveNavKey(key('z', { ctrlKey: true, altKey: true, ...alt }), ctx())).toEqual({ type: 'edit', mode: 'replace', char: 'z' });
+      expect(resolveNavKey(key('y', { ctrlKey: true, altKey: true, ...alt }), ctx())).toEqual({ type: 'edit', mode: 'replace', char: 'y' });
+    }
+    expect(resolveNavKey(key('z', { metaKey: true, altKey: true }), ctx())).toBeNull();
+    vi.restoreAllMocks();
   });
 
   it('a bare Z or Y still types, and is blocked when the grid is read only', () => {

@@ -91,6 +91,16 @@ describe('getShortcutGroups: shape', () => {
   });
 });
 
+describe('getShortcutGroups: typed characters', () => {
+  it.each([false, true])('the Any character row says AltGr and Option characters start editing too (mac: %s)', (mac) => {
+    const row = allRows(getShortcutGroups(mac)).find((r) => r.keys.some((combo) => combo.includes('Any character')));
+    expect(row?.covers).toEqual(['edit']);
+    expect(row?.action).toContain('Start editing, with that character replacing the cell');
+    expect(row?.action).toContain('AltGr');
+    expect(row?.action).toContain('Option on a Mac');
+  });
+});
+
 describe('getShortcutGroups: the modifier follows the platform', () => {
   const labels = (mac: boolean): Set<string> =>
     new Set(allRows(getShortcutGroups(mac)).flatMap((r) => r.keys.flat()));

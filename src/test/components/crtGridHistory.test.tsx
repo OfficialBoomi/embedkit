@@ -226,11 +226,16 @@ describe('Ctrl+Z and Ctrl+Y reach the grid history', () => {
     expect(e.preventDefault).not.toHaveBeenCalled();
   });
 
-  it('leaves Alt combinations and Shift+Y alone', () => {
+  it('leaves Alt chords and Shift+Y alone, and never turns Alt into undo or redo', () => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Win32');
     const h = setup();
-    expect(h.press('z', { ctrlKey: true, altKey: true }).preventDefault).not.toHaveBeenCalled();
+    expect(h.press('z', { altKey: true }).preventDefault).not.toHaveBeenCalled();
+    expect(h.press('ArrowDown', { altKey: true }).preventDefault).not.toHaveBeenCalled();
     expect(h.press('y', { ctrlKey: true, shiftKey: true }).preventDefault).not.toHaveBeenCalled();
+    // Ctrl and Alt together is AltGr: it types a character (the editor opens), it is not undo.
+    expect(h.press('z', { ctrlKey: true, altKey: true }).preventDefault).toHaveBeenCalledTimes(1);
     expect(h.runOp).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
   });
 
   it('works on an empty table, so deleting every row can be undone from the keyboard', () => {

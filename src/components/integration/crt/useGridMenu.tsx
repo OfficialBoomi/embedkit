@@ -29,6 +29,7 @@ import {
 } from 'react-icons/ai';
 import { plainSelection, selectionRange } from '../../../utils/crt/crtGridSelection';
 import { inRange } from '../../../utils/crt/crtSelection';
+import { isMacPlatform } from '../../../utils/crt/crtShortcuts';
 import type { CrtMenuItem } from './CrtMenu';
 import { isOpEnabled } from './CrtToolbar';
 import type { CrtGridInfo, CrtOp, GridContext, GridMenuState } from './crtGridTypes';
@@ -42,9 +43,6 @@ import {
   scrollRowIntoView,
 } from './gridLayout';
 import type { GridSelectionOps } from './useGridSelectionOps';
-
-const isMac = (): boolean =>
-  typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '');
 
 /** What CrtGrid builds before this hook runs. */
 export interface GridMenuParts {
@@ -109,7 +107,7 @@ export function useGridMenu(
 
   const menuItems = useMemo<CrtMenuItem[] | null>(() => {
     if (!menu) return null;
-    const mod = isMac() ? '⌘' : 'Ctrl+';
+    const mod = isMacPlatform() ? '⌘' : 'Ctrl+';
     const item = (
       op: CrtOp,
       label: string,

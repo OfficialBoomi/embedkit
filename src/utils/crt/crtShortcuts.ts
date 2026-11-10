@@ -179,7 +179,8 @@ export function getShortcutGroups(mac: boolean = isMacPlatform()): CrtShortcutGr
         },
         {
           keys: [['Any character']],
-          action: 'Start editing, with that character replacing the cell',
+          action:
+            'Start editing, with that character replacing the cell. Characters typed with AltGr, or with Option on a Mac, start editing too',
           covers: ['edit'],
         },
         { keys: [['Double-click']], action: 'Edit the cell with the cursor at the end' },

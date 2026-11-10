@@ -14,6 +14,8 @@
 // When you add, remove or change a key here, update crtShortcuts.ts (the Keyboard shortcuts
 // window); a test fails when an action has no row.
 
+import { isMacPlatform } from './crtShortcuts';
+
 /** The parts of a keyboard event the rules read. */
 export interface KeyInput {
   key: string;
@@ -21,6 +23,8 @@ export interface KeyInput {
   metaKey?: boolean;
   shiftKey?: boolean;
   altKey?: boolean;
+  /** A real keyboard event has it. Only used to tell AltGr from Alt; a plain object may leave it out. */
+  getModifierState?: (key: 'AltGraph') => boolean;
 }
 
 /** Where the active cell is and what the grid allows. Cells are zero based. */
@@ -99,6 +103,19 @@ export function isPrintableKey(key: string): boolean {
   return !isControlCode(chars[0].codePointAt(0) ?? 0);
 }
 
+/**
+ * True when Alt is held to type a character, not to press a shortcut: AltGr (a keyboard's way to type
+ * @, {, [, \ or the euro sign, which Windows and Linux report as Ctrl and Alt together, and some
+ * browsers also as the AltGraph modifier), or Option on a Mac (which types characters such as the
+ * at sign or an accented letter). Plain Alt on any other platform is a menu or shortcut key, and a
+ * Command key held with Option is a browser or system shortcut: neither types.
+ */
+function altTypesCharacter(k: KeyInput): boolean {
+  if (k.metaKey) return false;
+  const altGr = (!!k.ctrlKey && !!k.altKey) || k.getModifierState?.('AltGraph') === true;
+  return altGr || isMacPlatform();
+}
+
 /** Rows a page key moves: at least 1, always a whole number. */
 const pageStep = (pageRows: number): number =>
   Number.isFinite(pageRows) ? Math.max(1, Math.floor(pageRows)) : 1;
@@ -108,7 +125,13 @@ const pageStep = (pageRows: number): number =>
  * Returns null when the key is not handled so the event can bubble.
  */
 export function resolveNavKey(k: KeyInput, c: NavContext): NavAction | null {
-  if (k.altKey) return null;
+  if (k.altKey) {
+    // Alt is a shortcut modifier, so nothing happens with it, except that a character typed with it
+    // (AltGr, or Option on a Mac) starts an edit like any other typed character. Alt with an arrow,
+    // Enter and the other named keys stays unhandled.
+    if (c.rowCount <= 0 || c.colCount <= 0 || !isPrintableKey(k.key) || !altTypesCharacter(k)) return null;
+    return c.editable ? { type: 'edit', mode: 'replace', char: k.key } : { type: 'blocked' };
+  }
 
   const mod = !!(k.ctrlKey || k.metaKey);
   const shift = !!k.shiftKey;
