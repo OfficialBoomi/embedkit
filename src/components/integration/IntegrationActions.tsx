@@ -41,7 +41,7 @@ import { Menu } from '@headlessui/react';
  * @property {() => void} [onEdit] - When set, adds Edit as the first item (used when the card has no Edit button).
  * @property {string} [editLabel] - Text of that item (default "Edit").
  * @property {() => void} [onEditCrossReferences] - When set, adds the cross reference tables item after Edit Map(s).
- * @property {string} [crossReferencesLabel] - Text of that item (default "Edit Cross Reference Tables").
+ * @property {string} [crossReferencesLabel] - Text of that item (default "Edit Cross Reference Tables", also used when this is empty).
  */
 interface IntegrationActionsProps {
   integration: IntegrationPackInstance;
@@ -70,8 +70,10 @@ const IntegrationActions: React.FC<IntegrationActionsProps> = ({
   onEdit,
   editLabel = 'Edit',
   onEditCrossReferences,
-  crossReferencesLabel = 'Edit Cross Reference Tables',
+  crossReferencesLabel,
 }) => {
+  // A default parameter only covers undefined, so an empty label would give a blank menu item.
+  const crossLabel = crossReferencesLabel?.trim() || 'Edit Cross Reference Tables';
   return (
     <DropdownMenu>
       <>
@@ -124,7 +126,7 @@ const IntegrationActions: React.FC<IntegrationActionsProps> = ({
                 data-headlessui-state={active ? 'active' : undefined}
               >
                 <AiOutlineTable className="boomi-menu-icon" />
-                {crossReferencesLabel}
+                {crossLabel}
               </button>
             )}
           </Menu.Item>

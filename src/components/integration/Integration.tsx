@@ -133,7 +133,8 @@ const Integration: React.FC<IntegrationProps> = ({
   const crtActionProps = crtCfg?.enabled === true
     ? {
         onEditCrossReferences: () => onEditClick('UpdateCrossReferences', integration),
-        crossReferencesLabel: crtCfg.menuLabel as string | undefined,
+        // An empty label (or one of spaces) is no label: the item falls back to its default text, like `title`.
+        crossReferencesLabel: (crtCfg.menuLabel as string | undefined)?.trim() || undefined,
       }
     : {};
 
