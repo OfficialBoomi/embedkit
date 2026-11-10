@@ -41,10 +41,26 @@
  * pressing a chip jumps to the next flagged row. The grid gets the same result to mark the key
  * cells. A table that is not editable shows no key warnings.
  *
+ * The screen is also a step of the Edit wizard (`wizard`). There it shows the body only: no page
+ * frame and no Cancel button, since the wizard has its own Back and Cancel. It stays mounted for the
+ * whole wizard and shows only while its step is `active`; the tables load the first time the step is
+ * active, and the data and any unsaved edits are kept while it is hidden. The wizard asks the screen,
+ * through its ref (`UpdateCrossReferencesRef`), before it moves away from the step: nothing is saved
+ * by moving on, and unsaved edits are only dropped when the user chooses Discard and continue.
+ *
  * @return {JSX.Element} The rendered UpdateCrossReferences component.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import type { IntegrationPackInstance } from '@boomi/embedkit-sdk';
 import { usePlugin } from '../../context/pluginContext';
 import { useDialogs } from '../../hooks/useDialogs';
@@ -96,12 +112,32 @@ import crtCss from './crt/crt.css?inline';
  * @property {string} componentKey - Unique key for the component instance.
  * @property {IntegrationPackInstance} integration - The integration whose tables are shown.
  * @property {() => void} [onBack] - Optional callback invoked to navigate back.
+ * @property {boolean} [active] - Wizard mode: whether this step is the one shown. Defaults to true.
+ * @property {boolean} [wizard] - Whether the screen is a step of the Edit wizard (body only, no Cancel button).
  */
 export interface UpdateCrossReferencesProps {
   componentKey: string;
   integration: IntegrationPackInstance;
   onBack?: () => void;
+  active?: boolean;
+  wizard?: boolean;
 }
+
+/**
+ * @typedef UpdateCrossReferencesRef
+ *
+ * @description
+ * Methods exposed to the wizard for the cross reference tables step.
+ *
+ * @property {() => boolean} hasUnsavedChanges - Whether any table has unsaved edits.
+ * @property {() => Promise<boolean>} confirmLeave - Resolves true when the wizard may move away from the step:
+ * at once when no table has unsaved edits, otherwise after the user chooses Discard and continue (the edits
+ * are then dropped). Resolves false when the user keeps editing, or while a save is in progress.
+ */
+export type UpdateCrossReferencesRef = {
+  hasUnsavedChanges: () => boolean;
+  confirmLeave: () => Promise<boolean>;
+};
 
 type LoadState =
   | { status: 'loading' }
@@ -145,6 +181,25 @@ const tableKey = (t: CrtTableData): string => `${t.processId}:${t.id}`;
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
 
+/** What the unsaved changes dialog says: when leaving the screen, and when moving on to another step of the wizard. */
+interface LeaveWording {
+  title: string;
+  outcome: string;
+  confirmLabel: string;
+}
+
+const LEAVE_SCREEN: LeaveWording = {
+  title: 'Discard your changes?',
+  outcome: 'Leaving now discards them.',
+  confirmLabel: 'Discard changes',
+};
+
+const LEAVE_STEP: LeaveWording = {
+  title: 'You have unsaved changes',
+  outcome: 'Discard and continue throws them away.',
+  confirmLabel: 'Discard and continue',
+};
+
 /** A table that is listed but cannot be edited here. Only a non-empty reason counts. */
 const isUnavailable = (t: CrtTableData): boolean => Boolean(t.unavailableReason);
 
@@ -180,12 +235,20 @@ function useStoreVersion(store: CrtStore | null): number {
   );
 }
 
-const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
+const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossReferencesProps>(({
   componentKey,
   integration,
   onBack,
-}) => {
+  active = true,
+  wizard = false,
+}, ref) => {
   const { boomiConfig, renderComponent } = usePlugin();
+  // In the wizard the screen is mounted from the start but loads only when its step is first shown.
+  const [opened, setOpened] = useState(false);
+  useEffect(() => {
+    if (wizard && active) setOpened(true);
+  }, [wizard, active]);
+  const loadEnabled = !wizard || active || opened;
   const { confirm } = useDialogs('CrossReferenceTables');
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -338,6 +401,8 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   const packEnvironmentId = integration.environmentId;
   const packName = integration.integrationPackOverrideName || integration.integrationPackName;
   useEffect(() => {
+    // A wizard step that has not been shown yet asks the server for nothing.
+    if (!loadEnabled) return;
     let alive = true;
     const controller = new AbortController();
     const load = async (): Promise<{
@@ -405,7 +470,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
       alive = false;
       controller.abort();
     };
-  }, [loadAttempt, ensureStore, packInstanceId, packEnvironmentId, packName]);
+  }, [loadEnabled, loadAttempt, ensureStore, packInstanceId, packEnvironmentId, packName]);
 
   useEffect(
     () => () => {
@@ -415,6 +480,11 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   );
 
   const tables = state.status === 'ready' ? state.tables : NO_TABLES;
+  // The latest tables, for code that runs after an await (the wizard's dialog).
+  const tablesRef = useRef(tables);
+  useEffect(() => {
+    tablesRef.current = tables;
+  });
   const allProcesses = state.status === 'ready' ? state.processes : NO_PROCESSES;
   const selectedTable = tables.find((t) => tableKey(t) === selectedKey) ?? null;
   const store = selectedTable ? (storesRef.current.get(tableKey(selectedTable)) ?? null) : null;
@@ -539,18 +609,18 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
 
   // Asks before leaving while any table has unsaved edits. Counted from the live stores, so it
   // cannot lag behind a render. Guarded like the reset dialog so a double click cannot open two.
-  const confirmLeave = async (changed: number): Promise<boolean> => {
+  const confirmLeave = async (changed: number, wording: LeaveWording = LEAVE_SCREEN): Promise<boolean> => {
     if (leaveOpen.current) return false;
     leaveOpen.current = true;
     blurGrid();
     let leave = false;
     try {
       leave = await confirm({
-        title: 'Discard your changes?',
+        title: wording.title,
         description: `${
           changed === 1 ? 'One table has' : `${changed.toLocaleString('en-US')} tables have`
-        } unsaved changes. Leaving now discards them.`,
-        confirmLabel: 'Discard changes',
+        } unsaved changes. ${wording.outcome}`,
+        confirmLabel: wording.confirmLabel,
         cancelLabel: 'Keep editing',
         destructive: true,
       });
@@ -562,12 +632,27 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     }
   };
 
-  // Clean tables leave at once, with no dialog and no wait.
-  const leaveScreen = (go: () => void) => {
+  // How many tables have unsaved edits, counted from the live stores.
+  const countChanged = (): number => {
     let changed = 0;
     storesRef.current.forEach((s) => {
       if (s.isDirty()) changed += 1;
     });
+    return changed;
+  };
+
+  // Every table with unsaved edits goes back to the data it was loaded or last saved with.
+  const discardChanges = () => {
+    const dirty = [...storesRef.current].filter(([, s]) => s.isDirty()).map(([key]) => key);
+    dirty.forEach((key) => {
+      const loaded = tablesRef.current.find((t) => tableKey(t) === key);
+      if (loaded) commitTable(key, loaded);
+    });
+  };
+
+  // Clean tables leave at once, with no dialog and no wait.
+  const leaveScreen = (go: () => void) => {
+    const changed = countChanged();
     if (changed === 0) {
       go();
       return;
@@ -674,6 +759,21 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   // With no callback the breadcrumb does nothing, so there is nothing to leave and nothing to ask.
   // It is also dead while a save runs: leaving then would hide whether the save landed.
   const handleBreadcrumb = onBack && !save.saving ? () => leaveScreen(onBack) : undefined;
+
+  // What the wizard asks before it moves away from this step. While a save, the shared-table confirmation or the
+  // conflict prompt is open the answer is no, so the wizard stays where the result will show. Nothing is saved
+  // here: the screen's own Save buttons do that. Without a dependency list, the handle is current on every render.
+  useImperativeHandle(ref, () => ({
+    hasUnsavedChanges: () => countChanged() > 0,
+    confirmLeave: async () => {
+      if (saveBusy) return false;
+      const changed = countChanged();
+      if (changed === 0) return true;
+      const leave = await confirmLeave(changed, LEAVE_STEP);
+      if (leave) discardChanges();
+      return leave;
+    },
+  }));
 
   const handleInfo = useCallback((next: CrtGridInfo) => {
     setGridInfo((prev) => (sameInfo(prev, next) ? prev : next));
@@ -880,6 +980,9 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     );
   };
 
+  // The wizard's card is the frame, so the wizard marker class replaces the standalone card.
+  const screenClass = `${wizard ? 'boomi-update-wizard' : 'boomi-update'} boomi-crt-screen`;
+
   const bodyContent = (
     <>
       <style>{crtCss}</style>
@@ -901,7 +1004,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           onButtonClick={handleRetry}
         />
       ) : !selectedTable || !store ? (
-        <div className="boomi-update boomi-crt-screen">
+        <div className={screenClass}>
           {allProcesses.length > 0 && (
             <div className="boomi-crt-picker">
               <CrtTablePicker
@@ -926,20 +1029,22 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
               </ul>
             )}
           </div>
-          <div className="boomi-update-actions">
-            <Button
-              toggle={false}
-              primary={false}
-              showIcon={false}
-              label="Cancel"
-              onClick={handleCancel}
-            />
-          </div>
+          {!wizard && (
+            <div className="boomi-update-actions">
+              <Button
+                toggle={false}
+                primary={false}
+                showIcon={false}
+                label="Cancel"
+                onClick={handleCancel}
+              />
+            </div>
+          )}
         </div>
       ) : (
         <div className="boomi-crt-busy">
           {/* While a save runs nothing under the cover can be clicked, typed into or tabbed to. */}
-          <div className="boomi-update boomi-crt-screen" inert={save.saving} aria-busy={save.saving}>
+          <div className={screenClass} inert={save.saving} aria-busy={save.saving}>
             {renderTable(selectedTable, store)}
             {save.error && (
               <Dialog
@@ -961,13 +1066,15 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
                 {save.action.text}
               </span>
               <div className="boomi-update-actions">
-                <Button
-                  toggle={false}
-                  primary={false}
-                  showIcon={false}
-                  label="Cancel"
-                  onClick={handleCancel}
-                />
+                {!wizard && (
+                  <Button
+                    toggle={false}
+                    primary={false}
+                    showIcon={false}
+                    label="Cancel"
+                    onClick={handleCancel}
+                  />
+                )}
                 <CrtSaveButton
                   shared={save.shared}
                   disabled={save.action.mode === 'none' || save.saving}
@@ -1015,6 +1122,12 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     </>
   );
 
+  // A wizard step that is not the one shown renders nothing but stays mounted, so it keeps its tables and edits.
+  if (wizard && !active) return null;
+
+  // In the wizard only the body shows: the wizard has its own frame, Back and Cancel.
+  if (wizard) return bodyContent;
+
   return (
     <Page
       componentKey={componentKey}
@@ -1029,7 +1142,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
       callbackOne={handleBreadcrumb}
     />
   );
-};
+});
 
 UpdateCrossReferences.displayName = 'UpdateCrossReferences';
 export default UpdateCrossReferences;
