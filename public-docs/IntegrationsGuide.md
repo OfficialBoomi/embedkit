@@ -163,7 +163,7 @@ The wizard has up to three steps: **Make Connections**, **Map Fields** and **Set
 
 A schedule is optional. An integration with none opens this step empty, with an **Add** button, and finishing the step without adding one saves no schedule. To remove every schedule, delete the cards and save (this needs the updated EmbedKit server).
 
-Single-install packs keep their connection settings at the environment level rather than per process. EmbedKit 1.7 sends `isSingleInstall` with every connection and map request, so these load and save correctly. Earlier versions rejected them with `Code [1004]`.
+Single-install packs keep their settings in one record for the whole environment, shared by every single-install integration installed there. **Edit Connections** (and the connections step of the setup wizard) lists only the connections and process properties of the integration's own processes, the same as a multi-install integration, so another integration's settings never show and a save changes only the values shown. This needs the matching `@boomi/embedkit-sdk` and EmbedKit server releases; the connections request has the same fields in every EmbedKit version from 1.5.1 on and the server answers them all the same way. The `isSingleInstall` field that EmbedKit 1.7 and later send is still accepted (map requests still use it; for connections it no longer changes the answer). Versions before 1.7 rejected single-install connections with `Code [1004]`.
 
 ### Default mappings
 
