@@ -1418,7 +1418,7 @@
 
 /* ---------- History lines ---------- */
 
-/* Two quiet lines under the info row: who last saved the open table here, and who last saved in the environment. */
+/* One quiet line under the info row: when the open table was last saved, and by whom. */
 .boomi-crt-history {
   display: flex;
   flex-direction: column;

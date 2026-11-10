@@ -4,13 +4,13 @@
  * @support https://bitbucket.org/officialboomi/embedkit
  *
  * @description
- * The two quiet lines of the cross reference table screen that say who changed things: one for the
- * open table (only saves made through this screen are known) and one for the whole environment (the
- * last save Boomi recorded, whoever made it). Pure text and data, no React and no fetching, so it
- * can be tested without a server.
+ * The one quiet line of the cross reference table screen that says when the open table was last saved
+ * and by whom. It is worked out from two records: ours (saves made through the plugin, per table) and
+ * Boomi's (the last save of the whole environment, whoever made it). Pure text and data, no React and
+ * no fetching, so it can be tested without a server.
  *
- * The wording is fixed. The environment line says only whether the save came from the Boomi user
- * interface, never anything else about how it was made.
+ * The line shows a date, a time and a user, nothing else: no account id, no row count and no word about
+ * how the save was made.
  */
 import type {
   CrossReferenceEnvironmentHistory,
@@ -18,7 +18,7 @@ import type {
   CrossReferenceTableHistory,
 } from '../../service/crossReferenceTables.service';
 
-/** The tooltip of the environment line: that line is about the whole environment, not the open table. */
+/** The tooltip of a line that comes from Boomi alone: that record is about the whole environment, not one table. */
 export const ENVIRONMENT_HISTORY_HINT = 'Boomi records this for the whole environment, not for one table.';
 
 /** A date and time in the viewer's own format. Text that is not a date is shown as it came. */
@@ -30,19 +30,70 @@ export function formatHistoryDate(raw: string): string {
 }
 
 /** " by <name>" when there is a name, nothing when the name is blank, so the line never has a gap. */
-const byPart = (by: string): string => (by && by.trim() ? ` by ${by}` : '');
+const byPart = (by: string): string => (by && by.trim() ? ` by ${by.trim()}` : '');
 
-/** The line for one table: its last save or reset made through this screen. */
-export function formatTableHistory(entry: CrossReferenceTableHistory): string {
-  const when = formatHistoryDate(entry.at);
-  if (entry.action === 'reset') return `Defaults restored from this screen${byPart(entry.by)} on ${when}`;
-  const rows = `${entry.rowCount} ${entry.rowCount === 1 ? 'row' : 'rows'}`;
-  return `Last saved from this screen${byPart(entry.by)} on ${when}, ${rows}`;
+/** Our own record of a save and Boomi's record of the same save are this close in time (seconds apart in practice). */
+const SAME_SAVE_MS = 2 * 60 * 1000;
+/** A Boomi save newer than ours by more than this was made by someone else. */
+const SOMEONE_ELSE_MS = 60 * 1000;
+
+/** What the screen says about one table: when it was last saved, and by whom when that is known. */
+export interface TableHistoryLine {
+  /** When, ISO 8601. */
+  at: string;
+  /** The user (an email address from Boomi, or the host's user id). Blank when nobody is known. */
+  by: string;
+  action: 'save' | 'reset';
+  /** True when the save was made in the Boomi user interface. Kept for later use: the line does not say it. */
+  viaUi: boolean;
+  /** True when the line comes from Boomi alone, which records saves per environment and not per table. */
+  environmentWide: boolean;
 }
 
-/** The line for the environment: the last save Boomi recorded, and whether it was made in the Boomi user interface. */
-export function formatEnvironmentHistory(env: CrossReferenceEnvironmentHistory): string {
-  return `Last saved${byPart(env.by)} on ${formatHistoryDate(env.at)}, ${env.viaUi ? 'via UI' : 'not via UI'}`;
+const time = (iso: string): number => new Date(iso).getTime();
+
+/**
+ * One line for one table, from the two records the server sends.
+ *
+ * - With our own record of the table (a save or reset made through the plugin): its time. The user is the
+ *   one Boomi names for the save made at that moment (the plugin's session knows no person), else the host's
+ *   user id when there is one, else nobody. If Boomi shows a newer save made in its own user interface, someone
+ *   else changed the environment since, and that save is shown instead.
+ * - Without our record: Boomi's last save of the environment, but only for a table that has rows of its own,
+ *   because a table on the defaults has never been saved.
+ */
+export function mergeTableHistory(
+  entry: CrossReferenceTableHistory | null,
+  env: CrossReferenceEnvironmentHistory | null,
+  overridden: boolean
+): TableHistoryLine | null {
+  if (entry) {
+    const mine = time(entry.at);
+    const theirs = env ? time(env.at) : NaN;
+    if (env && env.viaUi && Number.isFinite(theirs) && Number.isFinite(mine) && theirs - mine > SOMEONE_ELSE_MS) {
+      return { at: env.at, by: env.by, action: 'save', viaUi: true, environmentWide: true };
+    }
+    const sameSave = env && Number.isFinite(theirs) && Number.isFinite(mine) && Math.abs(theirs - mine) <= SAME_SAVE_MS;
+    return {
+      at: entry.at,
+      by: sameSave ? env.by : entry.by,
+      action: entry.action,
+      viaUi: sameSave ? env.viaUi : false,
+      environmentWide: false,
+    };
+  }
+  if (env && overridden) {
+    return { at: env.at, by: env.by, action: 'save', viaUi: env.viaUi, environmentWide: true };
+  }
+  return null;
+}
+
+/** The words of the line. It never says how the save was made. */
+export function formatTableHistoryLine(line: TableHistoryLine): string {
+  const when = formatHistoryDate(line.at);
+  return line.action === 'reset'
+    ? `Defaults restored${byPart(line.by)} on ${when}`
+    : `Last saved${byPart(line.by)} on ${when}`;
 }
 
 /** The record of one table of one process, or null when the screen has none for it. */

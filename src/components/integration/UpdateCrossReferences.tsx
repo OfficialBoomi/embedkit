@@ -30,8 +30,8 @@
  * the selected table as you type. Its state lives here, above the grid, so the query survives
  * switching tables; see crt/useCrtFind.
  *
- * Under the info row two quiet lines say who changed things: the last save of the open table made
- * through this screen, and the last save Boomi recorded for the whole environment. They load after the
+ * Under the info row one quiet line says when the open table was last saved and by whom, built from our
+ * own record of saves made through the plugin and the last save Boomi recorded for the environment. They load after the
  * tables are shown, reload after each save or reset, and are simply absent when the server cannot say
  * (an older server, a failure, nothing recorded). The component's `crossReferenceTables.showHistory`
  * setting (default true) switches both off and then no request is made. See crt/useCrtHistory.
@@ -55,8 +55,8 @@ import { getCrtDataSource } from '../../utils/crt/crtDataSource';
 import {
   ENVIRONMENT_HISTORY_HINT,
   findTableHistory,
-  formatEnvironmentHistory,
-  formatTableHistory,
+  formatTableHistoryLine,
+  mergeTableHistory,
 } from '../../utils/crt/crtHistory';
 import { createLiveCrtDataSource } from '../../utils/crt/crtLiveSource';
 import { createCrtStore, type CrtStore } from '../../utils/crt/crtStore';
@@ -638,16 +638,14 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   const historyData = history.history;
   const openProcessId = selectedTable?.processId;
   const openTableId = selectedTable?.id;
-  // Text only changes with the history or the open table, not with every edit to a cell.
-  const tableHistoryLine = useMemo(() => {
+  // One line for the open table. It only changes with the history, the open table or whether it has rows of
+  // its own as loaded, not with every edit to a cell.
+  const openOverridden = selectedTable ? selectedTable.overrideRows != null : false;
+  const historyLine = useMemo(() => {
     if (!historyData || openProcessId === undefined || openTableId === undefined) return null;
     const entry = findTableHistory(historyData.tables, openProcessId, openTableId);
-    return entry ? formatTableHistory(entry) : null;
-  }, [historyData, openProcessId, openTableId]);
-  const environmentHistoryLine = useMemo(
-    () => (historyData?.environment ? formatEnvironmentHistory(historyData.environment) : null),
-    [historyData]
-  );
+    return mergeTableHistory(entry, historyData.environment, openOverridden);
+  }, [historyData, openProcessId, openTableId, openOverridden]);
 
   const save = useCrtSave({
     componentKey,
@@ -771,14 +769,11 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           </span>
         </div>
 
-        {(tableHistoryLine || environmentHistoryLine) && (
+        {historyLine && (
           <div className="boomi-crt-history">
-            {tableHistoryLine && <div className="boomi-crt-history-line">{tableHistoryLine}</div>}
-            {environmentHistoryLine && (
-              <div className="boomi-crt-history-line" title={ENVIRONMENT_HISTORY_HINT}>
-                {environmentHistoryLine}
-              </div>
-            )}
+            <div className="boomi-crt-history-line" title={historyLine.environmentWide ? ENVIRONMENT_HISTORY_HINT : undefined}>
+              {formatTableHistoryLine(historyLine)}
+            </div>
           </div>
         )}
 

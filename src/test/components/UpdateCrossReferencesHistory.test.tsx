@@ -92,7 +92,7 @@ const serverTable = (name: string, over: Record<string, unknown> = {}) => ({
 });
 
 const SAVED_AT = '2026-11-09T22:40:00Z';
-const ENV_AT = '2026-11-09T23:05:00Z';
+const ENV_AT = '2026-11-09T22:40:02Z'; // Boomi's entry for the same save, a moment later
 const shown = (iso: string) =>
   new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
 
@@ -100,7 +100,7 @@ const tableRecord = (over: Record<string, unknown> = {}) => ({
   processId: 'p1',
   tableId: 'id-alpha',
   at: SAVED_AT,
-  by: 'sam@example.com',
+  by: '',
   action: 'save',
   rowCount: 6,
   ...over,
@@ -111,8 +111,8 @@ const answer = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-const TABLE_LINE = `Last saved from this screen by sam@example.com on ${shown(SAVED_AT)}, 6 rows`;
-const ENV_LINE = `Last saved by svc@example.com on ${shown(ENV_AT)}, not via UI`;
+// Our record gives the time, Boomi's entry for the same save gives the user: one line.
+const LINE = `Last saved by svc@example.com on ${shown(SAVED_AT)}`;
 const HINT = 'Boomi records this for the whole environment, not for one table.';
 
 const renderScreen = () => render(<UpdateCrossReferences componentKey="k" integration={integration} onBack={vi.fn()} />);
@@ -139,58 +139,77 @@ afterEach(() => {
   registerCrtDataSource(null);
 });
 
-describe('the two lines', () => {
-  it('show the table line and the environment line under the chips row', async () => {
+describe('the line', () => {
+  it('is one line under the chips row, with the time of our record and the user Boomi names for that save', async () => {
     renderScreen();
     await screen.findByRole('grid');
-    expect(await screen.findByText(TABLE_LINE)).toBeTruthy();
-    expect(screen.getByText(ENV_LINE)).toBeTruthy();
-    expect(lines()).toEqual([TABLE_LINE, ENV_LINE]);
-    // They sit right after the chips row, above the grid.
+    expect(await screen.findByText(LINE)).toBeTruthy();
+    expect(lines()).toEqual([LINE]);
     const history = document.querySelector('.boomi-crt-history') as HTMLElement;
     expect(history.previousElementSibling?.className).toBe('boomi-crt-info');
+    // The line is about this table, so it carries no tooltip about the whole environment.
+    expect(screen.getByText(LINE).getAttribute('title')).toBeNull();
   });
 
-  it('say "via UI" when the save was made in the Boomi user interface', async () => {
-    fetchHistory.mockResolvedValue(answer({ environment: { at: ENV_AT, by: 'pat@example.com', viaUi: true } }));
+  it('shows only a date, a time and a user: no account id, no row count, nothing about how the save was made', async () => {
+    fetchHistory.mockResolvedValue(
+      answer({ environment: { at: ENV_AT, by: 'svc@example.com', viaUi: true }, tables: [tableRecord({ by: 'customer-account-7Q2K', rowCount: 6 })] })
+    );
     renderScreen();
-    expect(await screen.findByText(`Last saved by pat@example.com on ${shown(ENV_AT)}, via UI`)).toBeTruthy();
+    await screen.findByText(LINE);
+    const text = (document.querySelector('.boomi-crt-history') as HTMLElement).textContent as string;
+    expect(text).not.toMatch(/customer-account|rows?\b|via ui|screen|\bapi\b/i);
   });
 
-  it('explain on the environment line, and only there, that Boomi records it for the whole environment', async () => {
+  it('uses the host user id of our record when Boomi names no one for that moment', async () => {
+    fetchHistory.mockResolvedValue(answer({ environment: null, tables: [tableRecord({ by: 'host-user-7' })] }));
     renderScreen();
-    const envLine = await screen.findByText(ENV_LINE);
-    expect(envLine.getAttribute('title')).toBe(HINT);
-    expect(screen.getByText(TABLE_LINE).getAttribute('title')).toBeNull();
+    expect(await screen.findByText(`Last saved by host-user-7 on ${shown(SAVED_AT)}`)).toBeTruthy();
   });
 
-  it('say that the defaults were restored after a reset', async () => {
-    fetchHistory.mockResolvedValue(answer({ tables: [tableRecord({ action: 'reset', rowCount: 0 })] }));
-    renderScreen();
-    expect(await screen.findByText(`Defaults restored from this screen by sam@example.com on ${shown(SAVED_AT)}`)).toBeTruthy();
-  });
-
-  it('use the singular for one row', async () => {
-    fetchHistory.mockResolvedValue(answer({ tables: [tableRecord({ rowCount: 1 })] }));
-    renderScreen();
-    expect(await screen.findByText(`Last saved from this screen by sam@example.com on ${shown(SAVED_AT)}, 1 row`)).toBeTruthy();
-  });
-
-  it('show only the environment line when no save was made through the screen', async () => {
-    fetchHistory.mockResolvedValue(answer({ tables: [] }));
-    renderScreen();
-    await screen.findByText(ENV_LINE);
-    expect(lines()).toEqual([ENV_LINE]);
-  });
-
-  it('show only the table line when Boomi has nothing to say', async () => {
+  it('shows the time alone when nobody is known', async () => {
     fetchHistory.mockResolvedValue(answer({ environment: null }));
     renderScreen();
-    await screen.findByText(TABLE_LINE);
-    expect(lines()).toEqual([TABLE_LINE]);
+    expect(await screen.findByText(`Last saved on ${shown(SAVED_AT)}`)).toBeTruthy();
   });
 
-  it('show nothing at all when there is nothing to say', async () => {
+  it('says that the defaults were restored after a reset', async () => {
+    fetchHistory.mockResolvedValue(answer({ tables: [tableRecord({ action: 'reset', rowCount: 0 })] }));
+    renderScreen();
+    expect(await screen.findByText(`Defaults restored by svc@example.com on ${shown(SAVED_AT)}`)).toBeTruthy();
+  });
+
+  it('is built from Boomi alone when we have no record of the table, and then says it is about the whole environment', async () => {
+    fetchHistory.mockResolvedValue(answer({ tables: [] }));
+    renderScreen();
+    const line = await screen.findByText(`Last saved by svc@example.com on ${shown(ENV_AT)}`);
+    expect(line.getAttribute('title')).toBe(HINT);
+    expect(lines()).toHaveLength(1);
+  });
+
+  it('has no line for a table on the defaults that nobody saved', async () => {
+    fetchTables.mockResolvedValue({ tables: [serverTable('Alpha', { overridden: false, overrideRows: null })] });
+    fetchHistory.mockResolvedValue(answer({ tables: [] }));
+    renderScreen();
+    await screen.findByRole('grid');
+    await waitFor(() => expect(fetchHistory).toHaveBeenCalled());
+    await settle();
+    expect(document.querySelector('.boomi-crt-history')).toBeNull();
+  });
+
+  it('shows a save made in the Boomi user interface after ours, because someone else changed it', async () => {
+    fetchHistory.mockResolvedValue(answer({ environment: { at: '2026-11-10T08:00:00Z', by: 'pat@example.com', viaUi: true } }));
+    renderScreen();
+    expect(await screen.findByText(`Last saved by pat@example.com on ${shown('2026-11-10T08:00:00Z')}`)).toBeTruthy();
+  });
+
+  it('keeps our record when Boomi shows a later save that was not made in the user interface (another table saved here)', async () => {
+    fetchHistory.mockResolvedValue(answer({ environment: { at: '2026-11-10T08:00:00Z', by: 'svc@example.com', viaUi: false } }));
+    renderScreen();
+    expect(await screen.findByText(`Last saved on ${shown(SAVED_AT)}`)).toBeTruthy();
+  });
+
+  it('shows nothing at all when there is nothing to say', async () => {
     fetchHistory.mockResolvedValue({ environment: null, tables: [] });
     renderScreen();
     await screen.findByRole('grid');
@@ -199,31 +218,23 @@ describe('the two lines', () => {
     expect(document.querySelector('.boomi-crt-history')).toBeNull();
   });
 
-  it('follow the open table: another table with no record has no table line', async () => {
+  it('follows the open table: another table with no record of ours gets its own line from Boomi', async () => {
     const user = userEvent.setup();
     fetchTables.mockResolvedValue({ tables: [serverTable('Alpha'), serverTable('Beta')] });
     renderScreen();
-    await screen.findByText(TABLE_LINE);
+    await screen.findByText(LINE);
     await user.click(screen.getAllByRole('button', { name: /^Table\b/ })[0]);
     await user.click(screen.getAllByRole('option').find((o) => within(o).queryByText('Beta') !== null) as HTMLElement);
     await waitFor(() => expect(screen.getByRole('grid').getAttribute('aria-label')).toMatch(/Beta/));
-    expect(lines()).toEqual([ENV_LINE]);
+    expect(lines()).toHaveLength(1);
+    expect(document.querySelector('.boomi-crt-history-line')?.getAttribute('title')).toBe(HINT);
   });
 
-  it('match the process as well as the table id', async () => {
+  it('matches the process as well as the table id', async () => {
     fetchHistory.mockResolvedValue(answer({ tables: [tableRecord({ processId: 'p2' })] }));
     renderScreen();
-    await screen.findByText(ENV_LINE);
-    expect(lines()).toEqual([ENV_LINE]);
-  });
-
-  it('never contain the word API', async () => {
-    fetchHistory.mockResolvedValue(answer({ environment: { at: ENV_AT, by: 'svc@example.com', viaUi: false } }));
-    renderScreen();
-    await screen.findByText(ENV_LINE);
-    const history = document.querySelector('.boomi-crt-history') as HTMLElement;
-    expect(history.textContent).not.toMatch(/\bapi\b/i);
-    expect(history.innerHTML).not.toMatch(/\bapi\b/i);
+    const line = await screen.findByText(`Last saved by svc@example.com on ${shown(ENV_AT)}`);
+    expect(line.getAttribute('title')).toBe(HINT);
   });
 });
 
@@ -248,12 +259,12 @@ describe('when the history is asked for', () => {
     expect(lines()).toEqual([]);
     expect(saveButton().disabled).toBe(true);
     await act(async () => finish(answer()));
-    expect(await screen.findByText(TABLE_LINE)).toBeTruthy();
+    expect(await screen.findByText(LINE)).toBeTruthy();
   });
 
   it('sends the environment, the pack and a cancel signal', async () => {
     renderScreen();
-    await screen.findByText(TABLE_LINE);
+    await screen.findByText(LINE);
     expect(fetchHistory).toHaveBeenCalledTimes(1);
     const args = fetchHistory.mock.calls[0][0];
     expect(args).toMatchObject({ environmentId: 'env-1', integrationPackInstanceId: 'ipi-1' });
@@ -264,7 +275,7 @@ describe('when the history is asked for', () => {
   it('is not asked again just because the screen re-renders (a cell edit, a table switch)', async () => {
     const user = userEvent.setup();
     renderScreen();
-    await screen.findByText(TABLE_LINE);
+    await screen.findByText(LINE);
     await edit(user);
     await edit(user);
     await settle();
@@ -365,19 +376,19 @@ describe('nothing to show', () => {
   it('skips the entries it cannot read and shows the rest', async () => {
     fetchHistory.mockResolvedValue(answer({ tables: [null, { processId: 'p1' }, tableRecord()] }));
     renderScreen();
-    await screen.findByText(TABLE_LINE);
-    expect(lines()).toEqual([TABLE_LINE, ENV_LINE]);
+    await screen.findByText(LINE);
+    expect(lines()).toEqual([LINE]);
   });
 
   it('shows an unreadable date as it came, rather than nothing', async () => {
-    fetchHistory.mockResolvedValue(answer({ environment: { at: 'sometime', by: 'svc@example.com', viaUi: true } }));
+    fetchHistory.mockResolvedValue(answer({ tables: [], environment: { at: 'sometime', by: 'svc@example.com', viaUi: true } }));
     renderScreen();
-    expect(await screen.findByText('Last saved by svc@example.com on sometime, via UI')).toBeTruthy();
+    expect(await screen.findByText('Last saved by svc@example.com on sometime')).toBeTruthy();
   });
 });
 
 describe('the showHistory setting', () => {
-  it('hides both lines and makes no request when it is false', async () => {
+  it('hides the line and makes no request when it is false', async () => {
     ctx.boomiConfig = { components: { k: { crossReferenceTables: { showHistory: false } } } };
     renderScreen();
     await screen.findByRole('grid');
@@ -409,7 +420,7 @@ describe('the showHistory setting', () => {
       ctx.boomiConfig = config;
       fetchHistory.mockClear();
       const { unmount } = renderScreen();
-      expect(await screen.findByText(TABLE_LINE)).toBeTruthy();
+      expect(await screen.findByText(LINE)).toBeTruthy();
       expect(fetchHistory).toHaveBeenCalledTimes(1);
       unmount();
     }
@@ -417,11 +428,11 @@ describe('the showHistory setting', () => {
 });
 
 describe('after a save or a reset', () => {
-  it('asks again and shows the new lines', async () => {
+  it('asks again and shows the new line', async () => {
     const user = userEvent.setup();
     saveTable.mockResolvedValue(savedResult());
     renderScreen();
-    await screen.findByText(TABLE_LINE);
+    await screen.findByText(LINE);
     fetchHistory.mockResolvedValue(
       answer({
         environment: { at: '2026-11-10T08:00:00Z', by: 'me@example.com', viaUi: true },
@@ -431,22 +442,22 @@ describe('after a save or a reset', () => {
     await edit(user);
     await user.click(saveButton());
     await screen.findByText('Table saved.');
-    expect(await screen.findByText(`Last saved from this screen by me@example.com on ${shown('2026-11-10T08:00:00Z')}, 2 rows`)).toBeTruthy();
-    expect(screen.getByText(`Last saved by me@example.com on ${shown('2026-11-10T08:00:00Z')}, via UI`)).toBeTruthy();
-    expect(screen.queryByText(TABLE_LINE)).toBeNull();
+    expect(await screen.findByText(`Last saved by me@example.com on ${shown('2026-11-10T08:00:00Z')}`)).toBeTruthy();
+    expect(screen.queryByText(LINE)).toBeNull();
     expect(fetchHistory).toHaveBeenCalledTimes(2);
   });
 
-  it('asks again after a reset, and the table line then says the defaults were restored', async () => {
+  it('asks again after a reset, and the line then says the defaults were restored', async () => {
     const user = userEvent.setup();
     resetTable.mockResolvedValue(savedResult({ overridden: false, rowCount: 0, stamp: 'd0.reset' }));
     renderScreen();
-    await screen.findByText(TABLE_LINE);
+    await screen.findByText(LINE);
     fetchHistory.mockResolvedValue(answer({ tables: [tableRecord({ action: 'reset', rowCount: 0, by: 'me@example.com' })] }));
     await user.click(screen.getByRole('button', { name: 'Reset to defaults' }));
     await user.click(saveButton('Restore defaults'));
     await screen.findByText('Default values restored.');
-    expect(await screen.findByText(`Defaults restored from this screen by me@example.com on ${shown(SAVED_AT)}`)).toBeTruthy();
+    // Our record gives the time; the user is the one Boomi names for that save.
+    expect(await screen.findByText(`Defaults restored by svc@example.com on ${shown(SAVED_AT)}`)).toBeTruthy();
     expect(fetchHistory).toHaveBeenCalledTimes(2);
   });
 
@@ -454,7 +465,7 @@ describe('after a save or a reset', () => {
     const user = userEvent.setup();
     saveTable.mockResolvedValue(savedResult());
     renderScreen();
-    await screen.findByText(TABLE_LINE);
+    await screen.findByText(LINE);
     let finish!: (v: unknown) => void;
     fetchHistory.mockReturnValue(new Promise((resolve) => (finish = resolve)));
     await edit(user);
@@ -463,14 +474,14 @@ describe('after a save or a reset', () => {
     expect(screen.queryByText('Saving...')).toBeNull();
     expect(document.querySelector('.boomi-crt-screen')?.hasAttribute('inert')).toBe(false);
     await act(async () => finish(answer({ tables: [] })));
-    await waitFor(() => expect(lines()).toEqual([ENV_LINE]));
+    await waitFor(() => expect(lines()).toHaveLength(1));
   });
 
   it('does not ask after a save that failed', async () => {
     const user = userEvent.setup();
     saveTable.mockRejectedValue(new HttpError('failed', 502, { code: 'BOOMI_REJECTED', error: 'failed' }));
     renderScreen();
-    await screen.findByText(TABLE_LINE);
+    await screen.findByText(LINE);
     await edit(user);
     await user.click(saveButton());
     await screen.findByRole('alert');
@@ -481,7 +492,7 @@ describe('after a save or a reset', () => {
     const user = userEvent.setup();
     saveTable.mockResolvedValue(savedResult());
     renderScreen();
-    await screen.findByText(TABLE_LINE);
+    await screen.findByText(LINE);
     fetchHistory.mockRejectedValue(new HttpError('Boom', 500));
     await edit(user);
     await user.click(saveButton());
@@ -494,7 +505,7 @@ describe('after a save or a reset', () => {
     const user = userEvent.setup();
     saveTable.mockResolvedValue(savedResult());
     renderScreen();
-    await screen.findByText(TABLE_LINE);
+    await screen.findByText(LINE);
     fetchHistory.mockImplementation(() => {
       throw new Error('broken');
     });
@@ -509,7 +520,7 @@ describe('after a save or a reset', () => {
     const user = userEvent.setup();
     saveTable.mockResolvedValue(savedResult());
     renderScreen();
-    await screen.findByText(TABLE_LINE);
+    await screen.findByText(LINE);
     // The first request after the save never finishes on its own; the screen asks again on the next save.
     let finishOld!: (v: unknown) => void;
     fetchHistory.mockReturnValueOnce(new Promise((resolve) => (finishOld = resolve)));
@@ -522,8 +533,8 @@ describe('after a save or a reset', () => {
     await user.click(saveButton());
     await waitFor(() => expect(fetchHistory).toHaveBeenCalledTimes(3));
     expect(oldSignal.aborted).toBe(true);
-    await screen.findByText(`Last saved from this screen by newer@example.com on ${shown(SAVED_AT)}, 6 rows`);
+    await screen.findByText(`Last saved by newer@example.com on ${shown(SAVED_AT)}`);
     await act(async () => finishOld(answer()));
-    expect(lines()).toEqual([`Last saved from this screen by newer@example.com on ${shown(SAVED_AT)}, 6 rows`]);
+    expect(lines()).toEqual([`Last saved by newer@example.com on ${shown(SAVED_AT)}`]);
   });
 });
