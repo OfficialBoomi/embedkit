@@ -35,8 +35,8 @@ import type { CrtSearchOptions } from '../../../utils/crt/crtSearch';
  * @property {string} query - The text in the find box.
  * @property {string} replacement - The text in the replace box.
  * @property {CrtSearchOptions} options - Which toggles are on.
- * @property {string} status - The counter text ('3 of 12', 'No matches', 'Invalid regular expression', or empty).
- * @property {boolean} invalid - The query is not a valid regular expression.
+ * @property {string} status - The counter text ('3 of 12', 'No matches', a message for a pattern that is invalid or refused as too slow, a message when the search stopped early, or empty).
+ * @property {boolean} invalid - The query is not a valid regular expression, or is refused as too slow.
  * @property {boolean} hasMatches - There is at least one match, so the step and replace buttons can work.
  * @property {boolean} canReplace - The table can be edited. When false Replace and Replace all are off.
  * @property {number} focusToken - Changes every time the find box must take focus and select its text.
@@ -60,6 +60,9 @@ export interface CrtFindBarProps {
 }
 
 const READ_ONLY_TITLE = 'Press Override to edit';
+
+/** A counter longer than this is a sentence (a refused pattern, a search that stopped early), which may wrap. */
+const LONG_STATUS = 28;
 
 const CrtFindBar: React.FC<CrtFindBarProps> = ({
   query,
@@ -175,7 +178,7 @@ const CrtFindBar: React.FC<CrtFindBarProps> = ({
       </div>
       <span
         id={statusId}
-        className={`boomi-crt-find-count${invalid ? ' boomi-crt-find-count--invalid' : ''}`}
+        className={`boomi-crt-find-count${invalid ? ' boomi-crt-find-count--invalid' : ''}${status.length > LONG_STATUS ? ' boomi-crt-find-count--long' : ''}`}
         role="status"
         aria-live="polite"
       >

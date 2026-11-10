@@ -20,6 +20,7 @@ import {
   MAX_MASK_COLS,
   maskHasCol,
   resolveFindKey,
+  SEARCH_STOPPED_EARLY_TEXT,
 } from '../../utils/crt/crtFindView';
 import type { CrtMatch } from '../../utils/crt/crtSearch';
 
@@ -204,6 +205,23 @@ describe('findStatusText', () => {
   it('shows the error of an invalid pattern, ahead of everything else', () => {
     expect(findStatusText({ ...base, error: 'Invalid regular expression' })).toBe('Invalid regular expression');
     expect(findStatusText({ ...base, query: '', error: 'Invalid regular expression' })).toBe('');
+  });
+
+  it('shows the error of a pattern refused as too slow', () => {
+    const slow = 'This pattern could take too long to run. Try a simpler one.';
+    expect(findStatusText({ ...base, error: slow })).toBe(slow);
+  });
+
+  it('says the search stopped early, with or without matches found so far', () => {
+    expect(SEARCH_STOPPED_EARLY_TEXT).toBe('Search stopped early, the table is large or the pattern is slow');
+    expect(findStatusText({ ...base, stoppedEarly: true })).toBe(SEARCH_STOPPED_EARLY_TEXT);
+    expect(findStatusText({ ...base, count: 7, current: 2, stoppedEarly: true })).toBe(SEARCH_STOPPED_EARLY_TEXT);
+    expect(findStatusText({ ...base, count: 7, current: 2, stoppedEarly: false })).toBe('3 of 7');
+  });
+
+  it('puts an error ahead of stopped early, and an empty query ahead of both', () => {
+    expect(findStatusText({ ...base, error: 'Invalid regular expression', stoppedEarly: true })).toBe('Invalid regular expression');
+    expect(findStatusText({ ...base, query: '', stoppedEarly: true })).toBe('');
   });
 });
 

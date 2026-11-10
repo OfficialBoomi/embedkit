@@ -12,6 +12,11 @@
  * the cells that are highlighted are exactly the cells that get replaced. A cell counts as a
  * match only when the pattern matches a non-empty piece of it. Zero length matches never count,
  * and replace leaves them alone, so a pattern such as a* does not light up (or rewrite) every cell.
+ *
+ * Two guards keep a slow pattern from freezing the tab. A regular expression whose shape is known
+ * to backtrack without limit (a repeat of a group that itself repeats or branches, such as (a+)+) is
+ * refused before it runs. And a scan across the cells stops after a time budget and says so, keeping
+ * the matches it found. A single cell cannot be interrupted, which is why the first guard exists.
  */
 
 export interface CrtSearchOptions {
@@ -29,8 +34,20 @@ export interface CrtMatch {
 }
 
 export type CrtSearchResult =
-  | { ok: true; matches: CrtMatch[]; truncated: boolean }
+  | {
+      ok: true;
+      matches: CrtMatch[];
+      truncated: boolean;
+      /** Present (and true) only when the time budget ran out: the matches are those found so far. */
+      stoppedEarly?: boolean;
+    }
   | { ok: false; error: string };
+
+/** How long a scan may run, and the clock that says so. A test hands in its own clock. */
+export interface CrtSearchBudget {
+  ms: number;
+  now: () => number;
+}
 
 export interface CrtReplacePlan {
   changes: Array<{ row: number; col: number; value: string }>;
@@ -40,18 +57,115 @@ export interface CrtReplacePlan {
 /** Most matching (or changing) cells a single search reports, so a huge table cannot flood the UI. */
 export const CRT_SEARCH_LIMIT = 50000;
 
-/** The only error text. The engine's own message is not passed on, it differs by browser. */
+/** How long a search across the cells may run before it stops and reports what it has. */
+export const CRT_SEARCH_BUDGET_MS = 300;
+
+/** The error text of a pattern that is not a regular expression. The engine's own message is not passed on, it differs by browser. */
 const INVALID_PATTERN = 'Invalid regular expression';
+
+/** The error text of a pattern that is valid but is refused because it could take too long. */
+const SLOW_PATTERN = 'This pattern could take too long to run. Try a simpler one.';
 
 type CellGetter = (row: number, col: number) => string;
 
-type Compiled = { kind: 'empty' } | { kind: 'invalid' } | { kind: 'ready'; re: RegExp };
+type Compiled = { kind: 'empty' } | { kind: 'invalid' } | { kind: 'slow' } | { kind: 'ready'; re: RegExp };
 
 const EMPTY_QUERY: Compiled = { kind: 'empty' };
 const INVALID_QUERY: Compiled = { kind: 'invalid' };
+const SLOW_QUERY: Compiled = { kind: 'slow' };
+
+const systemNow = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+/** The error text of a query that cannot be run, or null when it can (or is empty). */
+function compileError(compiled: Compiled): string | null {
+  if (compiled.kind === 'invalid') return INVALID_PATTERN;
+  if (compiled.kind === 'slow') return SLOW_PATTERN;
+  return null;
+}
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** A group being read: whether something inside it repeats without limit, or branches with `|`. */
+interface PatternGroup {
+  repeats: boolean;
+  branches: boolean;
+}
+
+const BRACE_QUANTIFIER = /\{(\d+)(,(\d*))?\}/y;
+
+/**
+ * True when the pattern repeats a group without limit and that group itself repeats without limit or
+ * branches with `|`: (a+)+, (a*)*, (a|aa)+, (.*a){2,}. These are the shapes that make a backtracking
+ * engine try an exponential number of ways to fail on a long cell, and no engine can be interrupted
+ * part way through a cell. The rule is deliberately blunt and errs on the side of refusing, so it
+ * also refuses some safe forms, such as (\d+,)* or (a|b)+, which can be rewritten (the second as
+ * [ab]+). Bounded repeats ({2}, {1,5}, ?) are not refused. The pattern must already be known to
+ * compile, so the parentheses are balanced and this reader does not have to validate.
+ */
+export function isRunawayPattern(source: string): boolean {
+  const open: PatternGroup[] = [{ repeats: false, branches: false }];
+  /** What a repeat sign would apply to now: nothing, a single character or class (group null), or a group just closed. */
+  let atom: { group: PatternGroup | null } | null = null;
+  let i = 0;
+  while (i < source.length) {
+    const ch = source[i];
+    const here = open[open.length - 1];
+    if (ch === '\\') {
+      atom = { group: null };
+      i += 2;
+    } else if (ch === '[') {
+      i += 1;
+      while (i < source.length && source[i] !== ']') i += source[i] === '\\' ? 2 : 1;
+      atom = { group: null };
+      i += 1;
+    } else if (ch === '(') {
+      open.push({ repeats: false, branches: false });
+      atom = null;
+      i += 1;
+    } else if (ch === ')') {
+      const closed = open.length > 1 ? (open.pop() as PatternGroup) : null;
+      const parent = open[open.length - 1];
+      if (closed) {
+        parent.repeats = parent.repeats || closed.repeats;
+        parent.branches = parent.branches || closed.branches;
+      }
+      atom = { group: closed };
+      i += 1;
+    } else if (ch === '|') {
+      here.branches = true;
+      atom = null;
+      i += 1;
+    } else {
+      let unbounded: boolean | null = null;
+      let width = 1;
+      if (ch === '*' || ch === '+') {
+        unbounded = true;
+      } else if (ch === '?') {
+        unbounded = false;
+      } else if (ch === '{') {
+        BRACE_QUANTIFIER.lastIndex = i;
+        const m = BRACE_QUANTIFIER.exec(source);
+        if (m) {
+          unbounded = m[2] !== undefined && m[3] === '';
+          width = m[0].length;
+        }
+      }
+      if (unbounded !== null && atom !== null) {
+        if (unbounded) {
+          if (atom.group && (atom.group.repeats || atom.group.branches)) return true;
+          here.repeats = true;
+        }
+        i += width;
+        if (source[i] === '?') i += 1; // lazy: +? *? {n,}?
+      } else {
+        atom = { group: null };
+        i += 1;
+      }
+    }
+  }
+  return false;
 }
 
 /**
@@ -68,6 +182,8 @@ function compile(query: string, opts: CrtSearchOptions): Compiled {
   const source = opts.regex ? query : escapeRegExp(query);
   try {
     const plain = new RegExp(source, flags);
+    // Plain text is escaped, so only a user's own pattern can be one of the runaway shapes.
+    if (opts.regex && isRunawayPattern(query)) return SLOW_QUERY;
     return { kind: 'ready', re: opts.wholeCell ? new RegExp(`^(?:${source})$`, flags) : plain };
   } catch {
     return INVALID_QUERY;
@@ -81,7 +197,8 @@ function compile(query: string, opts: CrtSearchOptions): Compiled {
  * The loop repeats only while the matches found are empty, and each repeat starts one character
  * later, so it is bounded by the length of the cell; a pattern with no empty matches costs one
  * run. A single run cannot be interrupted, so a pattern that backtracks badly on a long cell
- * will stall this call, and nothing here can prevent that.
+ * will stall this call. What keeps that from happening is that compile refuses the known runaway
+ * shapes (isRunawayPattern); a pattern that still backtracks badly is only cut short between rows.
  */
 function hasNonEmptyMatch(re: RegExp, value: string): boolean {
   if (value === '') return false;
@@ -108,6 +225,10 @@ function resultCap(limit: number | undefined): number {
  * Every cell the query matches, in row-major order. An empty query finds nothing. When more than
  * `limit` cells match, the first `limit` are returned and `truncated` is true; hitting the limit
  * exactly is not truncation.
+ *
+ * The scan has a time budget (300 ms unless `budget` says otherwise), read at the start of every
+ * row after the first. When it runs out the matches found so far are returned with `stoppedEarly`
+ * set, so a huge table or a slow pattern shows a partial answer in place of a frozen tab.
  */
 export function findMatches(
   getCell: CellGetter,
@@ -116,15 +237,21 @@ export function findMatches(
   query: string,
   opts: CrtSearchOptions,
   limit: number = CRT_SEARCH_LIMIT,
+  budget: CrtSearchBudget = { ms: CRT_SEARCH_BUDGET_MS, now: systemNow },
 ): CrtSearchResult {
   const compiled = compile(query, opts);
-  if (compiled.kind === 'invalid') return { ok: false, error: INVALID_PATTERN };
+  const failure = compileError(compiled);
+  if (failure) return { ok: false, error: failure };
   const matches: CrtMatch[] = [];
-  if (compiled.kind === 'empty') return { ok: true, matches, truncated: false };
+  if (compiled.kind !== 'ready') return { ok: true, matches, truncated: false };
 
   const cap = resultCap(limit);
   const { re } = compiled;
+  const started = budget.now();
   for (let row = 0; row < rowCount; row++) {
+    if (row > 0 && budget.now() - started >= budget.ms) {
+      return { ok: true, matches, truncated: false, stoppedEarly: true };
+    }
     for (let col = 0; col < colCount; col++) {
       const value = getCell(row, col);
       let hit: boolean;
@@ -285,8 +412,9 @@ export function replaceInCell(
 /**
  * The cells a replace would change, in row-major order. Cells whose text would come out the same
  * (including a replacement equal to the old text) are left out, so applying the plan is always a
- * real edit. More than `limit` changes gives the first `limit` and `truncated: true`. Only an
- * invalid pattern is an error.
+ * real edit. More than `limit` changes gives the first `limit` and `truncated: true`. Only a
+ * pattern that is invalid or refused as too slow is an error. The plan has no time budget: a
+ * half made plan would rewrite some cells and not others, so it is always whole.
  */
 export function planReplace(
   getCell: CellGetter,
@@ -298,9 +426,10 @@ export function planReplace(
   limit: number = CRT_SEARCH_LIMIT,
 ): { ok: true; plan: CrtReplacePlan } | { ok: false; error: string } {
   const compiled = compile(query, opts);
-  if (compiled.kind === 'invalid') return { ok: false, error: INVALID_PATTERN };
+  const failure = compileError(compiled);
+  if (failure) return { ok: false, error: failure };
   const changes: CrtReplacePlan['changes'] = [];
-  if (compiled.kind === 'empty') return { ok: true, plan: { changes, truncated: false } };
+  if (compiled.kind !== 'ready') return { ok: true, plan: { changes, truncated: false } };
 
   const cap = resultCap(limit);
   const { re } = compiled;

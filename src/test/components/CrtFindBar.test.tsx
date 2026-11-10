@@ -14,7 +14,7 @@
  * the row wraps and looks.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import CrtFindBar, { type CrtFindBarProps } from '../../components/integration/crt/CrtFindBar';
 import CrtToolbar from '../../components/integration/crt/CrtToolbar';
 
@@ -149,6 +149,27 @@ describe('invalid pattern', () => {
     const { find } = renderBar({ query: 'a', status: 'No matches' });
     expect(find).not.toHaveAttribute('aria-invalid');
     expect(screen.getByRole('status')).not.toHaveClass('boomi-crt-find-count--invalid');
+  });
+
+  it('shows a refused pattern as an invalid one, with its sentence in the live counter', () => {
+    const sentence = 'This pattern could take too long to run. Try a simpler one.';
+    const { find } = renderBar({ query: '(a+)+', status: sentence, invalid: true });
+    expect(find).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('status')).toHaveTextContent(sentence);
+    expect(screen.getByRole('status')).toHaveClass('boomi-crt-find-count--invalid');
+  });
+});
+
+describe('a long counter sentence', () => {
+  it('may wrap, so it never runs out of the row, while the short counters keep to one line', () => {
+    renderBar({ query: 'a', status: 'Search stopped early, the table is large or the pattern is slow' });
+    expect(screen.getByRole('status')).toHaveClass('boomi-crt-find-count--long');
+    cleanup();
+    for (const short of ['', 'No matches', '3 of 12', '1,234 of 50,000+ matches']) {
+      renderBar({ query: 'a', status: short });
+      expect(screen.getByRole('status')).not.toHaveClass('boomi-crt-find-count--long');
+      cleanup();
+    }
   });
 });
 

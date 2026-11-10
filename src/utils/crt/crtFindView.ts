@@ -80,23 +80,36 @@ export function maskHasCol(mask: number, col: number): boolean {
 
 export interface FindStatusInput {
   query: string;
-  /** The text of an invalid pattern, otherwise null. */
+  /** The text of an invalid or refused pattern, otherwise null. */
   error: string | null;
   count: number;
   /** Index of the current match, or -1. */
   current: number;
   /** More cells match than the search reports. */
   truncated: boolean;
+  /** The search ran out of time, so the matches are only those found so far. Omitted means false. */
+  stoppedEarly?: boolean;
 }
+
+/** What the counter says when the search ran out of its time budget. */
+export const SEARCH_STOPPED_EARLY_TEXT = 'Search stopped early, the table is large or the pattern is slow';
 
 /**
  * The counter next to the buttons. Empty while there is no query; the pattern's error for an
- * invalid regular expression; 'No matches'; '3 of 12'; and, when the search stopped at its
- * limit, '3 of 50,000+ matches'.
+ * invalid (or refused) regular expression; the stopped early sentence when the search ran out of
+ * time; 'No matches'; '3 of 12'; and, when the search stopped at its limit, '3 of 50,000+ matches'.
  */
-export function findStatusText({ query, error, count, current, truncated }: FindStatusInput): string {
+export function findStatusText({
+  query,
+  error,
+  count,
+  current,
+  truncated,
+  stoppedEarly = false,
+}: FindStatusInput): string {
   if (query === '') return '';
   if (error) return error;
+  if (stoppedEarly) return SEARCH_STOPPED_EARLY_TEXT;
   if (count === 0) return 'No matches';
   const position = current >= 0 && current < count ? `${(current + 1).toLocaleString('en-US')} of ` : '';
   if (truncated) return `${position}${count.toLocaleString('en-US')}+ matches`;

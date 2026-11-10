@@ -342,6 +342,49 @@ describe('useCrtFind: live search', () => {
     expect(h.find().bar.status).toBe('1 of 3');
   });
 
+  it('refuses a pattern that could take too long, says so, marks the box and highlights nothing', () => {
+    const h = setup();
+    h.open();
+    h.toggle('regex');
+    h.type('(v+)+$');
+    h.settle();
+    expect(h.find().bar.status).toBe('This pattern could take too long to run. Try a simpler one.');
+    expect(h.find().bar.invalid).toBe(true);
+    expect(h.find().highlight).toBeUndefined();
+    expect(h.find().bar.hasMatches).toBe(false);
+    // The same characters with Regex off are plain text and are simply not found.
+    h.toggle('regex');
+    h.settle();
+    expect(h.find().bar.invalid).toBe(false);
+    expect(h.find().bar.status).toBe('No matches');
+    // A simpler pattern works again.
+    h.toggle('regex');
+    h.type('v+1');
+    h.settle();
+    expect(h.find().bar.invalid).toBe(false);
+    expect(h.find().bar.status).toBe('1 of 3');
+  });
+
+  it('reports a search that ran out of time as partial and keeps what it found', () => {
+    const h = setup({ rows: 12 });
+    // Every read of the clock is 500 ms later than the last, so the scan stops after its first row.
+    let t = 0;
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => (t += 500));
+    try {
+      h.search('v');
+    } finally {
+      clock.mockRestore();
+    }
+    expect(h.find().bar.status).toBe('Search stopped early, the table is large or the pattern is slow');
+    expect(h.find().bar.invalid).toBe(false);
+    expect(h.find().bar.hasMatches).toBe(true);
+    expect(h.find().highlight?.current).toEqual({ row: 0, col: 1 });
+    // With a normal clock the same search is whole again.
+    h.type('v1');
+    h.settle();
+    expect(h.find().bar.status).toBe('1 of 3');
+  });
+
   it('formats a long count with a thousands separator and shows a plus when the search was cut', () => {
     const rows = Array.from({ length: 2600 }, () => ['x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x']);
     const big = createCrtStore({ ...makeTable(0, true, 20), overrideRows: rows });

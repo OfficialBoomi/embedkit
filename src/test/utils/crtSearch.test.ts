@@ -7,17 +7,21 @@
  * Tests for the cross reference table find and replace rules: plain, case, whole cell and regular
  * expression matching, zero length patterns, special characters, ordering and the result limit,
  * stepping between matches, the replace plan and the single cell replace (including the
- * replacement syntax), that find and replace always agree, and a 10,000 by 20 scan timing.
+ * replacement syntax), that find and replace always agree, the refusal of patterns that could run
+ * away and the time budget of a scan, and a 10,000 by 20 scan timing.
  */
 import { describe, it, expect, vi } from 'vitest';
 import {
+  CRT_SEARCH_BUDGET_MS,
   CRT_SEARCH_LIMIT,
   findMatches,
   firstMatchAtOrAfter,
+  isRunawayPattern,
   planReplace,
   replaceInCell,
   stepMatch,
   type CrtMatch,
+  type CrtSearchBudget,
   type CrtSearchOptions,
 } from '../../utils/crt/crtSearch';
 
@@ -862,6 +866,210 @@ describe('find and replace agree', () => {
   });
 });
 
+describe('regular expressions that could run away', () => {
+  const REFUSED = 'This pattern could take too long to run. Try a simpler one.';
+  const re = { regex: true };
+
+  // An unbounded repeat of a group that repeats without limit, or that branches.
+  const NESTED = [
+    '(a+)+',
+    '(a+)+$',
+    '(a*)*',
+    '(a+)*',
+    '(a*)+',
+    '(a|aa)+',
+    '(a|b)*',
+    '(.*a){3,}',
+    '(?:a+)+',
+    '(?<n>a+)+',
+    '((a+)b)*',
+    '((a|b)c)+',
+    '(\\d+)+x',
+    '(a+?)+',
+    '(a+){2,}',
+    '(x+x+)+y',
+    '^(\\w+\\s?)*$',
+  ];
+
+  it.each(NESTED)('refuses %s with the message, without running it', (pattern) => {
+    const result = find([['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaab']], pattern, re);
+    expect(result).toEqual({ ok: false, error: REFUSED });
+  });
+
+  it('answers at once for the pattern that took tens of seconds to fail', () => {
+    const start = performance.now();
+    const result = find([['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaab']], '(a+)+$', re);
+    expect(result).toEqual({ ok: false, error: REFUSED });
+    expect(performance.now() - start).toBeLessThan(100);
+  });
+
+  it('refuses them in whole cell mode too', () => {
+    expect(find([['a']], '(a+)+', { regex: true, wholeCell: true })).toEqual({ ok: false, error: REFUSED });
+  });
+
+  it('refuses them whatever the case option is', () => {
+    expect(find([['a']], '(a+)+', { regex: true, matchCase: true })).toEqual({ ok: false, error: REFUSED });
+  });
+
+  it('refuses a replace with such a pattern, and replaceInCell leaves the cell alone', () => {
+    expect(plan([['aaa']], '(a+)+', 'x', re)).toEqual({ ok: false, error: REFUSED });
+    expect(replaceInCell('aaa', '(a+)+', 'x', opts(re))).toBe('aaa');
+  });
+
+  it('keeps calling an invalid pattern invalid, not slow', () => {
+    expect(find([['a']], '(a+)+(', re)).toEqual({ ok: false, error: INVALID });
+    expect(find([['a']], '(a+)+)', re)).toEqual({ ok: false, error: INVALID });
+  });
+
+  // Ordinary patterns, and the bounded or harmless forms that look a little like the bad ones.
+  const FINE: Array<[pattern: string, cell: string, matches: boolean]> = [
+    ['^[A-Z]{2}-\\d+$', 'AB-123', true],
+    ['^[A-Z]{2}-\\d+$', 'AB-x', false],
+    ['a|b', 'xxbxx', true],
+    ['x*', 'xx', true],
+    ['x*', 'abc', false],
+    ['(ab)+', 'xababx', true],
+    ['(ab)*c', 'ababc', true],
+    ['(ab)?c', 'abc', true],
+    ['(a|b)', 'b', true],
+    ['(a|b)?c', 'bc', true],
+    ['(a+){2}', 'aa', true],
+    ['(a+){1,5}b', 'aab', true],
+    ['(a+)?b', 'aab', true],
+    ['a+b+', 'xaabbx', true],
+    ['[a+]+', 'a+a', true],
+    ['\\(a+\\)+', '(aa))', true],
+    ['\\(a\\+\\)', '(a+)', true],
+    ['a{2,}', 'caab', true],
+    ['(?:foo)+', 'foofoo', true],
+    ['(?=a+)a', 'a', true],
+    ['a.*b', 'a--b', true],
+  ];
+
+  it.each(FINE)('still runs %s', (pattern, cell, matches) => {
+    expect(isRunawayPattern(pattern)).toBe(false);
+    const result = find([[cell]], pattern, re);
+    expect(result.ok && result.matches.length).toBe(matches ? 1 : 0);
+  });
+
+  it('is blunt: it also refuses a few safe forms, which can be written another way', () => {
+    // Anything that repeats without limit inside a group that repeats without limit is turned away.
+    expect(isRunawayPattern('\\d+(,\\d+)*')).toBe(true);
+    expect(isRunawayPattern('(\\d+,)*')).toBe(true);
+    expect(isRunawayPattern('(US|CA)+')).toBe(true);
+    // The same text without the outer repeat is fine.
+    expect(isRunawayPattern('\\d+,\\d+')).toBe(false);
+    expect(isRunawayPattern('[UC][SA]+')).toBe(false);
+  });
+
+  it('does not treat a brace that is not a repeat as one', () => {
+    expect(isRunawayPattern('(a+)x{')).toBe(false);
+    expect(isRunawayPattern('(a+){x,}')).toBe(false);
+  });
+
+  it('leaves plain text search alone: the same characters are just text', () => {
+    expect(hits([['(a+)+', 'aaaa'], ['x', 'y']], '(a+)+')).toEqual(['0,0']);
+    expect(hits([['(a|b)*', 'ab']], '(a|b)*', { wholeCell: true })).toEqual(['0,0']);
+    expect(replaceInCell('say (a+)+ now', '(a+)+', 'X', opts())).toBe('say X now');
+    const planned = plan([['(a+)+']], '(a+)+', 'X');
+    expect(planned.ok && planned.plan.changes).toEqual([{ row: 0, col: 0, value: 'X' }]);
+  });
+
+  it('only a regex pattern is checked, so turning Regex off finds the text again', () => {
+    expect(find([['(a+)+']], '(a+)+', re).ok).toBe(false);
+    expect(find([['(a+)+']], '(a+)+', { regex: false }).ok).toBe(true);
+  });
+});
+
+describe('findMatches: time budget', () => {
+  /** A clock that moves `step` ms every time it is read. */
+  function clock(step: number, ms = 300): CrtSearchBudget {
+    let t = 0;
+    return {
+      ms,
+      now: () => {
+        const value = t;
+        t += step;
+        return value;
+      },
+    };
+  }
+
+  const rows = (n: number) => Array.from({ length: n }, () => ['x']);
+
+  function run(n: number, budget: CrtSearchBudget) {
+    const g = grid(rows(n));
+    return findMatches(g.get, g.rows, g.cols, 'x', opts(), undefined, budget);
+  }
+
+  it('is about 300 ms by default', () => {
+    expect(CRT_SEARCH_BUDGET_MS).toBe(300);
+  });
+
+  it('stops when the budget is used up and keeps the matches found so far', () => {
+    // The clock reads 0 at the start, then 100, 200 and 300 at rows 1, 2 and 3: rows 0 to 2 are scanned.
+    const result = run(10, clock(100));
+    expect(result).toEqual({
+      ok: true,
+      matches: [
+        { row: 0, col: 0 },
+        { row: 1, col: 0 },
+        { row: 2, col: 0 },
+      ],
+      truncated: false,
+      stoppedEarly: true,
+    });
+  });
+
+  it('always scans the first row, even with no budget at all', () => {
+    const result = run(5, { ms: 0, now: () => 0 });
+    expect(result.ok && result.matches).toEqual([{ row: 0, col: 0 }]);
+    expect(result.ok && result.stoppedEarly).toBe(true);
+  });
+
+  it('does not say it stopped early when the scan finished in time', () => {
+    const result = run(4, clock(10));
+    expect(result).toEqual({
+      ok: true,
+      matches: [0, 1, 2, 3].map((row) => ({ row, col: 0 })),
+      truncated: false,
+    });
+    expect(result.ok && 'stoppedEarly' in result).toBe(false);
+  });
+
+  it('uses the real clock when none is given', () => {
+    const now = vi.spyOn(performance, 'now');
+    now.mockReturnValueOnce(0).mockReturnValue(10_000);
+    const g = grid(rows(6));
+    const result = findMatches(g.get, g.rows, g.cols, 'x', opts());
+    now.mockRestore();
+    expect(result.ok && result.matches).toEqual([{ row: 0, col: 0 }]);
+    expect(result.ok && result.stoppedEarly).toBe(true);
+  });
+
+  it('does not read the clock for an empty query, an invalid pattern or a refused one', () => {
+    const budget = { ms: 300, now: vi.fn(() => 0) };
+    const g = grid(rows(3));
+    findMatches(g.get, g.rows, g.cols, '', opts(), undefined, budget);
+    findMatches(g.get, g.rows, g.cols, '(', opts({ regex: true }), undefined, budget);
+    findMatches(g.get, g.rows, g.cols, '(a+)+', opts({ regex: true }), undefined, budget);
+    expect(budget.now).not.toHaveBeenCalled();
+  });
+
+  it('reports the limit as truncation, not as a stop', () => {
+    const g = grid(rows(10));
+    const result = findMatches(g.get, g.rows, g.cols, 'x', opts(), 2, clock(1));
+    expect(result).toEqual({
+      ok: true,
+      matches: [
+        { row: 0, col: 0 },
+        { row: 1, col: 0 },
+      ],
+      truncated: true,
+    });
+  });
+});
+
 describe('performance: 10,000 rows by 20 columns', () => {
   const ROWS = 10000;
   const COLS = 20;
@@ -871,6 +1079,9 @@ describe('performance: 10,000 rows by 20 columns', () => {
   const MAX_EMPTY_MATCH_MS = 1500;
   const cell = (r: number, c: number) => `row${r} col${c} value`;
 
+  // These tests time the whole scan themselves, so the scan must not cut itself short first.
+  const NO_BUDGET: CrtSearchBudget = { ms: Infinity, now: () => 0 };
+
   function timed<T>(fn: () => T): { out: T; elapsed: number } {
     const start = performance.now();
     const out = fn();
@@ -878,14 +1089,14 @@ describe('performance: 10,000 rows by 20 columns', () => {
   }
 
   it('scans for plain text quickly', () => {
-    const { out, elapsed } = timed(() => findMatches(cell, ROWS, COLS, 'row99 ', opts()));
+    const { out, elapsed } = timed(() => findMatches(cell, ROWS, COLS, 'row99 ', opts(), undefined, NO_BUDGET));
     expect(out.ok && out.matches.length).toBe(COLS);
     expect(elapsed).toBeLessThan(MAX_MS);
   });
 
   it('scans a whole cell search quickly', () => {
     const { out, elapsed } = timed(() =>
-      findMatches(cell, ROWS, COLS, 'row5 col5 value', opts({ wholeCell: true })),
+      findMatches(cell, ROWS, COLS, 'row5 col5 value', opts({ wholeCell: true }), undefined, NO_BUDGET),
     );
     expect(out.ok && out.matches).toEqual([{ row: 5, col: 5 }]);
     expect(elapsed).toBeLessThan(MAX_MS);
@@ -893,7 +1104,7 @@ describe('performance: 10,000 rows by 20 columns', () => {
 
   it('scans with a regular expression quickly', () => {
     const { out, elapsed } = timed(() =>
-      findMatches(cell, ROWS, COLS, 'col1[0-9] v', opts({ regex: true, matchCase: true }), 1e9),
+      findMatches(cell, ROWS, COLS, 'col1[0-9] v', opts({ regex: true, matchCase: true }), 1e9, NO_BUDGET),
     );
     expect(out.ok && out.matches.length).toBe(ROWS * 10);
     expect(out.ok && out.truncated).toBe(false);
@@ -902,7 +1113,7 @@ describe('performance: 10,000 rows by 20 columns', () => {
 
   it('scans a pattern that can match nothing quickly', () => {
     const { out, elapsed } = timed(() =>
-      findMatches(cell, ROWS, COLS, 'z*', opts({ regex: true })),
+      findMatches(cell, ROWS, COLS, 'z*', opts({ regex: true }), undefined, NO_BUDGET),
     );
     expect(out.ok && out.matches.length).toBe(0);
     expect(elapsed).toBeLessThan(MAX_EMPTY_MATCH_MS);

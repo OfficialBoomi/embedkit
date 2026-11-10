@@ -935,6 +935,12 @@
   white-space: nowrap;
 }
 
+/* A sentence (a refused pattern, a search that stopped early) wraps instead of running out of the row. */
+.boomi-crt-find-count--long {
+  max-width: 100%;
+  white-space: normal;
+}
+
 .boomi-crt-find-count--invalid {
   color: var(--crt-danger);
   font-weight: 600;

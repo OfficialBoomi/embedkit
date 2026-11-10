@@ -16,7 +16,9 @@
  * an undo or a replace). That second kind keeps the position in the list of matches when it is
  * still valid, otherwise clamps it, and never moves the active cell, or typing in a cell would
  * keep dragging the cursor back to a match. The rules of what matches and what a replace writes
- * are all in crtSearch; this file only decides when to run them.
+ * are all in crtSearch; this file only decides when to run them. Two guards of crtSearch show up in
+ * the counter: a regular expression refused as too slow is reported like an invalid one, and a scan
+ * that ran out of its time budget keeps the matches it found and says that it stopped early.
  *
  * Making a match current asks the grid to show the cell (active cell and scroll) and never takes
  * focus, so stepping from the find box leaves the cursor in the find box. Replace changes the
@@ -82,7 +84,9 @@ interface SearchState {
   store: CrtStore | null;
   matches: CrtMatch[];
   truncated: boolean;
-  /** Set only for an invalid regular expression. */
+  /** The search ran out of its time budget: the matches are those found so far. */
+  stoppedEarly: boolean;
+  /** Set only for a pattern that is invalid or refused as too slow. */
   error: string | null;
   /** Index into `matches`, or -1. */
   current: number;
@@ -95,6 +99,7 @@ const IDLE: SearchState = {
   store: null,
   matches: NO_MATCHES,
   truncated: false,
+  stoppedEarly: false,
   error: null,
   current: -1,
   masks: NO_MASKS,
@@ -155,6 +160,7 @@ export function useCrtFind(
             store: st,
             matches,
             truncated: result.truncated,
+            stoppedEarly: result.stoppedEarly === true,
             error: null,
             current,
             masks: buildRowMasks(matches),
@@ -351,6 +357,7 @@ export function useCrtFind(
             count: view.matches.length,
             current: view.current,
             truncated: view.truncated,
+            stoppedEarly: view.stoppedEarly,
           }),
     invalid: view.error !== null,
     hasMatches: view.matches.length > 0,
