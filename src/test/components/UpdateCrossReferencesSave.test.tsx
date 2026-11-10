@@ -514,6 +514,10 @@ describe('a table that several processes share', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Save to 2 processes' }));
     await within(dialog).findByRole('button', { name: 'Close' });
     await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    // Once the window is gone the screen hands focus back to the grid on the next animation frame.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    });
 
     await user.click(screen.getAllByRole('button', { name: /^Process\b/ })[0]);
     await user.click(screen.getAllByRole('option').find((o) => within(o).queryByText('Second') !== null) as HTMLElement);

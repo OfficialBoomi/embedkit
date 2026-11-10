@@ -68,7 +68,7 @@ describe('classifySaveError', () => {
     });
     expect(classifySaveError(http(502, { code: 'BOOMI_REJECTED' }))).toEqual({
       kind: 'rejected',
-      message: 'Boomi did not accept the save. Check that the API token can edit environment extensions.',
+      message: 'Boomi did not accept the save. Check that the account the server uses to reach Boomi may edit environment extensions.',
     });
   });
 

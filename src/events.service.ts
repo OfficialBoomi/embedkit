@@ -187,7 +187,7 @@ export type CrossReferenceTableSavedEventData = {
   tableId: string;
   /** Rows in the table after the save */
   rowCount: number;
-  /** Rows added, edited or removed, when the save was an edit of rows the process already had */
+  /** Rows added, edited or removed (a reorder is not counted). Sent only for the process that was being edited, not for the other processes of a shared save */
   changedRowCount?: number;
 };
 

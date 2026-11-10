@@ -310,7 +310,7 @@ export function classifySaveError(err: unknown): SaveErrorInfo {
   if (code === 'BOOMI_REJECTED') {
     return {
       kind: 'rejected',
-      message: 'Boomi did not accept the save. Check that the API token can edit environment extensions.',
+      message: 'Boomi did not accept the save. Check that the account the server uses to reach Boomi may edit environment extensions.',
     };
   }
   if (status === 503 || status === 429 || code === 'THROTTLED') {
