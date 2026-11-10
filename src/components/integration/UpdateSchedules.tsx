@@ -33,6 +33,7 @@ import Page from '../core/Page';
 import ScheduleForm, { ScheduleFormRef } from './ScheduleForm';
 import logger from '../../logger.service';
 import { emitEmbedKitEvent } from '../../events.service';
+import { describeScheduleLoadError } from '../../utils/scheduleLoadError';
 
 /**
  * @typedef UpdateScheduleRef
@@ -110,11 +111,14 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
     }
   }, [active, wizard]);
 
+  // The load error in plain words, naming the environment (see utils/scheduleLoadError).
+  const loadErrorText = fetchError ? describeScheduleLoadError(fetchError, integration) : null;
+
   const handleSubmit = async () => {
     setApiError(null);
     // If the current schedules did not load, an empty form would overwrite them. Send nothing.
     if (fetchError) {
-      setApiError(`Nothing was saved because the current schedules could not be loaded. ${fetchError}`);
+      setApiError(`Nothing was saved because the current schedules could not be loaded. ${loadErrorText}`);
       return false;
     }
     try {
@@ -176,9 +180,14 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
 
   const handleSave = async () => {
     setPageIsLoading(true);
-    const ok = await handleSubmit();
-    if (!ok) return;
-    handleRenderHome(true);
+    try {
+      const ok = await handleSubmit();
+      if (!ok) return;
+      handleRenderHome(true);
+    } finally {
+      // Every exit turns the overlay off. Left on after a failed save it covers the error the user needs to read.
+      setPageIsLoading(false);
+    }
   };
 
   const showTitle = boomiConfig?.components?.[componentKey]?.updateSchedules?.showTitle ?? true;
@@ -225,7 +234,7 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
 
           <div className="flex-1">
             {fetchError ? (
-              <p className="boomi-form-error" role="alert">{fetchError}</p>
+              <p className="boomi-form-error" role="alert">{loadErrorText}</p>
             ) : (
               <ScheduleForm
                 ref={formRef}
