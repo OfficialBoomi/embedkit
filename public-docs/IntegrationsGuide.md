@@ -1,6 +1,6 @@
 # Boomi EmbedKit — Integrations Guide (1.7)
 
-> How the integrations list, the Add Integration catalog and the setup wizard work in EmbedKit 1.7, how to limit which environments a session can use, and every flag that turns these features on or off. For the full option and token reference, see [ConfigurationReference.md](./ConfigurationReference.md). For what changed in this release, see [ReleaseNotes.md](./ReleaseNotes.md).
+> How the integrations list, the Add Integration catalog and the setup wizard work in EmbedKit 1.7, how to limit which environments a session can use, and every flag that turns these features on or off. It also covers the opt-in Cross Reference Tables screen. For the full option and token reference, see [ConfigurationReference.md](./ConfigurationReference.md). For what changed in this release, see [ReleaseNotes.md](./ReleaseNotes.md).
 
 ---
 
@@ -15,7 +15,8 @@
 7. [Flags reference](#7-flags-reference)
 8. [Customizing the look](#8-customizing-the-look)
 9. [Server API for list sorting and filtering](#9-server-api-for-list-sorting-and-filtering)
-10. [Upgrade checklist](#10-upgrade-checklist)
+10. [Cross Reference Tables](#10-cross-reference-tables)
+11. [Upgrade checklist](#11-upgrade-checklist)
 
 ---
 
@@ -35,8 +36,9 @@
 | Setup wizard skips steps with nothing to configure | After install and on Edit | always |
 | Single-install packs use the setup wizard and can edit connections | After install and on Edit | always |
 | Session environment scope (`environments` at login) | Login body | opt-in |
+| Cross Reference Tables: view and edit an integration's cross reference tables (menu item, setup wizard step, Map Fields link). New in NEXT_VERSION | Integrations list menu, setup wizard, Map Fields | opt-in (`crossReferenceTables.enabled`), whatever the `uiVersion` |
 
-Anything marked "at `uiVersion` 1.7.0" stays off for a component until you set its `uiVersion` to `'1.7.0'` or later (see the next section). The rest are bug fixes or behavior that applies to every component.
+Anything marked "at `uiVersion` 1.7.0" stays off for a component until you set its `uiVersion` to `'1.7.0'` or later (see the next section). The rest are bug fixes or behavior that applies to every component, or opt-in options that are off until you turn them on.
 
 ---
 
@@ -152,7 +154,7 @@ For **single-install** packs the environment list leaves out environments that a
 
 After an install, agents open **Run Agent** and every integration, **single-install packs included**, opens the setup wizard. The same wizard opens from a card's Edit.
 
-The wizard has up to three steps: **Make Connections**, **Map Fields** and **Set Schedule / Run**. Before it opens, it checks the integration and leaves out:
+The wizard has up to three steps: **Make Connections**, **Map Fields** and **Set Schedule / Run**. When [Cross Reference Tables](#10-cross-reference-tables) is turned on, a **Cross Reference Tables** step sits between Map Fields and Set Schedule / Run. Before it opens, it checks the integration and leaves out:
 
 - **Make Connections** when there are no connections and no process properties to set;
 - **Map Fields** when there are no maps.
@@ -244,6 +246,12 @@ Defaults depend on the component's `uiVersion`. All paths are under `components[
 | `environmentSelect.includeEnvironments` | `'ALL' \| 'PROD' \| 'TEST'` | `'ALL'` | `'ALL'` | Environment classifications offered. |
 | `environmentSelect.environmentId` | `string` | — | — | Offer only this environment. |
 | `environmentSelect.onlineOnly` | `boolean` | `false` | `false` | Offer only environments whose runtime is ONLINE. |
+| `crossReferenceTables.enabled` | `boolean` | `false` | `false` | Turns on [Cross Reference Tables](#10-cross-reference-tables): the menu item, the setup wizard step and the Map Fields link. Only `true` counts. |
+| `crossReferenceTables.menuLabel` | `string` | `'Edit Cross Reference Tables'` | `'Edit Cross Reference Tables'` | Text of the item in the integration's ⋮ menu. |
+| `crossReferenceTables.title` | `string` | `'Cross Reference Tables'` | `'Cross Reference Tables'` | Screen title and wizard step name. |
+| `crossReferenceTables.unavailableTables` | `'disabled' \| 'hidden'` | `'disabled'` | `'disabled'` | A table that cannot be edited here is listed greyed out with the reason, or left out. |
+| `crossReferenceTables.wizardStep` | `boolean` | `true` when enabled | `true` when enabled | Only `false` removes the step from the Edit wizard. |
+| `crossReferenceTables.showHistory` | `boolean` | `true` | `true` | Only `false` hides the "Last saved" line and makes no request for it. |
 
 Login body (not `boomi.config.js`): `environments: string[]` sets the session scope (see [section 6](#6-limiting-environments)).
 
@@ -279,6 +287,7 @@ cssVarsByKey: {
 | Setup wizard | `--boomi-wizard-loading-padding` | `.boomi-wizard-loading` |
 | Map Fields search | `--boomi-map-search-*` (row, Prev / Next, count, hit outline and ring) | `.boomi-map-search`, `.boomi-map-search-nav`, `.boomi-map-search-btn`, `.boomi-map-search-count`; cards get `.is-search-hit` / `.is-current-hit` |
 | Searchable dropdown | `--boomi-options-search-*`, `--boomi-options-searchable-max-height` | `.boomi-options--searchable`, `.boomi-options-search`, `.boomi-options-search-input` |
+| Cross Reference Tables | `--boomi-crt-*` (text, borders, headers, row stripes, focus, key warnings, find matches) | `.boomi-crt-screen`, `.boomi-crt-grid`, `.boomi-crt-chip`, `.boomi-crt-savebar` and the other `.boomi-crt-*` classes |
 
 Every token, with its default, is listed in [ConfigurationReference.md → CSS Design Tokens](./ConfigurationReference.md#9-css-design-tokens). Defaults reproduce the shipped look, so you only set what you want to change.
 
@@ -310,10 +319,139 @@ Takes `renderType`, `notAllowedIds`, `search`, `page`, `pageSize`, `includeConne
 
 ---
 
-## 10. Upgrade checklist
+## 10. Cross Reference Tables
+
+A cross reference table is a lookup table that the publisher of an integration ships with it, for example one that turns a code from one system into the value another system expects. Every customer starts with the publisher's default rows and can keep their own copy. The **Cross Reference Tables** screen lets your users read the defaults and edit their own copy without leaving your app.
+
+It is opt-in, and it needs the matching `@boomi/embedkit-sdk` and EmbedKit server releases (see [Requirements and older servers](#requirements-and-older-servers)). It is part of the Integration method (npm); the CDN embed does not include it.
+
+### Turning it on
+
+```js
+// boomi.config.js
+export default {
+  components: {
+    integrationsPage: {
+      renderType: 'integration',
+      crossReferenceTables: { enabled: true },
+    },
+  },
+};
+```
+
+Off, or not set, this feature changes nothing for your users (the integration card layout changes in the same release apply to every embed, see the release notes). The feature does not depend on `uiVersion`. The other options (`menuLabel`, `title`, `unavailableTables`, `wizardStep` and `showHistory`) are in the [flags reference](#7-flags-reference) and in the [Configuration Reference](./ConfigurationReference.md#cross-reference-tables-crossreferencetables).
+
+### Where it appears
+
+| Entry point | What the user sees |
+|---|---|
+| The integration's ⋮ menu | **Edit Cross Reference Tables** (change the text with `menuLabel`), after **Edit Map(s)**. It opens the screen for that integration. **Cancel** or the **My Integrations** breadcrumb goes back to the list. |
+| The setup wizard (after install, and from **Edit**) | A **Cross Reference Tables** step between **Map Fields** and **Set Schedule / Run**. `wizardStep: false` removes it. It is shown for every integration while the feature is on, so a pack without editable tables shows "No editable cross reference tables". |
+| Map Fields | **Open Cross Reference Table** in the menu of a Cross Ref Lookup card opens the screen with that table selected, in the process of the map that is open when that process has the table. Only a lookup that names its table directly has it; a lookup inside a User Defined function does not. In the setup wizard it moves to the **Cross Reference Tables** step, so with `wizardStep: false` the wizard's Map Fields step does not show it (the **Edit Map(s)** screen still does). If the table cannot be opened here, for example because it cannot be edited, the first table opens with a short note. |
+
+### Choosing a process and a table
+
+Each process of an integration keeps its own copy of a table, so the screen works on one process at a time. Pick a **Process**, then a **Table**.
+
+- **Process.** Lists the integration's own processes (sub-processes never appear). A process with no table is listed but cannot be chosen. With only one process the dropdown is disabled.
+- **Table.** Lists the tables of the chosen process, sorted by name with numbers by value ("Table 2" before "Table 10"). Each option shows the process, whether the table is **Default** or **Overridden**, and its row count. A small dot marks a table, and its process, that has unsaved edits. A table that cannot be edited here (it is runtime specific, its definition cannot be read, it is not a cross reference table, or its format is not supported) is greyed out with the reason, for example "It is runtime specific, which an override cannot hold.", or left out when `unavailableTables` is `'hidden'`.
+- **Chips.** Under the dropdowns: **Shared with: ...** when other processes of the integration use the same table; **Match: Exact**, **Wildcard** or **Regex**, which is how the table matches a value and is set by the publisher; **Default** or **Overridden**; warning chips for key problems; and the row and column count.
+
+### Editing
+
+- **Read only first.** A table opens showing the publisher's default rows, read only. Trying to edit one shows "Read only. Press Override to edit." **Override** creates your own copy to edit. From then on it no longer follows later changes to the defaults.
+- **A spreadsheet in the page.** Arrow keys and Tab move, Enter, F2 or typing edits a cell, and Esc cancels. Copy, cut and paste work with spreadsheets (tab separated text). Rows can be added, inserted above or below, duplicated, moved up or down, deleted, and pasted above or below, from the toolbar, from the right-click menu (or the Menu key) or from the keyboard. Deleting two or more rows asks first.
+- **Undo, find, full screen.** Undo and redo; find and replace (Ctrl or Cmd+F), with options to match case, match the whole cell and use a regular expression; and a full screen view that Esc leaves. The keyboard icon at the end of the toolbar opens a **Keyboard shortcuts** window with every key and mouse gesture.
+- **Key warnings.** The first column is the key. When a key is blank, or appears in more than one row (compared ignoring case), a chip such as "1 blank key" or "2 duplicate keys" shows. Pressing it jumps to the next flagged row. Warnings do not stop a save.
+- **What cannot change.** The column headers and the match type come from the publisher. A table has at most 20 columns and 10,000 rows ("A table can hold at most 10,000 rows.").
+- **Reset to defaults.** Once a table is overridden, **Reset to defaults** replaces **Override**. It asks first, then shows the defaults again. Nothing is written to Boomi until the user saves, and the save button then reads **Restore defaults**.
+
+### Saving
+
+The bar under the grid says what the button will do: "No changes to save", "Save will create your own copy (12 rows)", "3 rows changed", "Row order changed" or "Save will restore the default values". The button is disabled when there is nothing to save, and reads **Restore defaults** after a reset.
+
+**Save** writes the whole open table for the open process and reads it back, so the screen shows what Boomi now holds. A toast confirms it ("Table saved." or "Default values restored."). While a save runs, a small wait window covers the whole screen. A table that is too large for the server is refused before anything is sent: "This table is about 9.3 MB, which is over the 8 MB limit for saving. Remove some rows or shorten long values." The limit is the server's `CRT_SAVE_BODY_LIMIT_MB` (see [Server settings](#server-settings)).
+
+#### Tables shared by several processes
+
+When other processes of the same integration use the same table, **Save** becomes a split button: **Save to this process**, and an arrow with **Save to other processes that share this table...**. The arrow opens a confirmation that lists each other process with what will happen there:
+
+- "Has unsaved changes, which will be replaced."
+- "Has its own different rows, which will be replaced."
+- "Uses the publisher defaults and will get its own copy."
+- "Already has these rows." (listed, but not ticked)
+
+Every process that has something to change is ticked, and the confirm button says how many processes will be written, this one included (for example **Save to 3 processes**). The saves then run one after another, and each process shows Waiting, Saving, Saved or Failed, with the reason when it failed. A button such as **Retry 2 failed processes** tries the failed ones again, except a process whose table someone else changed after it was loaded: its line says to close the window, reload the table and save again, because the same attempt would fail the same way. Nothing is rolled back: a process that was saved stays saved. A process where the table cannot be edited is not offered.
+
+Restoring defaults works the same way, with **Restore defaults in this process** and **Restore defaults in other processes that share this table...**. Its lines there are "Has its own rows, which will go back to the defaults." and "Already uses the defaults."
+
+#### When someone else changed the table
+
+If the table was changed after your user opened it (in Boomi, or by another user of your app), saving shows **This table was changed** with three choices:
+
+- **Overwrite** saves your user's rows and replaces the other version.
+- **Reload table** shows the other version and discards the unsaved edits to this table.
+- **Keep editing** closes the prompt, for example so the user can copy their rows out first.
+
+In a shared save, a process that was changed shows as failed with "Changed by someone else after it was loaded. Close this window, reload the table and save again."
+
+#### Other failures
+
+A failed save shows a **Could not save** dialog with one plain sentence, for example "Another save of this table is still running. Try again in a moment.", "Boomi is busy right now. Try again in a moment.", "This table is no longer part of this process, so it cannot be saved. Reload the screen." or "Boomi accepted the save but the table does not read back as saved. Check the table and try again." If Boomi rejects a save, check that the API token your server uses can edit environment extensions.
+
+### The "Last saved" line
+
+Under the chips one quiet line says when the open table was last saved and by whom: `Last saved by <email> on <date>`, or `Defaults restored by <email> on <date>` after a restore. The date and time follow the viewer's own locale. When no user is known the line reads `Last saved on <date>`. It reloads after every save or restore.
+
+It is built from two records: the EmbedKit server's own record of saves made through the plugin (kept per table), and the last save that Boomi recorded for the environment.
+
+- **Boomi records saves per environment, not per table.** For a table the plugin has a record of, the line uses that record's time. If Boomi shows a newer save made in its own user interface, someone else changed the environment since, and that save is shown instead. For a table with no record from the plugin, the line comes from Boomi's last save of the environment, and only for a table that has rows of its own. Hovering a line that comes from Boomi alone says "Boomi records this for the whole environment, not for one table."
+- **The user is the account the server uses to talk to Boomi.** A save made through the plugin is recorded by Boomi under the account whose API token your EmbedKit server uses, so for a host with one service account the line names that account. A save made in the Boomi user interface names the person. If you would rather not show that name, set `showHistory: false`.
+- **The name needs the Boomi right to view audit logs.** Without it the user may be missing: the line then falls back to the `userId` you pass to `BoomiPlugin()`, if any, and shows no name otherwise.
+- **Nothing is shown when the server cannot say**: an older server, a failure, or nothing recorded. With `showHistory: false` the screen makes no request for it.
+
+### In the setup wizard
+
+In the wizard the step shows the same screen without its own **Cancel** button, because the wizard has its own **Back**, **Cancel** and **Next**. The tables load the first time the step is shown. **Next** does not save: the user saves with the step's own **Save**.
+
+If any table has unsaved edits, **Next**, **Back**, **Cancel** and the breadcrumb first ask **You have unsaved changes** with **Discard and continue** or **Keep editing**. Discarding throws away the edits to every table. While a save is running, or its confirmation or conflict prompt is open, the wizard stays on the step.
+
+### Where tables come from
+
+The tables listed are the ones the publisher marked overrideable on the **top-level published process** (the Cross Reference tab of the process's Extensions dialog). Where a table is used does not matter: a table used only inside a sub-process is listed if it is ticked on the top-level process. Sub-processes never appear in the **Process** dropdown, only the integration's own processes do.
+
+Publishers: tick the tables on the top-level published process, not only on a sub-process. Which tables a customer can edit is decided in the publisher's account, not by EmbedKit configuration.
+
+### Requirements and older servers
+
+- **Matching releases.** Publish `@boomi/embedkit-sdk` first, then deploy embedkit-server, then upgrade EmbedKit, the same order as the [upgrade checklist](#11-upgrade-checklist).
+- **An older server.** With the feature on and a server that does not have it (or runs an older SDK), the screen shows **Could not load cross reference tables**: "This server does not support cross reference tables yet. Update the embedkit server and try again." It has a **Try again** button, and the "Last saved" line never appears.
+- **Boomi rights.** Saving needs an API token that can edit environment extensions. User names in the "Last saved" line need the right to view audit logs.
+
+### Server settings
+
+All optional. They are set as environment variables on the EmbedKit server.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `CRT_SAVE_BODY_LIMIT_MB` | `8` (minimum `1`) | Largest request the save accepts, in MB. Every other route keeps 1 MB. The screen reads this limit from the server. |
+| `CRT_SAVE_LOCK_WAIT_SECONDS` | `10` | How long a save waits for another save in the same customer account and environment to finish before it answers that another save is still running. `0` tries once. |
+| `CRT_SAVE_LOCK_TTL_SECONDS` | `120` (minimum `10`) | How long the lock of a save, one per customer account and environment, lasts if the server never releases it (for example because it stopped mid-save). Set it longer than your slowest save: a save that is still running when its lock ends no longer holds it. |
+| `CRT_HISTORY_CACHE_SECONDS` | `60` | How long the answer taken from Boomi's audit log (the last save of an environment) is reused. `0` turns the reuse off. The reuse is kept per server instance: a save drops it at once on the instance that handled the save, and with several instances the others can serve the older answer until it ends. |
+| `CRT_DEFINITION_CACHE_MB` | `64` | Memory the server may use to keep table definitions (headers and default rows) it has read from the publisher's account. `0` turns the cache off. |
+| `CRT_DEFINITION_FRESH_SECONDS` | `30` | How long a kept definition is used before the server checks whether the publisher changed it. `0` checks on every request. |
+
+### Events, dialogs and look
+
+Saving or restoring emits `crossReference.table.saved` or `crossReference.table.reset` once for each process written, with ids and counts only and never cell values (see [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks)). The confirmations for leaving with unsaved edits, **Reset to defaults**, deleting several rows and the wizard's unsaved edits use the standard confirm dialog, so your `confirm` handler covers them, with `source.componentName` set to `'CrossReferenceTables'` (see [Cross reference table confirmations](./ConfigurationReference.md#cross-reference-table-confirmations)). The wait window, the conflict prompt and the shared-table confirmation are built in and cannot be replaced. The colors come from the `--boomi-crt-*` tokens (see [Cross Reference Tables tokens](./ConfigurationReference.md#cross-reference-tables)).
+
+---
+
+## 11. Upgrade checklist
 
 1. **Deploy in order.** Publish `@boomi/embedkit-sdk` first, then embedkit-server, then the EmbedKit UI or CDN bundle. The UI's catalog, filters and sorting need the new server routes, and the server needs the new SDK.
 2. **Nothing changes until you opt in.** Existing components keep the 1.6.1 UI. Set `uiVersion: '1.7.0'` on one component, test it, then roll out.
 3. **Allow connector icons.** Pages with a strict `img-src` Content Security Policy must allow the Boomi platform host (for example `https://api.boomi.com`), or icons fall back to EmbedKit's own glyphs.
 4. **Pin the CDN version.** The CDN quick start loads an unversioned URL, which always serves the latest release. Pin a version (`@boomi/embedkit-cdn@1.7.0`) so future releases reach you only when you choose.
 5. **Changes that apply to everyone** (no opt-in): environment dropdowns set to `ALL` now list environments without a classification; single-install packs open the setup wizard and can edit connections; the wizard skips empty steps; screen titles fall back to the pack name; scroll areas no longer rubber-band. See the release notes.
+6. **Cross Reference Tables is opt-in.** The feature changes nothing until you set `crossReferenceTables.enabled: true` on a component. The release also changes the integration cards for every embed (see the release notes). It needs the matching `@boomi/embedkit-sdk` and EmbedKit server releases, deployed in the order of step 1. Turn it on for one component, try it on an integration that has cross reference tables, then roll it out. Publishers must tick the tables on the top-level published process (see [Where tables come from](#where-tables-come-from)).
