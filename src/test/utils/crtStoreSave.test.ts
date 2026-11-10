@@ -39,7 +39,7 @@ const makeOverridden = (): CrtTableData =>
     ],
   });
 
-const NONE = { added: 0, edited: 0, removed: 0, reordered: false };
+const NONE = { added: 0, edited: 0, removed: 0, reordered: false, rowsReplaced: false };
 
 describe('rowsSnapshot', () => {
   it('copies the default rows of a table that is not overridden', () => {
@@ -144,16 +144,22 @@ describe('changeSummary: what was loaded and what shows', () => {
   it('override() flips overridden and keeps what was loaded; the counts start from the copy', () => {
     const store = createCrtStore(makeTable());
     store.override();
-    expect(store.changeSummary()).toEqual({ loadedOverridden: false, overridden: true, ...NONE });
+    expect(store.changeSummary()).toEqual({ loadedOverridden: false, overridden: true, ...NONE, rowsReplaced: true });
     store.setCell(1, 1, 'mine');
-    expect(store.changeSummary()).toEqual({ loadedOverridden: false, overridden: true, ...NONE, edited: 1 });
+    expect(store.changeSummary()).toEqual({
+      loadedOverridden: false,
+      overridden: true,
+      ...NONE,
+      rowsReplaced: true,
+      edited: 1,
+    });
   });
 
   it('reset() of a loaded override flips overridden and keeps what was loaded', () => {
     const store = createCrtStore(makeOverridden());
     store.setCell(0, 0, 'x');
     store.reset();
-    expect(store.changeSummary()).toEqual({ loadedOverridden: true, overridden: false, ...NONE });
+    expect(store.changeSummary()).toEqual({ loadedOverridden: true, overridden: false, ...NONE, rowsReplaced: true });
   });
 
   it('override() after reset() of a loaded override starts counting from the copy of the defaults', () => {
@@ -161,7 +167,81 @@ describe('changeSummary: what was loaded and what shows', () => {
     store.reset();
     store.override();
     store.deleteRows([0]);
-    expect(store.changeSummary()).toEqual({ loadedOverridden: true, overridden: true, ...NONE, removed: 1 });
+    expect(store.changeSummary()).toEqual({
+      loadedOverridden: true,
+      overridden: true,
+      ...NONE,
+      rowsReplaced: true,
+      removed: 1,
+    });
+  });
+
+  describe('rowsReplaced', () => {
+    it('is false until override() or reset() rebuilds the rows', () => {
+      expect(createCrtStore(makeTable()).changeSummary().rowsReplaced).toBe(false);
+      const store = createCrtStore(makeOverridden());
+      expect(store.changeSummary().rowsReplaced).toBe(false);
+      store.setCell(0, 0, 'x');
+      store.insertRows(1, [['n', 'New', 'APAC']]);
+      store.deleteRows([2]);
+      store.moveRows([3], 1);
+      expect(store.changeSummary().rowsReplaced).toBe(false);
+    });
+
+    it('stays true through edits made after Reset and then Override of a table that had rows of its own', () => {
+      const store = createCrtStore(makeOverridden());
+      store.reset();
+      store.override();
+      expect(store.changeSummary()).toMatchObject({ loadedOverridden: true, overridden: true, rowsReplaced: true, edited: 0 });
+      store.setCell(0, 1, 'edit on top');
+      // The counts only compare with the fresh copy of the defaults, which is why the flag is needed.
+      expect(store.changeSummary()).toMatchObject({ rowsReplaced: true, edited: 1, added: 0, removed: 0 });
+      expect(store.isDirty()).toBe(true);
+    });
+
+    it('is true after Reset of a table that had rows of its own, and false again for a table that had none', () => {
+      const loadedOwn = createCrtStore(makeOverridden());
+      loadedOwn.reset();
+      expect(loadedOwn.changeSummary().rowsReplaced).toBe(true);
+      const loadedDefault = createCrtStore(makeTable());
+      loadedDefault.override();
+      expect(loadedDefault.changeSummary().rowsReplaced).toBe(true);
+      loadedDefault.reset();
+      expect(loadedDefault.changeSummary().rowsReplaced).toBe(false);
+    });
+
+    it('does not change on an undo, which cannot reach back past override() or reset()', () => {
+      const store = createCrtStore(makeOverridden());
+      store.reset();
+      store.override();
+      store.setCell(0, 0, 'x');
+      store.undo();
+      expect(store.changeSummary().rowsReplaced).toBe(true);
+    });
+  });
+
+  describe('isDirty is net by what happened to the rows, not by their text', () => {
+    it('reads clean after an undo, after a cell is put back and after a row is moved down and up', () => {
+      const store = createCrtStore(makeOverridden());
+      store.setCell(0, 0, 'x');
+      store.undo();
+      expect(store.isDirty()).toBe(false);
+      store.setCell(1, 1, 'changed');
+      store.setCell(1, 1, 'One');
+      expect(store.isDirty()).toBe(false);
+      store.moveRows([2], 1);
+      store.moveRows([3], -1);
+      expect(store.isDirty()).toBe(false);
+    });
+
+    it('deleting a row and inserting one with the same content still reads dirty', () => {
+      const store = createCrtStore(makeOverridden());
+      store.deleteRows([1]);
+      store.insertRows(1, [['r1', 'One', 'US']]);
+      expect(store.rowsSnapshot()).toEqual(makeOverridden().overrideRows);
+      expect(store.isDirty()).toBe(true);
+      expect(store.changeSummary()).toMatchObject({ added: 1, removed: 1 });
+    });
   });
 
   it('override() then reset() of a table loaded without an override is a clean table again', () => {

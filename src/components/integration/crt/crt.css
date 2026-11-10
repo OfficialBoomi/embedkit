@@ -1083,7 +1083,7 @@
  * so the light, dark and boomi themes all follow. The Modal's dialog element takes focus when
  * the window opens; it is a container, not a control, so it shows no focus ring.
  */
-.boomi-crt-sc-wrap [role='dialog']:focus {
+.boomi-crt-modal-frame [role='dialog']:focus {
   outline: none;
 }
 

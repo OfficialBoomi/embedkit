@@ -11,7 +11,9 @@
  * - how big the request will be (`estimateSaveBytes`, `checkSaveSize`),
  * - what saving or resetting a table that other processes share does in each of them
  *   (`describeShareTargets`),
- * - what a failed save means, in words a customer can read (`classifySaveError`).
+ * - what a failed save means, in words a customer can read (`classifySaveError`),
+ * - what to take from the answer of a write that went through (`readWriteAnswer`) and the words that
+ *   report it (`describeWriteSuccess`, `writeBusyLabel`).
  */
 import { getSessionMessage, isSessionError } from '../sessionError';
 import type { CrtChangeSummary } from './crtStore';
@@ -38,6 +40,9 @@ export const NO_CHANGES_TEXT = 'No changes to save';
  * - Nothing differs from the load: `none`.
  * - The table had no rows of its own and now has: `save`, which creates the customer's own copy.
  * - The table had rows of its own and shows the defaults again: `reset`.
+ * - The table had rows of its own, was reset and then overridden again (`rowsReplaced`): `save`, which
+ *   replaces every row of the customer with a copy of the defaults plus whatever was edited since, and
+ *   says so, because "1 row changed" would hide that.
  * - The table had rows of its own and still does: `save`, described by how many rows changed.
  *
  * `dirty` is the store's `isDirty()`, `rowCount` the rows now in the table and `summary` the store's
@@ -56,9 +61,15 @@ export function describeSaveAction(summary: CrtChangeSummary, rowCount: number, 
 
   if (!summary.overridden) return { mode: 'reset', text: 'Save will restore the default values' };
 
+  if (summary.rowsReplaced) {
+    // Reset and then override again: the rows are a fresh copy of the defaults and differ from the saved
+    // ones. The counts above only compare with that copy, so they are added to the sentence, not shown alone.
+    const base = 'Save will replace your rows with a copy of the default values';
+    return { mode: 'save', text: changed > 0 ? `${base}, ${rowsText(changed)} changed` : base };
+  }
   if (changed > 0) return { mode: 'save', text: `${rowsText(changed)} changed` };
   if (summary.reordered) return { mode: 'save', text: 'Row order changed' };
-  // Reset and then override again: the rows are a fresh copy of the defaults and differ from the saved ones.
+  // Dirty with nothing to count: the rows are not the saved ones, so say the same as after a reset.
   return { mode: 'save', text: 'Save will replace your rows with a copy of the default values' };
 }
 
@@ -128,18 +139,34 @@ function formatSize(bytes: number, trimWhole: boolean, decimals = 1): string {
 }
 
 /**
- * Null when the rows fit in a save request, otherwise a plain message. `maxBytes` is what the server
- * said it accepts; without one the general limit of 1 MB is assumed.
+ * What a save request carries besides the rows: the ids, the stamp and the key names. The server's
+ * limit is on the whole body, so this much of it is not available to the rows.
+ */
+export const SAVE_ENVELOPE_BYTES = 2048;
+
+/** The most decimals shown to tell a size from the limit it just passed. Past this the message says "just over". */
+const MAX_SIZE_DECIMALS = 3;
+
+/**
+ * Null when the request fits, otherwise a plain message. `maxBytes` is what the server said it
+ * accepts for the whole body; without one the general limit of 1 MB is assumed. The rows are counted
+ * exactly (`estimateSaveBytes`) and an allowance of SAVE_ENVELOPE_BYTES stands for the rest of the body.
  */
 export function checkSaveSize(rows: Rows, maxBytes?: number): string | null {
   const limit = typeof maxBytes === 'number' && Number.isFinite(maxBytes) && maxBytes > 0 ? maxBytes : DEFAULT_MAX_SAVE_BYTES;
-  const size = estimateSaveBytes(rows);
+  const size = estimateSaveBytes(rows) + SAVE_ENVELOPE_BYTES;
   if (size <= limit) return null;
   const limitText = formatSize(limit, true);
-  let sizeText = formatSize(size, false);
-  // A table just over the limit must not read as equal to it ("8.0 MB" over "8 MB").
-  if (sizeText === formatSize(limit, false)) sizeText = formatSize(size, false, 2);
-  return `This table is about ${sizeText}, which is over the ${limitText} limit for saving. Remove some rows or shorten long values.`;
+  const advice = 'Remove some rows or shorten long values.';
+  // A table just over the limit must not read as equal to it ("8.0 MB" over "8 MB"): show one more
+  // decimal until the two differ, and when even that does not tell them apart, say "just over".
+  for (let decimals = 1; decimals <= MAX_SIZE_DECIMALS; decimals++) {
+    const sizeText = formatSize(size, false, decimals);
+    if (sizeText !== formatSize(limit, false, decimals)) {
+      return `This table is about ${sizeText}, which is over the ${limitText} limit for saving. ${advice}`;
+    }
+  }
+  return `This table is just over the ${limitText} limit for saving. ${advice}`;
 }
 
 // ---- a table shared by several processes ----
@@ -239,6 +266,7 @@ export type SaveErrorKind =
   | 'not-verified'
   | 'rejected'
   | 'throttled'
+  | 'timeout'
   | 'session'
   | 'too-old'
   | 'network'
@@ -313,8 +341,16 @@ export function classifySaveError(err: unknown): SaveErrorInfo {
       message: 'Boomi did not accept the save. Check that the account the server uses to reach Boomi may edit environment extensions.',
     };
   }
-  if (status === 503 || status === 429 || code === 'THROTTLED') {
+  // Only Boomi saying so is a throttle. A bare 503 or 504 is the host's router giving up on a request that
+  // took too long (Heroku answers 503 after 30 seconds), and the server may well finish the write after that.
+  if (status === 429 || code === 'THROTTLED') {
     return { kind: 'throttled', message: 'Boomi is busy right now. Try again in a moment.' };
+  }
+  if (status === 503 || status === 504) {
+    return {
+      kind: 'timeout',
+      message: 'The server did not answer in time. The save may have gone through. Reload the table to check.',
+    };
   }
   if (status === 400) return { kind: 'invalid', message: serverText() ?? INVALID_FALLBACK };
   if (status === 0) {
@@ -322,3 +358,39 @@ export function classifySaveError(err: unknown): SaveErrorInfo {
   }
   return { kind: 'other', message: serverText() ?? OTHER_FALLBACK };
 }
+
+// ---- what a write answers ----
+
+/** What the screen takes from the answer of a save or a reset. */
+export interface WriteAnswer {
+  /** The process has rows of its own for the table now. */
+  overridden: boolean;
+  /** The table's stamp now. Undefined when the server did not say, so the next save sends none. */
+  stamp: string | undefined;
+  rowCount: number;
+}
+
+/**
+ * Reads the answer of a write that has already happened, never throwing and never asking for more
+ * than it gets. The server is expected to say whether the table is overridden, its row count and its
+ * stamp, but an empty body, a null or a strange object must not turn a write that is done into a
+ * failure: `overridden` falls back to what the job did (a save leaves rows of its own, a reset does
+ * not), `stamp` to nothing and `rowCount` to the rows that were sent.
+ */
+export function readWriteAnswer(job: { mode: 'save' | 'reset'; rowCount: number }, answer: unknown): WriteAnswer {
+  const a = typeof answer === 'object' && answer !== null ? (answer as Record<string, unknown>) : {};
+  return {
+    overridden: typeof a.overridden === 'boolean' ? a.overridden : job.mode === 'save',
+    stamp: typeof a.stamp === 'string' && a.stamp !== '' ? a.stamp : undefined,
+    rowCount: typeof a.rowCount === 'number' && Number.isFinite(a.rowCount) ? a.rowCount : job.rowCount,
+  };
+}
+
+/** The toast after a successful write. `count` is how many processes were written. */
+export function describeWriteSuccess(mode: 'save' | 'reset', count: number): string {
+  if (mode === 'reset') return count > 1 ? `Default values restored in ${count} processes.` : 'Default values restored.';
+  return count > 1 ? `Table saved in ${count} processes.` : 'Table saved.';
+}
+
+/** The wait window's label while a write runs. */
+export const writeBusyLabel = (mode: 'save' | 'reset'): string => (mode === 'reset' ? 'Restoring defaults...' : 'Saving...');

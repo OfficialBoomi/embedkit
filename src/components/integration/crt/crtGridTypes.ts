@@ -48,6 +48,10 @@ export interface CrtGridHandle {
   showCell(row: number, col: number): void;
   /** The active cell, pulled back inside the table. */
   activeCell(): CrtCell;
+  /** How far the grid is scrolled, in pixels. With scrollTo, it lets the screen keep a user's place across a save. */
+  scrollPosition(): { top: number; left: number };
+  /** Scrolls the grid to a position in pixels (the browser keeps it inside what there is to scroll). */
+  scrollTo(top: number, left: number): void;
   /** Commits an open cell editor, so a table wide operation never runs under a stale one. */
   commitEdit(): void;
 }

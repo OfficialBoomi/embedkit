@@ -83,6 +83,12 @@ export interface CrtChangeSummary {
   removed: number;
   /** The original rows that remain are no longer in their original relative order. */
   reordered: boolean;
+  /**
+   * The rows were rebuilt by override() or reset() since the load, so they are not the rows that were
+   * loaded (a table loaded with its own rows, reset and then overridden again holds a copy of the
+   * defaults). The counts above then compare with that copy, which hides what Save will replace.
+   */
+  rowsReplaced: boolean;
 }
 
 export interface CrtStore {
@@ -141,8 +147,11 @@ export interface CrtStore {
   /** True for a row inserted or appended since the rows were created (load, override, reset). */
   isRowNew(row: number): boolean;
   /**
-   * True when the table differs from how it was loaded. Exact and net: undoing every
-   * change, or moving a row down and back up, makes it false again.
+   * True when the table differs from how it was loaded, judged by what happened to its rows and
+   * not by comparing their text. A cell edited back to its first value, an undone change and a row
+   * moved down and back up all read clean again. Deleting a row and inserting one with the same
+   * content does not: the inserted row is a new row, so the table reads dirty (and Save has
+   * something to send, even though nothing visible differs).
    */
   isDirty(): boolean;
   /**
@@ -924,6 +933,7 @@ export function createCrtStore(table: CrtTableData): CrtStore {
         edited: editedRows.size,
         removed: newRowLimit - kept,
         reordered,
+        rowsReplaced,
       };
     },
 

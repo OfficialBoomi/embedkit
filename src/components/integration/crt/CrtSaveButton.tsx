@@ -22,10 +22,8 @@ import Button from '../../ui/Button';
 export interface CrtSaveButtonProps {
   /** True when other processes of the pack use the same table: shows the split button. */
   shared: boolean;
-  /** Nothing to save, or a save is running. */
+  /** Nothing to save, or a save is running. The bar next to the button says which. */
   disabled?: boolean;
-  /** Why the button is disabled, shown as a tooltip while it is. */
-  disabledReason?: string;
   /** What the main button says when the table is shared, for example "Save to this process". */
   sharedLabel?: string;
   /** What the main button says otherwise. */
@@ -39,7 +37,6 @@ export interface CrtSaveButtonProps {
 const CrtSaveButton: React.FC<CrtSaveButtonProps> = ({
   shared,
   disabled = false,
-  disabledReason,
   sharedLabel = 'Save to this process',
   label = 'Save',
   menuLabel = 'Save to other processes that share this table...',
@@ -80,7 +77,6 @@ const CrtSaveButton: React.FC<CrtSaveButtonProps> = ({
         showIcon={false}
         label={label}
         disabled={disabled}
-        hoverText={disabled ? disabledReason : undefined}
         onClick={onSave}
       />
     );
@@ -106,7 +102,6 @@ const CrtSaveButton: React.FC<CrtSaveButtonProps> = ({
         showIcon={false}
         label={sharedLabel}
         disabled={disabled}
-        hoverText={disabled ? disabledReason : undefined}
         buttonClass="boomi-crt-split-main"
         onClick={onSave}
       />

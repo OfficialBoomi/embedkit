@@ -141,6 +141,26 @@ describe('the save bar', () => {
     expect(screen.getByText('Save will create your own copy (2 rows), 1 row changed')).toBeTruthy();
   });
 
+  it('says that Save replaces every row after Reset and Override, with the edits added', async () => {
+    const user = userEvent.setup();
+    fetchTables.mockResolvedValue({
+      tables: [serverTable('Alpha', { overridden: true, overrideRows: [['x', '1'], ['y', '2']], stamp: 'o2.mine' })],
+    });
+    renderScreen();
+    await screen.findByRole('grid');
+    await user.click(screen.getByRole('button', { name: 'Reset to defaults' }));
+    await screen.findByText('Save will restore the default values');
+    // The screen hands focus back to the grid on the next animation frame.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    });
+    await user.click(screen.getByRole('button', { name: 'Override' }));
+    expect(screen.getByText('Save will replace your rows with a copy of the default values')).toBeTruthy();
+    await edit(user);
+    expect(screen.getByText('Save will replace your rows with a copy of the default values, 1 row changed')).toBeTruthy();
+    expect(screen.queryByText('1 row changed')).toBeNull();
+  });
+
   it('counts the rows changed in a table that already has rows of its own', async () => {
     const user = userEvent.setup();
     fetchTables.mockResolvedValue({
@@ -230,6 +250,36 @@ describe('saving the open table', () => {
     expect(screen.getByRole('button', { name: 'Override' })).toBeTruthy();
   });
 
+  it('counts a write that answered with nothing as saved, and the next save sends no stamp', async () => {
+    const user = userEvent.setup();
+    fetchTables.mockResolvedValue({ tables: [serverTable('Alpha', { overridden: true, overrideRows: [['x', '1']], stamp: 'o1.mine' })] });
+    saveTable.mockResolvedValue(null);
+    renderScreen();
+    await screen.findByRole('grid');
+    await edit(user);
+    await user.click(saveButton());
+    await screen.findByText('Table saved.');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText('No changes to save')).toBeTruthy();
+    await edit(user);
+    await user.click(saveButton());
+    await waitFor(() => expect(saveTable).toHaveBeenCalledTimes(2));
+    expect('expectedStamp' in saveTable.mock.calls[1][0]).toBe(false);
+  });
+
+  it('says the save may have gone through when the server did not answer in time', async () => {
+    const user = userEvent.setup();
+    fetchTables.mockResolvedValue({ tables: [serverTable('Alpha', { overridden: true, overrideRows: [['x', '1']], stamp: 'o1.mine' })] });
+    saveTable.mockRejectedValue(problem(503));
+    renderScreen();
+    await screen.findByRole('grid');
+    await edit(user);
+    await user.click(saveButton());
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText('The server did not answer in time. The save may have gone through. Reload the table to check.')).toBeTruthy();
+    expect(screen.getByText('1 row changed')).toBeTruthy();
+  });
+
   it('keeps the edits and says why when a save fails', async () => {
     const user = userEvent.setup();
     fetchTables.mockResolvedValue({ tables: [serverTable('Alpha', { overridden: true, overrideRows: [['x', '1']], stamp: 'o1.mine' })] });
@@ -317,6 +367,23 @@ describe('a table that someone else changed', () => {
     await waitFor(() => expect(saveTable).toHaveBeenCalledTimes(2));
     expect(saveTable.mock.calls[1][0].expectedStamp).toBe('o1.theirs');
     expect(saveTable.mock.calls[1][0].rows).toEqual([['EDITED', '1']]);
+    await screen.findByText('Table saved.');
+  });
+
+  it('overwrites without any stamp when the server did not say what is there now', async () => {
+    const user = userEvent.setup();
+    fetchTables.mockResolvedValue({ tables: [serverTable('Alpha', { overridden: true, overrideRows: [['x', '1']], stamp: 'o1.mine' })] });
+    saveTable.mockRejectedValueOnce(problem(409, 'TABLE_CHANGED'));
+    renderScreen();
+    await screen.findByRole('grid');
+    await edit(user);
+    await user.click(saveButton());
+    await screen.findByText('This table was changed');
+    saveTable.mockResolvedValue({ processId: 'p1', tableId: 'id-alpha', overridden: true, rowCount: 1, stamp: 'o1.after' });
+    await user.click(screen.getByRole('button', { name: 'Overwrite' }));
+    await waitFor(() => expect(saveTable).toHaveBeenCalledTimes(2));
+    expect(saveTable.mock.calls[0][0].expectedStamp).toBe('o1.mine');
+    expect('expectedStamp' in saveTable.mock.calls[1][0]).toBe(false);
     await screen.findByText('Table saved.');
   });
 
@@ -499,6 +566,55 @@ describe('a table that several processes share', () => {
     await within(dialog).findByRole('button', { name: 'Close' });
     expect(resetTable.mock.calls.map((c) => c[0].processId)).toEqual(['p1', 'p2']);
     expect(saveTable).not.toHaveBeenCalled();
+    // The result is worded as a reset, not as a save.
+    expect(await screen.findByText('Default values restored in 2 processes.')).toBeTruthy();
+    expect(toasts.shown).toEqual(['Default values restored in 2 processes.']);
+  });
+
+  it('a conflict in one process is not offered a retry, while a throttle in another is', async () => {
+    const user = userEvent.setup();
+    fetchTables.mockResolvedValue(shared());
+    saveTable.mockImplementation(async (args: { processId: string }) => {
+      if (args.processId === 'p1') throw problem(409, 'TABLE_CHANGED', { currentStamp: 'o1.theirs' });
+      throw problem(503, 'THROTTLED');
+    });
+    renderScreen();
+    await screen.findByRole('grid');
+    await edit(user);
+    await user.click(screen.getByRole('button', { name: 'More ways to save' }));
+    await user.click(screen.getByRole('menuitem'));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Save to 2 processes' }));
+
+    await within(dialog).findByRole('button', { name: 'Retry 1 failed process' });
+    expect(within(dialog).getByText(/Failed: Changed by someone else after it was loaded\. Close this window, reload the table and save again/)).toBeTruthy();
+    expect(within(dialog).getByText(/Failed: Boomi is busy right now/)).toBeTruthy();
+
+    saveTable.mockImplementation(async (args: { processId: string }) => ok(args.processId, 'o1.after'));
+    await user.click(within(dialog).getByRole('button', { name: 'Retry 1 failed process' }));
+    await waitFor(() => expect(saveTable).toHaveBeenCalledTimes(3));
+    expect(saveTable.mock.calls[2][0]).toMatchObject({ processId: 'p2', expectedStamp: 'd0.second' });
+    await within(dialog).findByRole('button', { name: 'Close' });
+    // The conflict is still on the screen and cannot be retried, so there is no Retry and no success message.
+    expect(within(dialog).queryByRole('button', { name: /Retry/ })).toBeNull();
+    expect(within(dialog).getAllByText(/Failed/)).toHaveLength(1);
+    expect(toasts.shown).toEqual([]);
+  });
+
+  it('offers no retry at all when every failure is a conflict', async () => {
+    const user = userEvent.setup();
+    fetchTables.mockResolvedValue(shared());
+    saveTable.mockRejectedValue(problem(409, 'TABLE_CHANGED', { currentStamp: 'o1.theirs' }));
+    renderScreen();
+    await screen.findByRole('grid');
+    await edit(user);
+    await user.click(screen.getByRole('button', { name: 'More ways to save' }));
+    await user.click(screen.getByRole('menuitem'));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Save to 2 processes' }));
+    await within(dialog).findByRole('button', { name: 'Close' });
+    expect(within(dialog).getAllByText(/Failed/)).toHaveLength(2);
+    expect(within(dialog).queryByRole('button', { name: /Retry/ })).toBeNull();
   });
 
   it('the other process shows what was written when it is opened afterwards', async () => {

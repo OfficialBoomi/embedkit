@@ -17,8 +17,10 @@
  * the buttons says what Save will do. A table that other processes of the pack share gets a split
  * Save button: the main part saves this process only, and the arrow saves to the other processes
  * too after a confirmation. If someone else changed the table meanwhile, a prompt offers to
- * overwrite it, reload it or keep editing. While a save runs the whole screen is disabled. See
- * crt/useCrtSave.
+ * overwrite it, reload it or keep editing. While a save runs, and while its confirmation or conflict
+ * window is open, the whole screen is inert (those windows sit beside it, not inside it, and take
+ * the keyboard themselves). A save, reset or reload leaves the cursor and the scroll position of the
+ * open table where they were. See crt/useCrtSave.
  *
  * A small dot in the picker marks every table with unsaved edits, and leaving the screen (the
  * Cancel button or the breadcrumb) asks first while any table has some. A table that cannot be
@@ -171,6 +173,12 @@ const SERVER_TOO_OLD =
   'This server does not support cross reference tables yet. Update the embedkit server and try again.';
 const HINT_MS = 3000;
 const REQUEST_NOT_MET = 'That table cannot be opened here, so the first table is shown.';
+/**
+ * The built-in dialog while it is on screen or still closing. SweetAlert2 marks the rest of the page
+ * aria-hidden only for a dialog, never for a toast, and tells them apart by the popup: a toast popup has
+ * the swal2-toast class, a dialog popup has swal2-modal. The success toast after a save is a toast.
+ */
+const SWAL_DIALOG_SELECTOR = '.swal2-container .swal2-popup:not(.swal2-toast)';
 
 /** A short result message under the grid. Warnings use the danger colour, the rest the muted one. */
 interface Notice {
@@ -336,11 +344,12 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
 
   // The built-in dialog hides over about 200 ms and keeps the page aria-hidden until it is gone.
   // Taking focus earlier triggers the same warning, so wait for it to leave (at most about 1.5 s).
-  // A host dialog handler has no such container, so focus comes back at once.
+  // A host dialog handler has no such container, so focus comes back at once, and so it does while only a
+  // toast (the "Table saved." message) is up, since a toast never hides the page.
   const focusGridAfterDialog = useCallback(() => {
     let frames = 0;
     const tick = () => {
-      if (document.querySelector('.swal2-container') && frames++ < 90) {
+      if (document.querySelector(SWAL_DIALOG_SELECTOR) && frames++ < 90) {
         requestAnimationFrame(tick);
         return;
       }
@@ -407,11 +416,28 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
     };
   }, []);
 
+  // Where the user was in the open table (cursor cell and scroll) when it was swapped for its saved, reset
+  // or reloaded version, so the new store can be shown in the same place. Set by commitTable, used and
+  // cleared by the effect below once the new store is on screen.
+  const placeRef = useRef<{
+    key: string;
+    row: number;
+    col: number;
+    scroll: { top: number; left: number } | null;
+  } | null>(null);
+
   // A table was saved, reset or reloaded: it takes the new data, and its edits (what was just saved, or
   // what the user chose to throw away) are gone, so its old store and dot go. The open table gets its
   // new store at once; another one gets it when it is opened.
   const commitTable = useCallback(
     (key: string, next: CrtTableData) => {
+      // The grid starts a new store from the top left, so note where the user is before it is swapped.
+      // Undo history goes with the old store and is not carried over.
+      const handle = gridRef.current;
+      const cell = key === selectedKeyRef.current ? handle?.activeCell?.() : undefined;
+      if (handle && cell) {
+        placeRef.current = { key, row: cell.row, col: cell.col, scroll: handle.scrollPosition?.() ?? null };
+      }
       unsubscribesRef.current.get(key)?.();
       unsubscribesRef.current.delete(key);
       storesRef.current.delete(key);
@@ -528,6 +554,23 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
   // Live state (override, row count) of the selected table; other tables only change when selected.
   const storeVersion = useStoreVersion(store);
   const maxSaveBytes = state.status === 'ready' ? state.maxSaveBytes : undefined;
+
+  // After a save, reset or reload the open table has a new store, and the grid has started it from the top
+  // left. Put the cursor and the scroll back where they were, with the row and column pulled inside the
+  // new table (a reload can bring a shorter one). This effect runs after the grid's own, which is a child.
+  useEffect(() => {
+    const place = placeRef.current;
+    if (!place || !store) return;
+    placeRef.current = null;
+    // A place noted for a table that is no longer the open one is of no use.
+    if (place.key !== selectedKey) return;
+    const handle = gridRef.current;
+    if (!handle) return;
+    const rows = store.rowCount();
+    const cols = store.colCount();
+    if (rows > 0 && cols > 0) handle.showCell(Math.min(place.row, rows - 1), Math.min(place.col, cols - 1));
+    if (place.scroll) handle.scrollTo?.(place.scroll.top, place.scroll.left);
+  }, [store, selectedKey]);
 
   // Blank and duplicate keys, only while the table can be edited. The store changes in place, so its
   // version is what says the rows are not the ones that were checked.
@@ -1052,6 +1095,8 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
             onClose: onBack ?? (() => {}),
           }}
           origin="maps"
+          // The wizard passes no way back, so its close button would do nothing; its own Back is the way out.
+          showCloseButton={!wizard}
           showActionButton={state.canRetry}
           buttonLabel="Try again"
           onButtonClick={handleRetry}
@@ -1096,8 +1141,9 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
         </div>
       ) : (
         <div className="boomi-crt-busy">
-          {/* While a save runs nothing under the cover can be clicked, typed into or tabbed to. */}
-          <div className={screenClass} inert={save.saving} aria-busy={save.saving}>
+          {/* While a save runs, or its confirmation or conflict window is open, nothing under the cover can be
+              clicked, typed into or tabbed to. The windows are outside this element, so they stay usable. */}
+          <div className={screenClass} inert={saveBusy} aria-busy={save.saving}>
             {renderTable(selectedTable, store)}
             {save.error && (
               <Dialog
@@ -1108,6 +1154,7 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
                   onClose: save.dismissError,
                 }}
                 origin="maps"
+                role="alert"
               />
             )}
             <div className="boomi-crt-savebar">

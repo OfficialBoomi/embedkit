@@ -72,7 +72,9 @@ const iconMap = {
  * Props for the `Dialog` component.
  *
  * @property {UIError} error - Object containing error details (message, header, type, and optional code).
- * @property {boolean} [showCloseButton=false] - If true, renders the circle close button in the top right corner.
+ * @property {boolean} [showCloseButton=true] - If true, renders the circle close button in the top right corner.
+ * @property {'alert' | 'status'} [role] - Set on the dialog so a screen reader announces it when it appears (for an
+ *   error that shows up without the user asking for it). Left out, the dialog has no role.
  * @property {boolean} [showActionButton=false] - If true, renders an action button below the message.
  * @property {string} [buttonLabel='Go Back'] - Label text for the action button.
  * @property {() => void} [onButtonClick] - Callback when the action button is clicked. Defaults to `window.history.back`.
@@ -85,6 +87,7 @@ interface DialogProps {
   error: UIError;
   origin?: SessionErrorOrigin;
   sessionCode?: string;
+  role?: 'alert' | 'status';
   showCloseButton?: boolean;
   showActionButton?: boolean;
   buttonLabel?: string;
@@ -99,6 +102,7 @@ const Dialog: React.FC<DialogProps> = ({
   onButtonClick = () => window.history.back(),
   origin = 'auth',
   sessionCode,
+  role,
 }) => {
   const [visible, setVisible] = useState(true);
   // A session error is reported to the host (event, then handler). When the host's
@@ -117,6 +121,7 @@ const Dialog: React.FC<DialogProps> = ({
 
   return (
     <div
+      role={role}
       className={`boomi-notice--${state} max-w-lg mx-auto mt-8 p-6 rounded-xl border shadow-md relative flex flex-col`}
       style={{
         background: 'var(--boomi-notice-bg)',

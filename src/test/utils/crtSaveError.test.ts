@@ -72,12 +72,31 @@ describe('classifySaveError', () => {
     });
   });
 
-  it('503, 429 and THROTTLED are throttled', () => {
+  it('429, and the code THROTTLED, are throttled', () => {
     const expected = { kind: 'throttled', message: 'Boomi is busy right now. Try again in a moment.' };
     expect(classifySaveError(http(503, { code: 'THROTTLED' }))).toEqual(expected);
-    expect(classifySaveError(http(503, 'Service Unavailable'))).toEqual(expected);
     expect(classifySaveError(http(429))).toEqual(expected);
+    expect(classifySaveError(http(429, 'Too Many Requests'))).toEqual(expected);
     expect(classifySaveError(http(502, { code: 'THROTTLED' }))).toEqual(expected);
+  });
+
+  it('a bare 503 or 504 is a timeout: the server may still finish the write', () => {
+    const expected = {
+      kind: 'timeout',
+      message: 'The server did not answer in time. The save may have gone through. Reload the table to check.',
+    };
+    expect(classifySaveError(http(503, 'Service Unavailable'))).toEqual(expected);
+    expect(classifySaveError(http(503))).toEqual(expected);
+    expect(classifySaveError(http(503, '<html>Application Error H12</html>'))).toEqual(expected);
+    expect(classifySaveError(http(503, { error: 'x' }))).toEqual(expected);
+    expect(classifySaveError(http(504))).toEqual(expected);
+    expect(classifySaveError(http(504, { error: 'Gateway Timeout' }))).toEqual(expected);
+  });
+
+  it('a 503 with another code is still a timeout, and one with the code THROTTLED is not', () => {
+    expect(classifySaveError(http(503, { code: 'OTHER' })).kind).toBe('timeout');
+    expect(classifySaveError(http(503, { code: 'THROTTLED' })).kind).toBe('throttled');
+    expect(classifySaveError(http(504, { code: 'THROTTLED' })).kind).toBe('throttled');
   });
 
   it('400 is invalid and uses the server text', () => {
@@ -159,6 +178,8 @@ describe('classifySaveError', () => {
       http(502, { code: 'SAVE_NOT_VERIFIED' }),
       http(502, { code: 'BOOMI_REJECTED' }),
       http(503),
+      http(503, { code: 'THROTTLED' }),
+      http(504),
       new HttpError('x', 0),
       http(500),
     ];

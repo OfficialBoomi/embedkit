@@ -13,14 +13,21 @@
  * - running: the saves run one after the other and each process shows its own state; nothing can be
  *   closed or changed;
  * - done: every process shows saved or failed with the reason. Nothing is rolled back, so a failure
- *   leaves the processes that did save as they are; failed ones can be retried.
+ *   leaves the processes that did save as they are; failed ones can be retried, except a process that
+ *   was changed by someone else (its line says to reload the table), which a retry could not fix.
  *
  * The component only shows state. The screen runs the saves and passes progress in.
+ *
+ * It is a modal window for the keyboard too (see CrtModalFrame): it has a name, Tab stays inside, and
+ * Escape closes it in the choose and done stages, never while the saves run. Focus goes to the first
+ * checkbox that can be changed when the window opens (the confirm button when none can), to the window
+ * itself while the saves run, and to the Close button once they are done. The screen behind it is inert.
  */
 
 import { useEffect, useState } from 'react';
 import Button from '../../ui/Button';
 import Modal from '../../ui/Modal';
+import CrtModalFrame from './CrtModalFrame';
 
 /** What will happen in one other process, worked out by the screen before asking. */
 export interface CrtScopeTarget {
@@ -41,6 +48,11 @@ export interface CrtScopeProgress {
   state: CrtScopeRunState;
   /** The reason, for a failed process. */
   message?: string;
+  /**
+   * For a failed process: false when saving again cannot work (it was changed by someone else, so the
+   * same attempt would fail the same way). Left out, a failed process can be retried.
+   */
+  retryable?: boolean;
 }
 
 export type CrtScopeStage = 'choose' | 'running' | 'done';
@@ -61,6 +73,22 @@ export interface CrtSaveScopeModalProps {
 }
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * Where focus goes in each stage. Choose: the first checkbox that can be changed, else the confirm button
+ * (the last button of the row). Running: nothing, so the window itself takes it. Done: Close, the last button.
+ */
+function focusForStage(stage: CrtScopeStage): (dialog: HTMLElement) => HTMLElement | null {
+  return (dialog) => {
+    if (stage === 'running') return null;
+    const lastButton = (): HTMLElement | null => {
+      const buttons = dialog.querySelectorAll<HTMLElement>('.boomi-crt-scope-actions button');
+      return buttons.length > 0 ? buttons[buttons.length - 1] : null;
+    };
+    if (stage === 'done') return lastButton();
+    return dialog.querySelector<HTMLElement>('.boomi-crt-scope-item input[type="checkbox"]:not(:disabled)') ?? lastButton();
+  };
+}
 
 const STATE_LABEL: Record<CrtScopeRunState, string> = {
   waiting: 'Waiting',
@@ -116,99 +144,107 @@ const CrtSaveScopeModal: React.FC<CrtSaveScopeModalProps> = ({
   const confirmLabel = reset
     ? `Restore defaults in ${plural(total, 'process', 'processes')}`
     : `Save to ${plural(total, 'process', 'processes')}`;
-  const failed = progress.filter((p) => p.state === 'failed').length;
+  // A process that was changed by someone else cannot be saved again with the same attempt, so it is not counted.
+  const failed = progress.filter((p) => p.state === 'failed' && p.retryable !== false).length;
   const closable = stage !== 'running';
 
   return (
-    <Modal
-      isOpen
-      title={title}
-      description={description}
-      onClose={closable ? onClose : () => {}}
-      showSaveButton={false}
-      showCancelButton={false}
+    <CrtModalFrame
+      label={title}
+      onClose={closable ? onClose : undefined}
+      focusKey={stage}
+      initialFocus={focusForStage(stage)}
     >
-      <div className="boomi-crt-scope">
-        {stage === 'choose' && (
-          <ul className="boomi-crt-scope-list" aria-label="Processes that share this table">
-            {targets.map((t) => {
-              const id = `crt-scope-${t.processId}`;
-              return (
-                <li key={t.processId} className="boomi-crt-scope-item">
-                  <input
-                    id={id}
-                    type="checkbox"
-                    checked={t.willChange && ticked.has(t.processId)}
-                    disabled={!t.willChange}
-                    onChange={() => toggle(t.processId)}
-                  />
-                  <label htmlFor={id}>
-                    <span className="boomi-crt-scope-name">{t.processName}</span>
-                    <span className="boomi-crt-scope-text">{t.text}</span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        {stage !== 'choose' && (
-          <ul className="boomi-crt-scope-list" aria-live="polite" aria-label="Progress">
-            {progress.map((p) => (
-              <li key={p.processId} className={`boomi-crt-scope-item boomi-crt-scope-item--${p.state}`}>
-                <span className="boomi-crt-scope-state" aria-hidden="true">
-                  {p.state === 'saving' ? (
-                    <span className="boomi-crt-spin" />
-                  ) : p.state === 'saved' ? (
-                    '✓'
-                  ) : p.state === 'failed' ? (
-                    '!'
-                  ) : (
-                    ''
-                  )}
-                </span>
-                <span className="boomi-crt-scope-body">
-                  <span className="boomi-crt-scope-name">{p.processName}</span>
-                  <span className="boomi-crt-scope-text">
-                    {STATE_LABEL[p.state]}
-                    {p.state === 'failed' && p.message ? `: ${p.message}` : ''}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="boomi-crt-scope-actions">
+      <Modal
+        isOpen
+        title={title}
+        description={description}
+        onClose={closable ? onClose : () => {}}
+        showSaveButton={false}
+        showCancelButton={false}
+      >
+        <div className="boomi-crt-scope">
           {stage === 'choose' && (
-            <>
-              <Button toggle={false} primary={false} showIcon={false} label="Cancel" onClick={onClose} />
-              <Button
-                toggle={false}
-                primary={true}
-                showIcon={false}
-                label={confirmLabel}
-                onClick={() => onConfirm(chosen)}
-              />
-            </>
+            <ul className="boomi-crt-scope-list" aria-label="Processes that share this table">
+              {targets.map((t) => {
+                const id = `crt-scope-${t.processId}`;
+                return (
+                  <li key={t.processId} className="boomi-crt-scope-item">
+                    <input
+                      id={id}
+                      type="checkbox"
+                      checked={t.willChange && ticked.has(t.processId)}
+                      disabled={!t.willChange}
+                      onChange={() => toggle(t.processId)}
+                    />
+                    <label htmlFor={id}>
+                      <span className="boomi-crt-scope-name">{t.processName}</span>
+                      <span className="boomi-crt-scope-text">{t.text}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-          {stage === 'done' && (
-            <>
-              {failed > 0 && (
+
+          {stage !== 'choose' && (
+            <ul className="boomi-crt-scope-list" aria-live="polite" aria-label="Progress">
+              {progress.map((p) => (
+                <li key={p.processId} className={`boomi-crt-scope-item boomi-crt-scope-item--${p.state}`}>
+                  <span className="boomi-crt-scope-state" aria-hidden="true">
+                    {p.state === 'saving' ? (
+                      <span className="boomi-crt-spin" />
+                    ) : p.state === 'saved' ? (
+                      '✓'
+                    ) : p.state === 'failed' ? (
+                      '!'
+                    ) : (
+                      ''
+                    )}
+                  </span>
+                  <span className="boomi-crt-scope-body">
+                    <span className="boomi-crt-scope-name">{p.processName}</span>
+                    <span className="boomi-crt-scope-text">
+                      {STATE_LABEL[p.state]}
+                      {p.state === 'failed' && p.message ? `: ${p.message}` : ''}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="boomi-crt-scope-actions">
+            {stage === 'choose' && (
+              <>
+                <Button toggle={false} primary={false} showIcon={false} label="Cancel" onClick={onClose} />
                 <Button
                   toggle={false}
-                  primary={false}
+                  primary={true}
                   showIcon={false}
-                  label={`Retry ${plural(failed, 'failed process', 'failed processes')}`}
-                  onClick={onRetryFailed}
+                  label={confirmLabel}
+                  onClick={() => onConfirm(chosen)}
                 />
-              )}
-              <Button toggle={false} primary={true} showIcon={false} label="Close" onClick={onClose} />
-            </>
-          )}
+              </>
+            )}
+            {stage === 'done' && (
+              <>
+                {failed > 0 && (
+                  <Button
+                    toggle={false}
+                    primary={false}
+                    showIcon={false}
+                    label={`Retry ${plural(failed, 'failed process', 'failed processes')}`}
+                    onClick={onRetryFailed}
+                  />
+                )}
+                <Button toggle={false} primary={true} showIcon={false} label="Close" onClick={onClose} />
+              </>
+            )}
+          </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+    </CrtModalFrame>
   );
 };
 

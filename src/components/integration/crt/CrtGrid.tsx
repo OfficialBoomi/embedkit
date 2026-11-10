@@ -213,7 +213,9 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
     dragCleanupRef.current = null;
   }, []);
 
-  // A new table starts from the top left with nothing open or selected.
+  // A new table starts from the top left with nothing open or selected. When the new store is the open
+  // table's own saved, reset or reloaded version, the screen puts the cursor and scroll back afterwards
+  // (the handle's showCell and scrollTo), since this effect runs first.
   useEffect(() => {
     editRef.current = null;
     setEdit(null);
@@ -379,6 +381,13 @@ const CrtGrid = forwardRef<CrtGridHandle, CrtGridProps>(function CrtGrid(
         return clampSelection(selRef.current, s.rowCount(), s.colCount()).active;
       },
       commitEdit: () => commitEditRef.current(),
+      scrollPosition: () => ({ top: rootRef.current?.scrollTop ?? 0, left: rootRef.current?.scrollLeft ?? 0 }),
+      scrollTo: (top, left) => {
+        const el = rootRef.current;
+        if (!el) return;
+        el.scrollTop = top;
+        el.scrollLeft = left;
+      },
     }),
     []
   );
