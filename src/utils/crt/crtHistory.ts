@@ -32,8 +32,15 @@ export function formatHistoryDate(raw: string): string {
 /** " by <name>" when there is a name, nothing when the name is blank, so the line never has a gap. */
 const byPart = (by: string): string => (by && by.trim() ? ` by ${by.trim()}` : '');
 
-/** Our own record of a save and Boomi's record of the same save are this close in time (seconds apart in practice). */
-const SAME_SAVE_MS = 2 * 60 * 1000;
+/**
+ * Our record of a save and Boomi's record of the same save are not stamped at the same moment. Boomi
+ * stamps its entry when the platform finishes the write, and our record is made afterwards, once the
+ * table has been read back (a big table takes up to about 20 seconds). So Boomi's entry of the same
+ * save is up to this long BEFORE ours...
+ */
+const SAME_SAVE_BOOMI_FIRST_MS = 90 * 1000;
+/** ...or, allowing for clocks that do not agree to the second, up to this long after it. */
+const SAME_SAVE_BOOMI_LAST_MS = 10 * 1000;
 /** A Boomi save newer than ours by more than this was made by someone else. */
 const SOMEONE_ELSE_MS = 60 * 1000;
 
@@ -57,28 +64,37 @@ const time = (iso: string): number => new Date(iso).getTime();
  *
  * - With our own record of the table (a save or reset made through the plugin): its time. The user is the
  *   one Boomi names for the save made at that moment (the plugin's session knows no person), else the host's
- *   user id when there is one, else nobody. If Boomi shows a newer save made in its own user interface, someone
- *   else changed the environment since, and that save is shown instead.
+ *   user id when there is one, else nobody. Boomi's entry is the same save when it was stamped up to 90
+ *   seconds before ours or up to 10 seconds after it. If Boomi shows a save made in its own user interface
+ *   more than a minute newer than ours, someone else changed the environment since, and that save is
+ *   shown instead.
  * - Without our record: Boomi's last save of the environment, but only for a table that has rows of its own,
  *   because a table on the defaults has never been saved.
  */
 export function mergeTableHistory(
   entry: CrossReferenceTableHistory | null,
-  env: CrossReferenceEnvironmentHistory | null,
+  environment: CrossReferenceEnvironmentHistory | null,
   overridden: boolean
 ): TableHistoryLine | null {
+  // A record with no date cannot be shown ("on " and nothing after it), so it counts as no record.
+  const env = environment && environment.at.trim() !== '' ? environment : null;
   if (entry) {
     const mine = time(entry.at);
     const theirs = env ? time(env.at) : NaN;
     if (env && env.viaUi && Number.isFinite(theirs) && Number.isFinite(mine) && theirs - mine > SOMEONE_ELSE_MS) {
       return { at: env.at, by: env.by, action: 'save', viaUi: true, environmentWide: true };
     }
-    const sameSave = env && Number.isFinite(theirs) && Number.isFinite(mine) && Math.abs(theirs - mine) <= SAME_SAVE_MS;
+    // How long after Boomi's entry ours was made: positive when Boomi stamped first, which is the usual case.
+    const apart = mine - theirs;
+    const sameSave =
+      env !== null && apart >= -SAME_SAVE_BOOMI_LAST_MS && apart <= SAME_SAVE_BOOMI_FIRST_MS ? env : null;
+    // Boomi's user only when Boomi names one: a blank one must not wipe out the user our record has.
+    const boomiUser = sameSave !== null && sameSave.by.trim() !== '' ? sameSave.by : entry.by;
     return {
       at: entry.at,
-      by: sameSave ? env.by : entry.by,
+      by: boomiUser,
       action: entry.action,
-      viaUi: sameSave ? env.viaUi : false,
+      viaUi: sameSave !== null ? sameSave.viaUi : false,
       environmentWide: false,
     };
   }
@@ -124,7 +140,8 @@ function readTable(raw: unknown): CrossReferenceTableHistory | null {
 }
 
 function readEnvironment(raw: unknown): CrossReferenceEnvironmentHistory | null {
-  if (!isObject(raw) || typeof raw.at !== 'string') return null;
+  // The server sends an empty date when it has none; a record with no date says nothing worth showing.
+  if (!isObject(raw) || typeof raw.at !== 'string' || raw.at.trim() === '') return null;
   return { at: raw.at, by: typeof raw.by === 'string' ? raw.by : '', viaUi: raw.viaUi === true };
 }
 

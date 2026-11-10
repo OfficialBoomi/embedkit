@@ -111,6 +111,99 @@ describe('mergeTableHistory', () => {
     expect(mergeTableHistory(entry({ by: 'host-user' }), env({ at: later(-600) }), true)).toMatchObject({ by: 'host-user' });
   });
 
+  describe('the user: Boomi\'s only when it names one', () => {
+    it('a blank Boomi user keeps the user of our record', () => {
+      expect(mergeTableHistory(entry({ by: 'host-user' }), env({ at: later(2), by: '' }), true)).toMatchObject({ by: 'host-user' });
+      expect(mergeTableHistory(entry({ by: 'host-user' }), env({ at: later(-30), by: '   ' }), true)).toMatchObject({ by: 'host-user' });
+    });
+
+    it('a Boomi user for the same save wins over the one in our record', () => {
+      expect(mergeTableHistory(entry({ by: 'host-user' }), env({ at: later(2) }), true)).toMatchObject({ by: 'boomi.user@example.com' });
+    });
+
+    it('both blank is blank, so the line has no "by"', () => {
+      const merged = mergeTableHistory(entry({ by: '' }), env({ at: later(2), by: '' }), true) as TableHistoryLine;
+      expect(merged.by).toBe('');
+      expect(formatTableHistoryLine(merged)).toBe(`Last saved on ${shown(ISO)}`);
+    });
+
+    it('still takes the viaUi flag of the same save when its user is blank', () => {
+      expect(mergeTableHistory(entry({ by: 'host-user' }), env({ at: later(1), by: '', viaUi: true }), true)).toMatchObject({
+        by: 'host-user',
+        viaUi: true,
+      });
+    });
+  });
+
+  describe('the same save: Boomi stamps first, up to 90 seconds before our record or up to 10 after it', () => {
+    const boomiAt = (secs: number) => env({ at: later(secs), by: 'boomi.user@example.com' });
+    const sameAs = (secs: number) =>
+      (mergeTableHistory(entry({ by: 'host-user' }), boomiAt(secs), true) as TableHistoryLine).by === 'boomi.user@example.com';
+
+    it('Boomi\'s entry shortly before ours is the same save', () => {
+      expect(sameAs(-1)).toBe(true);
+      expect(sameAs(-20)).toBe(true);
+      expect(sameAs(-60)).toBe(true);
+    });
+
+    it('90 seconds before is still the same save, 91 is not', () => {
+      expect(sameAs(-90)).toBe(true);
+      expect(sameAs(-91)).toBe(false);
+    });
+
+    it('Boomi\'s entry a few seconds after ours is the same save, up to 10 seconds', () => {
+      expect(sameAs(0)).toBe(true);
+      expect(sameAs(5)).toBe(true);
+      expect(sameAs(10)).toBe(true);
+      expect(sameAs(11)).toBe(false);
+    });
+
+    it('the old window of two minutes either way no longer counts', () => {
+      expect(sameAs(100)).toBe(false);
+      expect(sameAs(-100)).toBe(false);
+      expect(sameAs(-119)).toBe(false);
+      expect(sameAs(119)).toBe(false);
+    });
+
+    it('outside the window the user of our record stays', () => {
+      expect(mergeTableHistory(entry({ by: 'host-user' }), boomiAt(-300), true)).toMatchObject({ by: 'host-user', viaUi: false });
+    });
+
+    it('a user interface entry a minute or more after ours is someone else\'s save and is shown instead', () => {
+      const other = (secs: number) => env({ at: later(secs), by: 'other.person@example.com', viaUi: true });
+      expect(mergeTableHistory(entry({ by: 'host-user' }), other(10), true)).toMatchObject({ by: 'other.person@example.com', environmentWide: false });
+      expect(mergeTableHistory(entry({ by: 'host-user' }), other(60), true)).toMatchObject({ environmentWide: false });
+      expect(mergeTableHistory(entry({ by: 'host-user' }), other(61), true)).toMatchObject({
+        at: later(61),
+        by: 'other.person@example.com',
+        environmentWide: true,
+      });
+    });
+
+    it('between the two, 11 to 60 seconds after ours, it is neither: our line stays and takes no user from Boomi', () => {
+      const between = env({ at: later(30), by: 'other.person@example.com', viaUi: true });
+      expect(mergeTableHistory(entry({ by: 'host-user' }), between, true)).toEqual({
+        at: ISO,
+        by: 'host-user',
+        action: 'save',
+        viaUi: false,
+        environmentWide: false,
+      });
+    });
+  });
+
+  describe('a Boomi record with no date', () => {
+    it('is no record: our line is used as it is', () => {
+      const merged = mergeTableHistory(entry({ by: 'host-user' }), env({ at: '', by: 'boomi.user@example.com', viaUi: true }), true);
+      expect(merged).toEqual({ at: ISO, by: 'host-user', action: 'save', viaUi: false, environmentWide: false });
+    });
+
+    it('gives no line of its own for a table without our record', () => {
+      expect(mergeTableHistory(null, env({ at: '' }), true)).toBeNull();
+      expect(mergeTableHistory(null, env({ at: '   ' }), true)).toBeNull();
+    });
+  });
+
   it('keeps our reset as a reset', () => {
     expect(mergeTableHistory(entry({ action: 'reset', rowCount: 0 }), env({ at: later(1) }), false)).toMatchObject({ action: 'reset', at: ISO });
   });
@@ -215,6 +308,13 @@ describe('readHistory', () => {
   it('turns an unknown action into a save and a missing name into a blank one', () => {
     const read = readHistory({ tables: [{ processId: 'p', tableId: 't', at: ISO, rowCount: 2, action: 'merge' }] });
     expect(read?.tables[0]).toEqual({ processId: 'p', tableId: 't', at: ISO, by: '', action: 'save', rowCount: 2 });
+  });
+
+  it('drops an environment whose date is empty, so the line never reads "on " with nothing after it', () => {
+    expect(readHistory({ environment: { at: '', by: 'x', viaUi: true } })?.environment).toBeNull();
+    expect(readHistory({ environment: { at: '   ', by: 'x' } })?.environment).toBeNull();
+    // The tables of the answer are kept.
+    expect(readHistory({ environment: { at: '' }, tables: [entry()] })).toEqual({ environment: null, tables: [entry()] });
   });
 
   it('drops an environment it cannot read, and counts only an exact true as "via UI"', () => {
