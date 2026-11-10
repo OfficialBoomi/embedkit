@@ -3991,11 +3991,14 @@
   position: relative;
   background-color: var(--boomi-connector-icon-solid-bg, var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff))));
   box-shadow: 0 0 0 2px var(--boomi-connector-icon-ring, var(--boomi-catalog-card-bg, var(--boomi-card-bg, var(--boomi-root-bg-color, #fff))));
+  transition: transform 120ms ease;
 }
 .boomi-connector-stack > .boomi-connector-icon + .boomi-connector-icon {
   margin-left: calc(-1 * var(--boomi-connector-icon-overlap, 0.625rem));
 }
-/* .boomi-connector-stack > .boomi-connector-icon:hover { transform: translateY(-2px); z-index: 5; } */
+.boomi-connector-stack > .boomi-connector-icon:hover { transform: translateY(-2px); z-index: 5; }
+/* Cards of the 1.7 UI (the Integrations list at uiVersion 1.7, and every Add Integration catalog card) keep their icons still. Earlier UI versions keep the lift. */
+.boomi-integration-card--ui-1-7 .boomi-connector-stack > .boomi-connector-icon:hover { transform: none; z-index: auto; }
 @media (prefers-reduced-motion: reduce) {
   .boomi-connector-stack > .boomi-connector-icon { transition: none; }
   .boomi-connector-stack > .boomi-connector-icon:hover { transform: none; }
