@@ -61,6 +61,13 @@ export interface UseCrtSaveArgs {
   packEnvironmentId?: string;
   /** The pack's name, which the server's process names carry in front (see `displayProcessName`). */
   packName?: string;
+  /**
+   * The pack is a single-install pack. Its processes share one copy of every table (the platform keeps one
+   * record per environment), so a table that two processes use is the same entry, not two. There is then
+   * nothing to copy to the other processes: they are not offered, and once a table is written the other
+   * processes' view of it is brought up to date instead.
+   */
+  singleInstall?: boolean;
   /** Every table of the pack as loaded or last saved. */
   tables: CrtTableData[];
   selectedTable: CrtTableData | null;
@@ -172,9 +179,11 @@ export function useCrtSave(args: UseCrtSaveArgs): CrtSaveApi {
   const store = selectedTable ? args.getStore(keyOf(selectedTable)) : undefined;
   const action: SaveAction = store ? describeSaveAction(store.changeSummary(), store.rowCount(), store.isDirty()) : NONE;
 
-  const sharers = selectedTable
-    ? args.tables.filter((t) => t.id === selectedTable.id && t.processId !== selectedTable.processId && !t.unavailableReason)
-    : [];
+  // A single-install pack has one copy of each table, so no other process needs a copy of it.
+  const sharers =
+    selectedTable && !args.singleInstall
+      ? args.tables.filter((t) => t.id === selectedTable.id && t.processId !== selectedTable.processId && !t.unavailableReason)
+      : [];
   const shared = sharers.length > 0;
 
   const showToast = useCallback((content: string) => {
@@ -243,6 +252,16 @@ export function useCrtSave(args: UseCrtSaveArgs): CrtSaveApi {
           overrideRows: read.overridden ? job.rows : null,
           stamp: read.stamp,
         });
+        if (argsRef.current.singleInstall) {
+          // The same entry is shown under every process that uses the table. Bring those views up to date, but
+          // leave one that has unsaved edits alone: its owner keeps them and is asked as usual when saving.
+          for (const sibling of argsRef.current.tables) {
+            if (sibling.id !== job.table.id || sibling.processId === job.table.processId || sibling.unavailableReason) continue;
+            const siblingKey = keyOf(sibling);
+            if (argsRef.current.getStore(siblingKey)?.isDirty()) continue;
+            commitTable(siblingKey, { ...sibling, overrideRows: read.overridden ? job.rows : null, stamp: read.stamp });
+          }
+        }
       } catch (err) {
         logWriteTrouble(job, err);
       }

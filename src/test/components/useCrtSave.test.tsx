@@ -66,11 +66,13 @@ const okAnswer = (processId: string, over: Record<string, unknown> = {}) => ({
 
 interface Setup {
   tables?: CrtTableData[];
+  /** The pack is a single-install pack: its processes share one copy of every table. */
+  singleInstall?: boolean;
   /** Makes the open table dirty: 'edit' changes a cell, 'reset' shows the defaults again. */
   change?: 'edit' | 'reset' | null;
 }
 
-function setup({ tables = [makeTable('p1'), makeTable('p2')], change = 'edit' }: Setup = {}) {
+function setup({ tables = [makeTable('p1'), makeTable('p2')], change = 'edit', singleInstall = false }: Setup = {}) {
   const stores = new Map<string, CrtStore>(tables.map((t) => [key(t), createCrtStore(t)]));
   const open = tables[0];
   const openStore = stores.get(key(open)) as CrtStore;
@@ -86,6 +88,7 @@ function setup({ tables = [makeTable('p1'), makeTable('p2')], change = 'edit' }:
       packId: 'pack-1',
       packEnvironmentId: 'env-1',
       packName: 'Pack',
+      singleInstall,
       tables,
       selectedTable: open,
       getStore: (k) => stores.get(k),
@@ -279,6 +282,73 @@ describe('the words of a save and of a reset', () => {
     expect(reset.api().busyLabel).toBe('Restoring defaults...');
     await act(async () => finish(okAnswer('p1', { overridden: false })));
     expect(reset.api().toast?.content).toBe('Default values restored.');
+  });
+});
+
+describe('a single-install pack, where the processes share one copy of a table', () => {
+  it('offers no copy to the other processes, a multi-install pack with the same tables does', () => {
+    expect(setup({ singleInstall: true }).api().shared).toBe(false);
+    expect(setup({ singleInstall: false }).api().shared).toBe(true);
+  });
+
+  it('after a save the other process shows the saved rows and the new stamp, and nothing is sent for it', async () => {
+    const h = setup({ singleInstall: true });
+    saveTable.mockResolvedValue(okAnswer('p1', { stamp: 'o2.shared' }));
+    await act(async () => h.api().save());
+
+    expect(saveTable).toHaveBeenCalledTimes(1);
+    expect(h.commitTable).toHaveBeenCalledTimes(2);
+    const [openKey, openData] = h.commitTable.mock.calls[0];
+    expect(openKey).toBe('p1:t1');
+    expect(openData).toMatchObject({ processId: 'p1', overrideRows: [['EDITED', '1']], stamp: 'o2.shared' });
+    const [otherKey, otherData] = h.commitTable.mock.calls[1];
+    expect(otherKey).toBe('p2:t1');
+    expect(otherData).toMatchObject({ processId: 'p2', processName: 'Second', overrideRows: [['EDITED', '1']], stamp: 'o2.shared' });
+  });
+
+  it('after a reset the other process is on the defaults too', async () => {
+    const h = setup({ singleInstall: true, change: 'reset' });
+    resetTable.mockResolvedValue(okAnswer('p1', { overridden: false, stamp: 'd0.shared' }));
+    await act(async () => h.api().save());
+
+    expect(resetTable).toHaveBeenCalledTimes(1);
+    expect(h.commitTable).toHaveBeenCalledWith('p2:t1', expect.objectContaining({ processId: 'p2', overrideRows: null, stamp: 'd0.shared' }));
+  });
+
+  it('leaves a process that has unsaved edits alone, so its owner is asked as usual when saving', async () => {
+    const h = setup({ singleInstall: true });
+    h.stores.get('p2:t1')?.setCell(0, 1, 'MINE');
+    saveTable.mockResolvedValue(okAnswer('p1'));
+    await act(async () => h.api().save());
+
+    expect(h.commitTable).toHaveBeenCalledTimes(1);
+    expect(h.commitTable.mock.calls[0][0]).toBe('p1:t1');
+  });
+
+  it('leaves a process whose table cannot be edited alone, and tables of other ids', async () => {
+    const tables = [makeTable('p1'), makeTable('p2', { unavailableReason: 'Could not read it' }), makeTable('p3', { id: 't2' })];
+    const h = setup({ singleInstall: true, tables });
+    saveTable.mockResolvedValue(okAnswer('p1'));
+    await act(async () => h.api().save());
+
+    expect(h.commitTable).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed save changes nothing anywhere', async () => {
+    const h = setup({ singleInstall: true });
+    saveTable.mockRejectedValue(problem(503, 'THROTTLED'));
+    await act(async () => h.api().save());
+
+    expect(h.commitTable).not.toHaveBeenCalled();
+  });
+
+  it('a multi-install pack never touches the other process after a save', async () => {
+    const h = setup({ singleInstall: false });
+    saveTable.mockResolvedValue(okAnswer('p1'));
+    await act(async () => h.api().save());
+
+    expect(h.commitTable).toHaveBeenCalledTimes(1);
+    expect(h.commitTable.mock.calls[0][0]).toBe('p1:t1');
   });
 });
 

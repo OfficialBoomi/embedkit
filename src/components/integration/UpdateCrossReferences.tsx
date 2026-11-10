@@ -834,6 +834,7 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
     packId: integration.integrationPackId,
     packEnvironmentId,
     packName,
+    singleInstall: integration.installationType === 'SINGLE',
     tables,
     selectedTable,
     getStore: (key) => storesRef.current.get(key),
@@ -941,7 +942,16 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
 
         <div className="boomi-crt-info">
           {sharedWith.length > 0 && (
-            <span className="boomi-crt-chip">Shared with: {sharedWith.join(', ')}</span>
+            <span
+              className="boomi-crt-chip"
+              title={
+                integration.installationType === 'SINGLE'
+                  ? 'This integration keeps one copy of the table for all its processes, so saving it here saves it for the others too.'
+                  : undefined
+              }
+            >
+              Shared with: {sharedWith.join(', ')}
+            </span>
           )}
           <span
             className="boomi-crt-chip"
