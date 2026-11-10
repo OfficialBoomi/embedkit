@@ -385,6 +385,8 @@ Every process that has something to change is ticked, and the confirm button say
 
 Restoring defaults works the same way, with **Restore defaults in this process** and **Restore defaults in other processes that share this table...**. Its lines there are "Has its own rows, which will go back to the defaults." and "Already uses the defaults."
 
+**Single-install integrations.** A single-install integration keeps one copy of each table for the whole environment, not one per process. A table that two of its processes use is therefore the same table: there is no **Save to other processes** item, **Save** is a plain button, and saving or restoring it in one process changes it in all of them (the other processes' tables update on the screen at once, unless they have unsaved edits). The same holds across integrations: two single-install integrations installed in one environment that use the same table share one copy, so a change made in one shows in the other.
+
 #### When someone else changed the table
 
 If the table was changed after your user opened it (in Boomi, or by another user of your app), saving shows **This table was changed** with three choices:
