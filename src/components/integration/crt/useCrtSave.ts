@@ -17,6 +17,9 @@
  *
  * Whether Save writes rows or restores the defaults follows the store: a table that shows its own rows
  * is saved, a table that was loaded with its own rows and now shows the defaults is reset.
+ *
+ * After each table is written the optional `onWritten` callback runs (the screen reloads its history
+ * lines there). It is fire and forget: a failure in it is ignored and never changes the save's result.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -59,6 +62,11 @@ export interface UseCrtSaveArgs {
   maxSaveBytes?: number;
   /** A short result line under the grid. */
   onNotice: (message: string, kind: 'info' | 'warn') => void;
+  /**
+   * Called after each table that was written successfully (a save or a reset), once the screen has
+   * taken the new data. Nothing waits for it and what it does can never change the result of the save.
+   */
+  onWritten?: () => void;
 }
 
 export interface CrtToast {
@@ -204,7 +212,7 @@ export function useCrtSave(args: UseCrtSaveArgs): CrtSaveApi {
   /** Tells the screen and the host that a table was written. */
   const landed = useCallback(
     (job: Job, result: CrossReferenceTableWriteResult) => {
-      const { componentKey, packInstanceId, packId, packEnvironmentId, commitTable } = argsRef.current;
+      const { componentKey, packInstanceId, packId, packEnvironmentId, commitTable, onWritten } = argsRef.current;
       commitTable(job.key, {
         ...job.table,
         overrideRows: result.overridden ? job.rows : null,
@@ -230,6 +238,12 @@ export function useCrtSave(args: UseCrtSaveArgs): CrtSaveApi {
         });
       } else {
         emitEmbedKitEvent('crossReference.table.reset', source, ids);
+      }
+      // The table is written, so whatever the callback does must not turn that into a failed save.
+      try {
+        onWritten?.();
+      } catch {
+        // Ignored on purpose.
       }
     },
     []

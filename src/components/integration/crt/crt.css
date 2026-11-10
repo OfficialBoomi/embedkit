@@ -1415,3 +1415,24 @@
     animation-duration: 2.4s;
   }
 }
+
+/* ---------- History lines ---------- */
+
+/* Two quiet lines under the info row: who last saved the open table here, and who last saved in the environment. */
+.boomi-crt-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--crt-muted);
+}
+
+/* The lines belong to the row above, so the row's own gap shrinks while they show. */
+.boomi-crt-info:has(+ .boomi-crt-history) {
+  margin-bottom: 0.25rem;
+}
+
+.boomi-crt-history-line {
+  overflow-wrap: anywhere;
+}

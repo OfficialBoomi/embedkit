@@ -30,6 +30,12 @@
  * the selected table as you type. Its state lives here, above the grid, so the query survives
  * switching tables; see crt/useCrtFind.
  *
+ * Under the info row two quiet lines say who changed things: the last save of the open table made
+ * through this screen, and the last save Boomi recorded for the whole environment. They load after the
+ * tables are shown, reload after each save or reset, and are simply absent when the server cannot say
+ * (an older server, a failure, nothing recorded). The component's `crossReferenceTables.showHistory`
+ * setting (default true) switches both off and then no request is made. See crt/useCrtHistory.
+ *
  * While a table is editable its key column is checked for blank and duplicate keys after every
  * change. Each problem shows as a warning chip in the info row (and in the full screen caption);
  * pressing a chip jumps to the next flagged row. The grid gets the same result to mark the key
@@ -46,6 +52,12 @@ import { useCrossReferenceTablesService } from '../../service/crossReferenceTabl
 import { HttpError } from '../../service/http';
 import { isSessionError } from '../../utils/sessionError';
 import { getCrtDataSource } from '../../utils/crt/crtDataSource';
+import {
+  ENVIRONMENT_HISTORY_HINT,
+  findTableHistory,
+  formatEnvironmentHistory,
+  formatTableHistory,
+} from '../../utils/crt/crtHistory';
 import { createLiveCrtDataSource } from '../../utils/crt/crtLiveSource';
 import { createCrtStore, type CrtStore } from '../../utils/crt/crtStore';
 import {
@@ -71,6 +83,7 @@ import CrtSaveScopeModal from './crt/CrtSaveScopeModal';
 import CrtTablePicker, { type CrtPickerOption } from './crt/CrtTablePicker';
 import CrtToolbar from './crt/CrtToolbar';
 import { useCrtFind } from './crt/useCrtFind';
+import { useCrtHistory } from './crt/useCrtHistory';
 import { useCrtSave } from './crt/useCrtSave';
 import crtCss from './crt/crt.css?inline';
 
@@ -93,7 +106,14 @@ export interface UpdateCrossReferencesProps {
 type LoadState =
   | { status: 'loading' }
   | { status: 'error'; message: string; canRetry: boolean }
-  | { status: 'ready'; tables: CrtTableData[]; processes: CrtProcessData[]; maxSaveBytes?: number };
+  | {
+      status: 'ready';
+      tables: CrtTableData[];
+      processes: CrtProcessData[];
+      maxSaveBytes?: number;
+      /** The tables came from the server (not from a registered source), so the server knows their history. */
+      live: boolean;
+    };
 
 const READ_ONLY_HINT = 'Read only. Press Override to edit.';
 const SERVER_UNREACHABLE = 'The server could not be reached. Check your connection and try again.';
@@ -320,10 +340,16 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
   useEffect(() => {
     let alive = true;
     const controller = new AbortController();
-    const load = async (): Promise<{ list: CrtTableData[]; named: CrtProcessData[]; maxSaveBytes?: number }> => {
+    const load = async (): Promise<{
+      list: CrtTableData[];
+      named: CrtProcessData[];
+      maxSaveBytes?: number;
+      live: boolean;
+    }> => {
       // A registered source wins; otherwise the tables come from the server.
+      const registered = getCrtDataSource();
       const source =
-        getCrtDataSource() ??
+        registered ??
         createLiveCrtDataSource(() => {
           if (!packInstanceId || !packEnvironmentId) {
             throw new Error('This integration pack has no environment to read cross reference tables from.');
@@ -339,10 +365,10 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
         source.listProcesses ? source.listProcesses() : Promise.resolve<CrtProcessData[]>([]),
         source.limits ? source.limits() : Promise.resolve<{ maxSaveBytes?: number }>({}),
       ]);
-      return { list, named, maxSaveBytes: limits.maxSaveBytes };
+      return { list, named, maxSaveBytes: limits.maxSaveBytes, live: !registered };
     };
     load()
-      .then(({ list, named, maxSaveBytes }) => {
+      .then(({ list, named, maxSaveBytes, live }) => {
         if (!alive) return;
         const tables = sortTables(list);
         const processes = mergeProcesses(named, tables);
@@ -354,7 +380,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
           setSelectedKey(tableKey(initial.table));
         }
         setSelectedProcessId(initial.process?.id ?? null);
-        setState({ status: 'ready', tables, processes, maxSaveBytes });
+        setState({ status: 'ready', tables, processes, maxSaveBytes, live });
       })
       .catch((err: unknown) => {
         if (!alive) return;
@@ -601,6 +627,28 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
 
   const find = useCrtFind(store, gridRef, { onNotice: showNotice, onBlocked: showHint });
 
+  // The history waits for the tables: it loads once the screen is ready, and never when the tables came
+  // from a registered source (the server knows nothing of those) or the setting turns it off.
+  const showHistory = (boomiConfig?.components?.[componentKey]?.crossReferenceTables?.showHistory ?? true) !== false;
+  const history = useCrtHistory({
+    enabled: state.status === 'ready' && state.live && showHistory,
+    environmentId: packEnvironmentId,
+    packInstanceId,
+  });
+  const historyData = history.history;
+  const openProcessId = selectedTable?.processId;
+  const openTableId = selectedTable?.id;
+  // Text only changes with the history or the open table, not with every edit to a cell.
+  const tableHistoryLine = useMemo(() => {
+    if (!historyData || openProcessId === undefined || openTableId === undefined) return null;
+    const entry = findTableHistory(historyData.tables, openProcessId, openTableId);
+    return entry ? formatTableHistory(entry) : null;
+  }, [historyData, openProcessId, openTableId]);
+  const environmentHistoryLine = useMemo(
+    () => (historyData?.environment ? formatEnvironmentHistory(historyData.environment) : null),
+    [historyData]
+  );
+
   const save = useCrtSave({
     componentKey,
     packInstanceId,
@@ -613,6 +661,7 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
     commitTable,
     maxSaveBytes,
     onNotice: showNotice,
+    onWritten: history.refresh,
   });
 
   // A save, the shared-table confirmation or the conflict prompt takes focus away (the screen is inert while
@@ -721,6 +770,17 @@ const UpdateCrossReferences: React.FC<UpdateCrossReferencesProps> = ({
             {plural(current.rowCount(), 'row', 'rows')}, {plural(current.colCount(), 'column', 'columns')}
           </span>
         </div>
+
+        {(tableHistoryLine || environmentHistoryLine) && (
+          <div className="boomi-crt-history">
+            {tableHistoryLine && <div className="boomi-crt-history-line">{tableHistoryLine}</div>}
+            {environmentHistoryLine && (
+              <div className="boomi-crt-history-line" title={ENVIRONMENT_HISTORY_HINT}>
+                {environmentHistoryLine}
+              </div>
+            )}
+          </div>
+        )}
 
         <div
           className={fullScreen ? 'boomi-crt-workspace boomi-crt-workspace--full' : 'boomi-crt-workspace'}

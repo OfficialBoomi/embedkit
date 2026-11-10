@@ -127,9 +127,57 @@ describe('resetCrossReferenceTable', () => {
   });
 });
 
+describe('fetchCrossReferenceHistory', () => {
+  const answer = {
+    environment: { at: '2026-11-09T22:40:00Z', by: 'someone@example.com', viaUi: true },
+    tables: [{ processId: 'proc-1', tableId: 'table-1', at: '2026-11-09T22:41:00Z', by: 'u-1', action: 'save', rowCount: 6 }],
+  };
+
+  it('GETs the history route with the environment and the pack as query parameters', async () => {
+    http.get.mockResolvedValue(answer);
+    const signal = new AbortController().signal;
+    const out = await useCrossReferenceTablesService().fetchCrossReferenceHistory({
+      environmentId: 'env-1',
+      integrationPackInstanceId: 'ipi-1',
+      signal,
+    });
+    expect(out).toBe(answer);
+    expect(http.get).toHaveBeenCalledWith('/cross-reference-tables/history', {
+      params: { environmentId: 'env-1', integrationPackInstanceId: 'ipi-1' },
+      signal,
+    });
+  });
+
+  it('sends only the environment when no pack is given, and keeps the signal out of the parameters', async () => {
+    http.get.mockResolvedValue(answer);
+    await useCrossReferenceTablesService().fetchCrossReferenceHistory({ environmentId: 'env-1' });
+    expect(http.get.mock.calls[0][1].params).toEqual({ environmentId: 'env-1' });
+    expect('signal' in http.get.mock.calls[0][1].params).toBe(false);
+  });
+
+  it('passes the failure on unchanged, so a 404 from an older server stays readable', async () => {
+    const failure = Object.assign(new Error('Not Found'), { status: 404 });
+    http.get.mockRejectedValue(failure);
+    await expect(useCrossReferenceTablesService().fetchCrossReferenceHistory({ environmentId: 'env-1' })).rejects.toBe(failure);
+  });
+
+  it('logs the ids only, never who saved', async () => {
+    http.get.mockResolvedValue(answer);
+    await useCrossReferenceTablesService().fetchCrossReferenceHistory({ environmentId: 'env-1' });
+    const logged = JSON.stringify(log.debug.mock.calls);
+    expect(logged).toContain('fetchCrossReferenceHistory');
+    expect(logged).not.toContain('someone@example.com');
+  });
+});
+
 describe('the hook', () => {
-  it('still gives the existing function first, and the two new ones', () => {
+  it('still gives the existing functions first, then the history one', () => {
     const service = useCrossReferenceTablesService();
-    expect(Object.keys(service)).toEqual(['fetchCrossReferenceTables', 'saveCrossReferenceTable', 'resetCrossReferenceTable']);
+    expect(Object.keys(service)).toEqual([
+      'fetchCrossReferenceTables',
+      'saveCrossReferenceTable',
+      'resetCrossReferenceTable',
+      'fetchCrossReferenceHistory',
+    ]);
   });
 });

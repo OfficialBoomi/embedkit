@@ -44,6 +44,42 @@ export type CrossReferenceTableWriteResult = {
   stamp: string;
 };
 
+/** Where the history of an environment's cross reference tables is read from. */
+export type CrossReferenceHistoryArgs = {
+  environmentId: string;
+  /** Sent along when known. The server does not need it. */
+  integrationPackInstanceId?: string;
+  signal?: AbortSignal;
+};
+
+/** The last save of one table of one process made through the plugin. */
+export type CrossReferenceTableHistory = {
+  processId: string;
+  tableId: string;
+  /** When it happened, ISO 8601. */
+  at: string;
+  /** Who did it, as the server recorded it. */
+  by: string;
+  action: 'save' | 'reset';
+  /** The rows the table had after the write. */
+  rowCount: number;
+};
+
+/** The last time Boomi recorded a save of the environment's extensions, whoever made it. */
+export type CrossReferenceEnvironmentHistory = {
+  /** When it happened, ISO 8601. */
+  at: string;
+  by: string;
+  /** True when the save was made in the Boomi user interface. */
+  viaUi: boolean;
+};
+
+export type CrossReferenceHistoryResponse = {
+  /** Null when nothing was found or Boomi did not say. */
+  environment: CrossReferenceEnvironmentHistory | null;
+  tables: CrossReferenceTableHistory[];
+};
+
 export function useCrossReferenceTablesService() {
   const http = useHttp();
 
@@ -74,5 +110,20 @@ export function useCrossReferenceTablesService() {
     return http.post('/cross-reference-tables/reset', body, { signal });
   }
 
-  return { fetchCrossReferenceTables, saveCrossReferenceTable, resetCrossReferenceTable };
+  /**
+   * Who last saved in the environment, and the last save of each table made through the plugin.
+   * A server without the route answers 404, which throws an HttpError like any other failure.
+   */
+  async function fetchCrossReferenceHistory(args: CrossReferenceHistoryArgs): Promise<CrossReferenceHistoryResponse> {
+    const { signal, ...params } = args;
+    logger.debug('Service: fetchCrossReferenceHistory', params);
+    return http.get('/cross-reference-tables/history', { params, signal });
+  }
+
+  return {
+    fetchCrossReferenceTables,
+    saveCrossReferenceTable,
+    resetCrossReferenceTable,
+    fetchCrossReferenceHistory,
+  };
 }

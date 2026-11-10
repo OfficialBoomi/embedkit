@@ -24,6 +24,7 @@ const ctx = vi.hoisted(() => ({
 const fetchTables = vi.hoisted(() => vi.fn());
 const saveTable = vi.hoisted(() => vi.fn());
 const resetTable = vi.hoisted(() => vi.fn());
+const fetchHistory = vi.hoisted(() => vi.fn());
 const emit = vi.hoisted(() => vi.fn());
 const toasts = vi.hoisted(() => ({ shown: [] as string[] }));
 
@@ -35,6 +36,7 @@ vi.mock('../../service/crossReferenceTables.service', () => ({
     fetchCrossReferenceTables: fetchTables,
     saveCrossReferenceTable: saveTable,
     resetCrossReferenceTable: resetTable,
+    fetchCrossReferenceHistory: fetchHistory,
   }),
 }));
 vi.mock('../../components/core/Page', () => ({
@@ -114,7 +116,8 @@ const problem = (status: number, code?: string, extra: Record<string, unknown> =
 
 beforeEach(() => {
   ctx.boomiConfig = {};
-  for (const m of [fetchTables, saveTable, resetTable, emit]) m.mockReset();
+  for (const m of [fetchTables, saveTable, resetTable, fetchHistory, emit]) m.mockReset();
+  fetchHistory.mockResolvedValue({ environment: null, tables: [] });
   toasts.shown.length = 0;
 });
 afterEach(() => {

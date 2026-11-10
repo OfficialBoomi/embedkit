@@ -19,11 +19,15 @@ const ctx = vi.hoisted(() => ({
   renderComponent: vi.fn(),
 }));
 const fetchTables = vi.hoisted(() => vi.fn());
+const fetchHistory = vi.hoisted(() => vi.fn());
 
 vi.mock('../../context/pluginContext', () => ({ usePlugin: () => ctx }));
 vi.mock('../../hooks/useDialogs', () => ({ useDialogs: () => ({ confirm: vi.fn(), alert: vi.fn() }) }));
 vi.mock('../../service/crossReferenceTables.service', () => ({
-  useCrossReferenceTablesService: () => ({ fetchCrossReferenceTables: fetchTables }),
+  useCrossReferenceTablesService: () => ({
+    fetchCrossReferenceTables: fetchTables,
+    fetchCrossReferenceHistory: fetchHistory,
+  }),
 }));
 vi.mock('../../components/core/Page', () => ({
   default: ({ bodyContent }: { bodyContent: React.ReactNode }) => <div>{bodyContent}</div>,
@@ -87,6 +91,8 @@ const renderScreen = (props: Record<string, unknown> = {}) =>
 beforeEach(() => {
   ctx.boomiConfig = {};
   fetchTables.mockReset();
+  fetchHistory.mockReset();
+  fetchHistory.mockResolvedValue({ environment: null, tables: [] });
 });
 afterEach(() => {
   registerCrtDataSource(null);
