@@ -4,7 +4,7 @@ This document is the complete reference for all user-facing configuration option
 
 > **New in 1.7:** the integrations list, Add Integration catalog, setup wizard, environment scope and their flags are explained end to end in the [Integrations Guide](./IntegrationsGuide.md).
 
-> **New in NEXT_VERSION:** an opt-in screen to view and edit an integration's cross reference tables. It changes nothing until you set `crossReferenceTables.enabled`. See [Cross Reference Tables](#cross-reference-tables-crossreferencetables) for its options and the [Integrations Guide](./IntegrationsGuide.md#10-cross-reference-tables) for how it works. The same release also changes the integration cards for every embed, with no opt-in (long titles wrap to three lines, and a tidier card layout), and at `uiVersion` 1.7.0 or higher the connector icons no longer lift on hover: see the [Release Notes](./ReleaseNotes.md).
+> **New in NEXT_VERSION:** an opt-in screen to view and edit an integration's cross reference tables. It changes nothing until you set `crossReferenceTables.enabled`. See [Cross Reference Tables](#cross-reference-tables-crossreferencetables) for its options and the [Integrations Guide](./IntegrationsGuide.md#10-cross-reference-tables) for how it works. The same release also changes the integration cards for every embed, with no opt-in (long titles wrap to three lines, a tidier card layout, and a few small UI fixes): see the [Release Notes](./ReleaseNotes.md).
 
 ---
 
