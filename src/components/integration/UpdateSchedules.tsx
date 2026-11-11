@@ -82,6 +82,8 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
 }, ref) => {
   const { setPageIsLoading, boomiConfig, renderComponent } = usePlugin();
   const formRef = useRef<ScheduleFormRef>(null);
+  // True when the last Save really sent an update, so the list only confirms a save that happened.
+  const sentUpdate = useRef(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const {
     schedule,
@@ -116,6 +118,7 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
 
   const handleSubmit = async () => {
     setApiError(null);
+    sentUpdate.current = false;
     // If the current schedules did not load, an empty form would overwrite them. Send nothing.
     if (fetchError) {
       setApiError(`Nothing was saved because the current schedules could not be loaded. ${loadErrorText}`);
@@ -136,6 +139,7 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
 
       setIsLoading?.(true);
       await updateProcessSchedules(payload.Schedule, integration.environmentId, integration.id || '');
+      sentUpdate.current = true;
       emitEmbedKitEvent(
         'schedules.updated',
         {
@@ -171,7 +175,9 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
     renderComponent?.({
       component: 'Integrations',
       props: {
-        componentKey: componentKey || 'integrationsMain'
+        componentKey: componentKey || 'integrationsMain',
+        // The list shows its "Integration updated successfully" message when it opens with this on.
+        showUpdateControls: updated,
       },
     });
   };
@@ -183,7 +189,8 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
     try {
       const ok = await handleSubmit();
       if (!ok) return;
-      handleRenderHome(true);
+      // A Save that had nothing to send (no schedule before, none now) goes back without claiming a save.
+      handleRenderHome(sentUpdate.current);
     } finally {
       // Every exit turns the overlay off. Left on after a failed save it covers the error the user needs to read.
       setPageIsLoading(false);

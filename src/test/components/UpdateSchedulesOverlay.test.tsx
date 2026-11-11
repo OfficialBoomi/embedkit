@@ -103,6 +103,27 @@ describe('Save on the Edit Schedule screen', () => {
     expect(renderComponent).toHaveBeenCalledWith(expect.objectContaining({ component: 'Integrations' }));
     expect(updateProcessSchedules).toHaveBeenCalledTimes(1);
     expect(overlayNow()).toBe(false);
+    // The list is told a save happened, so it shows its success message.
+    expect(renderComponent.mock.calls[0][0].props).toMatchObject({ componentKey: 'k', showUpdateControls: true });
+  });
+
+  it('goes back without claiming a save when there was nothing to send', async () => {
+    fetchState.schedule = null; // no schedule before, and none added
+    open();
+    save();
+    await waitFor(() => expect(renderComponent).toHaveBeenCalledTimes(1));
+    expect(updateProcessSchedules).not.toHaveBeenCalled();
+    expect(renderComponent.mock.calls[0][0].props.showUpdateControls).toBe(false);
+    expect(overlayNow()).toBe(false);
+  });
+
+  it('Cancel goes back without a success message', () => {
+    fetchState.schedule = oneSchedule;
+    open();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(renderComponent).toHaveBeenCalledTimes(1);
+    expect(renderComponent.mock.calls[0][0].props.showUpdateControls).toBe(false);
+    expect(updateProcessSchedules).not.toHaveBeenCalled();
   });
 });
 

@@ -144,7 +144,9 @@ const UpdateConnections = forwardRef<UpdateConnectionsRef, UpdateConnectionsProp
     renderComponent?.({
       component: 'Integrations',
       props: {
-        componentKey: componentKey || 'integrationsMain'
+        componentKey: componentKey || 'integrationsMain',
+        // The list shows its "Integration updated successfully" message when it opens with this on.
+        showUpdateControls: updated,
       },
     });
   };

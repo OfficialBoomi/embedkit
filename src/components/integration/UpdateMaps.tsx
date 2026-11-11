@@ -215,6 +215,8 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
   };
   const handleSave = () => {
     setPageIsLoading?.(true);
+    // Each map change is saved as it is made, so this button only goes back to the list. The list is not asked to
+    // say "updated" (handleRenderHome does not pass it on): nothing was saved just now.
     handleRenderHome(true);
   };
 
