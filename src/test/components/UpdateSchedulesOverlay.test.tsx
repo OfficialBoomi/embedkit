@@ -31,6 +31,18 @@ vi.mock('../../hooks/process-schedule/useFetchProcessSchedules', () => ({
 vi.mock('../../hooks/process-schedule/useUpdateProcessSchedules', () => ({
   useUpdateProcessSchedules: () => ({ updateProcessSchedules, isUpdating: false, updateError: null }),
 }));
+const toastShown = vi.hoisted(() => vi.fn());
+vi.mock('../../components/ui/ToastNotification', async () => {
+  const { useEffect } = await import('react');
+  // Records each time a toast is put on screen (a toast mounts once per message), and shows its text.
+  const ToastStandIn = ({ type, content }: { type: string; content: string }) => {
+    useEffect(() => {
+      toastShown(type, content);
+    }, [type, content]);
+    return <div role="status" data-type={type}>{content}</div>;
+  };
+  return { default: ToastStandIn };
+});
 vi.mock('../../components/ui/Dialog', () => ({
   default: ({ error }: { error?: { header: string; message: string } }) =>
     error ? <div role="alertdialog">{error.header}: {error.message}</div> : null,
@@ -56,6 +68,7 @@ const overlayNow = () => pageLoading.mock.calls.at(-1)?.[0];
 beforeEach(() => {
   pageLoading.mockClear();
   renderComponent.mockClear();
+  toastShown.mockClear();
   updateProcessSchedules.mockReset();
   updateProcessSchedules.mockResolvedValue(undefined);
   fetchState.schedule = null;
@@ -95,26 +108,65 @@ describe('Save on the Edit Schedule screen', () => {
     expect(renderComponent).not.toHaveBeenCalled();
   });
 
-  it('goes back to the list after a save that works, with the overlay off', async () => {
+  it('stays on the screen after a save that works, with a confirmation and the overlay off', async () => {
     fetchState.schedule = oneSchedule;
     open();
     save();
-    await waitFor(() => expect(renderComponent).toHaveBeenCalledTimes(1));
-    expect(renderComponent).toHaveBeenCalledWith(expect.objectContaining({ component: 'Integrations' }));
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Schedule saved.'));
+    expect(screen.getByRole('status').getAttribute('data-type')).toBe('success');
     expect(updateProcessSchedules).toHaveBeenCalledTimes(1);
     expect(overlayNow()).toBe(false);
-    // The list is told a save happened, so it shows its success message.
-    expect(renderComponent.mock.calls[0][0].props).toMatchObject({ componentKey: 'k', showUpdateControls: true });
+    // Still on the Edit Schedule screen: not sent back to the list, and the form is still there.
+    expect(renderComponent).not.toHaveBeenCalled();
+    expect(screen.getByText('Save')).toBeTruthy();
+    expect(screen.getByText(/Schedule #1/)).toBeTruthy();
   });
 
-  it('goes back without claiming a save when there was nothing to send', async () => {
+  it('stays and says there was nothing to save when there was nothing to send', async () => {
     fetchState.schedule = null; // no schedule before, and none added
     open();
     save();
-    await waitFor(() => expect(renderComponent).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('No changes to save.'));
+    expect(screen.getByRole('status').getAttribute('data-type')).toBe('info');
     expect(updateProcessSchedules).not.toHaveBeenCalled();
-    expect(renderComponent.mock.calls[0][0].props.showUpdateControls).toBe(false);
+    expect(renderComponent).not.toHaveBeenCalled();
     expect(overlayNow()).toBe(false);
+  });
+
+  it('after a first save the screen knows a schedule exists, so deleting it and saving again is sent', async () => {
+    fetchState.schedule = null; // the loaded copy stays empty for the whole test, as it does on the screen
+    open();
+    fireEvent.click(screen.getByText('Add'));
+    save();
+    await waitFor(() => expect(updateProcessSchedules).toHaveBeenCalledTimes(1));
+    expect((updateProcessSchedules.mock.calls[0] as unknown[])[0]).toHaveLength(1);
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Schedule saved.'));
+
+    // Delete the schedule that was just saved and save again. Against the stale empty copy this would look like
+    // "nothing before, nothing now" and be skipped; it must reach the server.
+    fireEvent.click(document.querySelector('.boomi-sched-card__delete') as HTMLElement);
+    save();
+    await waitFor(() => expect(updateProcessSchedules).toHaveBeenCalledTimes(2));
+    expect((updateProcessSchedules.mock.calls[1] as unknown[])[0]).toHaveLength(0);
+  });
+
+  it('shows the confirmation again for a second save', async () => {
+    fetchState.schedule = oneSchedule;
+    open();
+    save();
+    await waitFor(() => expect(toastShown).toHaveBeenCalledTimes(1));
+    save();
+    await waitFor(() => expect(toastShown).toHaveBeenCalledTimes(2));
+    expect(toastShown).toHaveBeenNthCalledWith(2, 'success', 'Schedule saved.');
+  });
+
+  it('shows no confirmation after a save that fails', async () => {
+    fetchState.schedule = oneSchedule;
+    updateProcessSchedules.mockRejectedValue(new Error('The platform refused it'));
+    open();
+    save();
+    await waitFor(() => expect(screen.getByRole('alertdialog')).toBeTruthy());
+    expect(toastShown).not.toHaveBeenCalled();
   });
 
   it('Cancel goes back without a success message', () => {
@@ -124,6 +176,7 @@ describe('Save on the Edit Schedule screen', () => {
     expect(renderComponent).toHaveBeenCalledTimes(1);
     expect(renderComponent.mock.calls[0][0].props.showUpdateControls).toBe(false);
     expect(updateProcessSchedules).not.toHaveBeenCalled();
+    expect(toastShown).not.toHaveBeenCalled();
   });
 });
 

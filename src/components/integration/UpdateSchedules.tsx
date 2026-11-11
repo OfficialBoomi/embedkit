@@ -29,6 +29,7 @@ import { useUpdateProcessSchedules } from '../../hooks/process-schedule/useUpdat
 import AjaxLoader from '../ui/AjaxLoader';
 import Button from '../ui/Button';
 import Dialog from '../ui/Dialog';
+import ToastNotification from '../ui/ToastNotification';
 import Page from '../core/Page';
 import ScheduleForm, { ScheduleFormRef } from './ScheduleForm';
 import logger from '../../logger.service';
@@ -82,8 +83,19 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
 }, ref) => {
   const { setPageIsLoading, boomiConfig, renderComponent } = usePlugin();
   const formRef = useRef<ScheduleFormRef>(null);
-  // True when the last Save really sent an update, so the list only confirms a save that happened.
+  // True when the last Save really sent an update, so a save is only confirmed when it happened.
   const sentUpdate = useRef(false);
+  // How many schedules the integration has after this screen's last successful save. The loaded copy is old
+  // from then on, and the screen is not reloaded (a read right after a write can still return the old state),
+  // so the "nothing to send" check must start from this.
+  const savedCount = useRef<number | null>(null);
+  // The message after a Save. A new id makes the toast show again for the next one.
+  const [toast, setToast] = useState<{ id: number; type: 'success' | 'info'; text: string } | null>(null);
+  const toastSeq = useRef(0);
+  const showToast = (type: 'success' | 'info', text: string) => {
+    toastSeq.current += 1;
+    setToast({ id: toastSeq.current, type, text });
+  };
   const [apiError, setApiError] = useState<string | null>(null);
   const {
     schedule,
@@ -132,7 +144,8 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
       }
 
       // No schedule before and none now: nothing to save (also keeps the wizard working on an older server).
-      if (!schedule?.Schedule?.length && payload.Schedule.length === 0) {
+      const schedulesBefore = savedCount.current ?? schedule?.Schedule?.length ?? 0;
+      if (schedulesBefore === 0 && payload.Schedule.length === 0) {
         onSubmit?.();
         return true;
       }
@@ -140,6 +153,7 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
       setIsLoading?.(true);
       await updateProcessSchedules(payload.Schedule, integration.environmentId, integration.id || '');
       sentUpdate.current = true;
+      savedCount.current = payload.Schedule.length;
       emitEmbedKitEvent(
         'schedules.updated',
         {
@@ -189,8 +203,10 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
     try {
       const ok = await handleSubmit();
       if (!ok) return;
-      // A Save that had nothing to send (no schedule before, none now) goes back without claiming a save.
-      handleRenderHome(sentUpdate.current);
+      // This screen is opened on its own (the wizard has no Save button), so the user stays here and is told
+      // what happened. A Save that had nothing to send (no schedule before, none now) says so and claims no save.
+      if (sentUpdate.current) showToast('success', 'Schedule saved.');
+      else showToast('info', 'No changes to save.');
     } finally {
       // Every exit turns the overlay off. Left on after a failed save it covers the error the user needs to read.
       setPageIsLoading(false);
@@ -209,6 +225,7 @@ const UpdateSchedules = forwardRef<UpdateScheduleRef, UpdateSchedulesProps>(({
 
   const bodyContent = (
     <div className={`${wizard ? 'boomi-update-wizard': 'boomi-update'}`}>
+      {toast && <ToastNotification key={toast.id} type={toast.type} content={toast.text} />}
       {showTitle && (
         <div className="boomi-update-title">
           {panelTitle}
