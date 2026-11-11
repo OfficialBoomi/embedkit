@@ -37,7 +37,7 @@
 
   **Fixes** (UI only, no server or SDK change needed)
   - 🐛 **Edit Schedule:** the full-screen loading cover no longer stays on after a Save that fails (the schedules could not be loaded, there is no environment, or the update was refused), so the error under it can be read.
-  - 🐛 **A confirmation after Save:** after a successful Save in **Edit Schedule** or **Edit Connections**, the Integrations list now shows its existing "Integration updated successfully!" message. Before, the screen jumped back to the list and said nothing. Cancel, a failed Save and a Schedule Save that had nothing to send show no message. **Edit Maps** is unchanged: it saves each change as it is made, so its Save button only returns to the list.
+  - 🐛 **A confirmation after Save:** after a successful Save in **Edit Schedule**, the user now stays on the screen and sees a "Schedule saved." message (a Save with nothing to send says "No changes to save."). After a successful Save in **Edit Connections**, the Integrations list opens with its existing "Integration updated successfully!" message. Before, both screens jumped back to the list and said nothing. Cancel and a failed Save show no message. **Edit Maps** is unchanged: it saves each change as it is made, so its Save button only returns to the list. The setup wizard is unchanged.
   - 🐛 **Edit Schedule load error:** the message now names the environment (its name and id). When the platform has no runtime attached to the environment, it says so: "No runtime is attached to environment ... Attach one in Boomi." Any other failure keeps its reason, with the environment in front.
 
   **New** (behind `crossReferenceTables.enabled`)
