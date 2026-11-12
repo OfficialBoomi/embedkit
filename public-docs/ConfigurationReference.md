@@ -4,7 +4,7 @@ This document is the complete reference for all user-facing configuration option
 
 > **New in 1.7:** the integrations list, Add Integration catalog, setup wizard, environment scope and their flags are explained end to end in the [Integrations Guide](./IntegrationsGuide.md).
 
-> **New in NEXT_VERSION:** an opt-in screen to view and edit an integration's cross reference tables. It changes nothing until you set `crossReferenceTables.enabled`. See [Cross Reference Tables](#cross-reference-tables-crossreferencetables) for its options and the [Integrations Guide](./IntegrationsGuide.md#10-cross-reference-tables) for how it works. The same release also changes the integration cards for every embed, with no opt-in (long titles wrap to three lines, a tidier card layout, and a few small UI fixes): see the [Release Notes](./ReleaseNotes.md).
+> **New in NEXT_VERSION:** an opt-in screen to view and edit an integration's cross reference tables, off until you set `crossReferenceTables.enabled` (options: [Cross Reference Tables](#cross-reference-tables-crossreferencetables); how it works: [Integrations Guide](./IntegrationsGuide.md#10-cross-reference-tables)). The same release also brings UI fixes and improvements to the integration cards for every embed, with no opt-in: see the [Release Notes](./ReleaseNotes.md).
 
 ---
 
@@ -550,7 +550,7 @@ components: {
 
 ### Cross Reference Tables (`crossReferenceTables`)
 
-Options for the **Cross Reference Tables** screen, under `components[componentKey].crossReferenceTables`. The screen shows the publisher's default rows of an installed integration's cross reference tables and lets your users edit their own copy of each one. It is **off by default**: with `enabled` not set, or not `true`, nothing changes for your users. How it works for your users, including saving, shared tables and the "Last saved" line, is in the [Integrations Guide](./IntegrationsGuide.md#10-cross-reference-tables).
+Options for the **Cross Reference Tables** screen, under `components[componentKey].crossReferenceTables`. It shows the publisher's default rows of an installed integration's cross reference tables and lets your users edit their own copy. It is **off by default**: unless `enabled` is `true`, nothing changes for your users. How it works (saving, shared tables, the "Last saved" line) is in the [Integrations Guide](./IntegrationsGuide.md#10-cross-reference-tables).
 
 ```js
 components: {
@@ -570,17 +570,17 @@ components: {
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `enabled` | `boolean` | `false` | Turns the feature on. Only `true` counts. It adds the menu item to each integration, the **Cross Reference Tables** step to the Edit wizard (unless `wizardStep` is `false`) and **Open Cross Reference Table** to the menu of a Cross Ref Lookup card on Map Fields. |
-| `menuLabel` | `string` | `'Edit Cross Reference Tables'` | Text of the item in an integration's actions (⋮) menu. The item sits after **Edit Map(s)**. |
-| `title` | `string` | `'Cross Reference Tables'` | Title of the screen (the page shows it followed by the integration's name) and name of the wizard step. An empty string uses the default. |
-| `unavailableTables` | `'disabled' \| 'hidden'` | `'disabled'` | What to do with a table that cannot be edited here, for example one that is runtime specific or whose definition EmbedKit cannot read. `'disabled'` lists it greyed out with the reason; `'hidden'` leaves it out. Any other value acts as `'disabled'`. |
-| `wizardStep` | `boolean` | `true` (when `enabled`) | Only `false` removes the **Cross Reference Tables** step from the Edit wizard. The menu item stays, and so does **Open Cross Reference Table** on the **Edit Map(s)** screen, but the wizard's own Map Fields step no longer shows it, because it has no step to move to. |
-| `showHistory` | `boolean` | `true` | Only `false` hides the "Last saved" line under the table's chips and stops the screen from requesting it. |
+| `enabled` | `boolean` | `false` | Turns the feature on (only `true` counts): the menu item on each integration, the **Cross Reference Tables** step in the Edit wizard (unless `wizardStep` is `false`) and **Open Cross Reference Table** in the menu of a Cross Ref Lookup card on Map Fields. |
+| `menuLabel` | `string` | `'Edit Cross Reference Tables'` | Text of the item in an integration's ⋮ menu, after **Edit Map(s)**. |
+| `title` | `string` | `'Cross Reference Tables'` | Title of the screen (followed by the integration's name) and name of the wizard step. An empty string uses the default. |
+| `unavailableTables` | `'disabled' \| 'hidden'` | `'disabled'` | What to do with a table that cannot be edited here (for example runtime specific, or a definition EmbedKit cannot read): `'disabled'` lists it greyed out with the reason, `'hidden'` leaves it out. Any other value acts as `'disabled'`. |
+| `wizardStep` | `boolean` | `true` (when `enabled`) | Only `false` removes the step from the Edit wizard. The menu item stays, and so does **Open Cross Reference Table** on **Edit Map(s)**, but the wizard's own Map Fields step no longer shows it, because it has no step to move to. |
+| `showHistory` | `boolean` | `true` | Only `false` hides the "Last saved" line and stops the screen from requesting it. |
 
 Things to know:
 
-- **Needs matching releases.** The screen needs the matching `@boomi/embedkit-sdk` and EmbedKit server releases: publish the SDK first, then deploy the server, then upgrade EmbedKit. On an older server the screen says "This server does not support cross reference tables yet. Update the embedkit server and try again." The server's optional settings are listed under [Server settings](./IntegrationsGuide.md#server-settings).
-- **Which tables appear.** The publisher decides: only tables ticked as overrideable on the top-level published process are listed. See [Where tables come from](./IntegrationsGuide.md#where-tables-come-from).
+- **Needs matching releases.** Publish the SDK first, then deploy the server, then upgrade EmbedKit. On an older server the screen says "This server does not support cross reference tables yet. Update the embedkit server and try again." The server's optional settings are under [Server settings](./IntegrationsGuide.md#server-settings).
+- **Which tables appear.** Only tables ticked as overrideable on the top-level published process. See [Where tables come from](./IntegrationsGuide.md#where-tables-come-from).
 - **Integration method only.** The CDN embed does not include this screen.
 - **Related.** The events are `crossReference.table.saved` and `crossReference.table.reset` (see [Events & Callbacks](#10-events--callbacks)), the confirmations go through your `confirm` [dialog handler](#cross-reference-table-confirmations), and the colors are the `--boomi-crt-*` [tokens](#cross-reference-tables).
 
@@ -1921,7 +1921,7 @@ type EmbedKitEvent<T> = {
 | `map.function.converted` | A user chose **Edit** on a platform-defined function with `updateMaps.convertFunctionsToScript` on, and it was compiled to a script | `{ mapId, functionId, type, warnings: string[] }` |
 | `map.browse.executed` | A user resolves dynamic-browse candidates (re-authenticating a connector mid-mapping) | `{ integrationPackInstanceId, mapId, succeededCount, failedCount }` |
 | `schedules.updated` | A user saves process schedule changes. `scheduleCount` is `0` when every schedule was deleted. Not emitted when the integration had no schedule and none was added | `{ integrationPackInstanceId, environmentId?, scheduleCount }` |
-| `crossReference.table.saved` | A user saves their own rows of a cross reference table. Emitted once for each process saved, so saving a shared table to three processes emits three events. `rowCount` is the number of rows in the table after the save. `changedRowCount` is the number of rows added, edited or removed (reordering rows is not counted), and is present only for the process the user was editing, not for the other processes of a shared save | `{ integrationPackInstanceId, environmentId, processId, tableId, rowCount, changedRowCount? }` |
+| `crossReference.table.saved` | A user saves their own rows of a cross reference table. Emitted once for each process saved (a shared save to three processes emits three). `rowCount` is the rows in the table after the save. `changedRowCount` counts rows added, edited or removed (reordering is not counted) and is present only for the process the user was editing, not the other processes of a shared save | `{ integrationPackInstanceId, environmentId, processId, tableId, rowCount, changedRowCount? }` |
 | `crossReference.table.reset` | A user saves a table after choosing **Reset to defaults**, so the publisher's default values apply again. Emitted once for each process restored | `{ integrationPackInstanceId, environmentId, processId, tableId }` |
 | `ai.transformation.generated` | A user generates a transformation script via AI | `{ integrationPackInstanceId?, functionId, prompt }` |
 | `agent.session.created` | A chat session is created — check `data.trigger` | `{ trigger: 'user' \| 'system', integrationPackId? }` |
@@ -1955,12 +1955,10 @@ type EmbedKitEvent<T> = {
 > names, not the full mapping/function data.
 
 > **Cell values never leave the table.** The two `crossReference.table.*`
-> events report which table of which process was saved or restored and how
-> many rows it has, never the cell values, which are your users' data. The
-> envelope's `source` carries `integrationPackInstanceId`, `integrationPackId`,
-> `environmentId` and `componentKey`. If your app uses a `switch` over
-> `event.type` that must cover every case, add a branch for each of the two
-> new types.
+> events carry ids and counts, never cell values, which are your users' data.
+> The envelope's `source` carries `integrationPackInstanceId`,
+> `integrationPackId`, `environmentId` and `componentKey`. A `switch` over
+> `event.type` that must cover every case needs a branch for each new type.
 
 ### Subscribing
 
@@ -2152,7 +2150,7 @@ All five use the title `Are you sure?`, the cancel label `No, cancel`, the inten
 
 #### Cross reference table confirmations
 
-The Cross Reference Tables screen (`components[componentKey].crossReferenceTables.enabled`) uses the same `confirm` handler for four confirmations, each with its own title and button labels. `req.source.componentName` is `'CrossReferenceTables'` for all of them, so you can tell them apart from the ones above. Every one has `destructive: true` and the intent `'warning'`, and is dismissible by outside click and Escape.
+The Cross Reference Tables screen uses the same `confirm` handler for four confirmations, each with its own title and button labels. `req.source.componentName` is `'CrossReferenceTables'` for all of them. Each has `destructive: true` and the intent `'warning'`, and is dismissible by outside click and Escape.
 
 | Action | `title` | `description` | `confirmLabel` | `cancelLabel` |
 |--------|---------|---------------|----------------|---------------|
