@@ -1,0 +1,290 @@
+/**
+ * @file CrtGridRow.tsx
+ * @component GridRow, GridHeader
+ * @license BSD-2-Clause
+ * @support https://bitbucket.org/officialboomi/embedkit
+ *
+ * @description
+ * The rows of the lookup table grid: the header row, one virtualized data row, and the text
+ * input that opens inside the active cell. A data row is memoized on primitive props only, so
+ * moving the active cell redraws two rows, not the whole window. Class strings come from
+ * precomputed tables (see gridLayout) so a cell never builds one while rendering.
+ *
+ * Whitespace at the edge of a cell is drawn as visible markers (see crtCellMarkers), in every
+ * table, editable or not. A cell with none keeps a plain text child, as it always had, and the
+ * open editor shows the real characters. The key cell of a row whose key is blank or duplicated
+ * gets a warning style through `keyWarn`, a number so the memo stays cheap.
+ *
+ * @return {JSX.Element} The rendered row.
+ */
+
+import { memo, useCallback, useRef } from 'react';
+import { markEdgeSpaces, type CrtMarkedText } from '../../../utils/crt/crtCellMarkers';
+import { maskHasCol } from '../../../utils/crt/crtFindView';
+import { resolveEditKey } from '../../../utils/crt/crtKeymap';
+import type { CrtStore } from '../../../utils/crt/crtStore';
+import { cellTooltip, KEY_WARN_NONE } from '../../../utils/crt/crtWarningsView';
+import type { EditState, FinishEdit } from './crtGridTypes';
+import {
+  CELL_CLASS,
+  CHECK,
+  CHECK_MIXED,
+  CHECK_ON,
+  FLAG_KEY_WARN,
+  FLAG_MATCH,
+  FLAG_MATCH_CURRENT,
+  GUTTER_CLASS,
+  ROW_CLASS,
+  type GridLayout,
+} from './gridLayout';
+
+/** Longer text gets a native tooltip, since it is probably clipped. */
+const TITLE_MIN_LENGTH = 24;
+
+export interface CellEditorProps {
+  edit: EditState;
+  onFinish: FinishEdit;
+}
+
+/** Uncontrolled text input for the active cell. Finishes exactly once. */
+const CellEditor: React.FC<CellEditorProps> = ({ edit, onFinish }) => {
+  const done = useRef(false);
+  const { mode, initial } = edit;
+
+  const setup = useCallback(
+    (el: HTMLInputElement | null) => {
+      if (!el) return;
+      // The grid positions the scroll itself; do not let focus jump it.
+      el.focus({ preventScroll: true });
+      if (mode === 'select-all') {
+        el.select();
+      } else {
+        const end = el.value.length;
+        el.setSelectionRange(end, end);
+      }
+    },
+    [mode]
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Enter while an input method is composing text confirms the composition, not the cell.
+    if (e.nativeEvent.isComposing) return;
+    const action = resolveEditKey(e);
+    if (!action) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (done.current) return;
+    done.current = true;
+    if (action.type === 'commit') {
+      onFinish(e.currentTarget.value, action.move, true);
+    } else {
+      onFinish(null, null, true);
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (done.current) return;
+    done.current = true;
+    onFinish(e.currentTarget.value, null, false);
+  };
+
+  return (
+    <input
+      ref={setup}
+      type="text"
+      name="crt-cell"
+      className="boomi-crt-cell-input boomi-input"
+      defaultValue={initial}
+      aria-label={`Edit ${edit.store.columns[edit.col] ?? 'cell'}, row ${edit.row + 1}`}
+      autoComplete="off"
+      spellCheck={false}
+      onKeyDown={handleKeyDown}
+      onBlur={handleBlur}
+    />
+  );
+};
+
+export interface GridRowProps {
+  store: CrtStore;
+  layout: GridLayout;
+  row: number;
+  top: number;
+  /** Active column when this is the active row, otherwise -1. */
+  activeCol: number;
+  activeId: string;
+  /** The open editor when it is in this row, otherwise null. */
+  edit: EditState | null;
+  hasEdits: boolean;
+  /** Not read: a changed version defeats the memo so rows redraw after a store change. */
+  version: number;
+  onFinishEdit: FinishEdit;
+  /** The row is ticked in the gutter. */
+  rowChecked: boolean;
+  /** First and last column of the cell range in this row, or -1 when the row is outside it. */
+  selC0: number;
+  selC1: number;
+  /** The row was inserted or appended since the table was loaded. */
+  rowNew: boolean;
+  /** Bit mask of this row's cells that match the find query (bit c is column c), 0 for none. A number, never a Set, so the memo stays cheap. */
+  findMask: number;
+  /** Column of the current find match when it is in this row, otherwise -1. */
+  findCol: number;
+  /** Warning on this row's key (first column): 1 blank, 2 duplicate, 0 none. Absent counts as none. */
+  keyWarn?: number;
+}
+
+/** The text of a cell with edge whitespace: markers, the middle as stored, markers. */
+function markedChildren(marked: CrtMarkedText): React.ReactNode {
+  return (
+    <>
+      {marked.lead !== '' && (
+        <span className="boomi-crt-ws" aria-hidden="true">
+          {marked.lead}
+        </span>
+      )}
+      {marked.middle}
+      {marked.trail !== '' && (
+        <span className="boomi-crt-ws" aria-hidden="true">
+          {marked.trail}
+        </span>
+      )}
+    </>
+  );
+}
+
+/** Memoized (primitive props only) so moving the active cell redraws two rows, not the whole window. */
+const GridRow = memo(function GridRow({
+  store,
+  layout,
+  row,
+  top,
+  activeCol,
+  activeId,
+  edit,
+  hasEdits,
+  onFinishEdit,
+  rowChecked,
+  selC0,
+  selC1,
+  rowNew,
+  findMask,
+  findCol,
+  keyWarn = KEY_WARN_NONE,
+}: GridRowProps) {
+  const cells: React.ReactNode[] = [];
+  const cols = layout.widths.length;
+  for (let c = 0; c < cols; c++) {
+    const text = store.getCell(row, c);
+    const isActive = c === activeCol;
+    const editing = edit !== null && edit.col === c;
+    const inSelection = c >= selC0 && c <= selC1;
+    // Null for nearly every cell, which then keeps its plain text child. The editor shows the real text.
+    const marked = editing ? null : markEdgeSpaces(text);
+    const warn = c === 0 ? keyWarn : KEY_WARN_NONE;
+    const flags =
+      (c === 0 ? 1 : 0) |
+      (isActive ? 2 : 0) |
+      (hasEdits && store.isCellEdited(row, c) ? 4 : 0) |
+      (editing ? 8 : 0) |
+      (inSelection && !isActive ? 16 : 0) |
+      (c === findCol ? FLAG_MATCH_CURRENT : maskHasCol(findMask, c) ? FLAG_MATCH : 0) |
+      (warn !== KEY_WARN_NONE ? FLAG_KEY_WARN : 0);
+    cells.push(
+      <div
+        key={c}
+        role="gridcell"
+        id={isActive ? activeId : undefined}
+        aria-colindex={c + 2}
+        aria-selected={isActive || inSelection || rowChecked}
+        className={CELL_CLASS[flags]}
+        style={layout.styles[c]}
+        data-c={c}
+        title={editing ? undefined : cellTooltip(text.length > TITLE_MIN_LENGTH, text, marked, warn)}
+      >
+        {editing ? (
+          <CellEditor edit={edit} onFinish={onFinishEdit} />
+        ) : marked === null ? (
+          text
+        ) : (
+          markedChildren(marked)
+        )}
+      </div>
+    );
+  }
+  return (
+    <div
+      role="row"
+      aria-rowindex={row + 2}
+      aria-selected={rowChecked || undefined}
+      data-r={row}
+      className={ROW_CLASS[(row % 2) | (rowChecked ? 2 : 0) | (rowNew ? 4 : 0)]}
+      style={{ top, width: layout.total }}
+    >
+      <div
+        role="rowheader"
+        aria-colindex={1}
+        data-gutter=""
+        className={GUTTER_CLASS[(activeCol >= 0 ? 1 : 0) | (rowNew ? 2 : 0)]}
+        title={rowNew ? 'New row' : undefined}
+      >
+        <span
+          role="checkbox"
+          aria-checked={rowChecked}
+          aria-label={`Select row ${row + 1}`}
+          data-check=""
+          className={rowChecked ? CHECK_ON : CHECK}
+        />
+        <span className="boomi-crt-rownum">{row + 1}</span>
+      </div>
+      {cells}
+    </div>
+  );
+});
+
+export interface GridHeaderProps {
+  layout: GridLayout;
+  columns: readonly string[];
+  /** Active column, which gets the header highlight. */
+  activeCol: number;
+  allChecked: boolean;
+  someChecked: boolean;
+}
+
+/** The sticky header row: the select all checkbox in the corner, then one cell per column name. */
+export const GridHeader: React.FC<GridHeaderProps> = ({
+  layout,
+  columns,
+  activeCol,
+  allChecked,
+  someChecked,
+}) => (
+  <div role="row" aria-rowindex={1} className="boomi-crt-header" style={layout.rowStyle}>
+    <div role="columnheader" aria-colindex={1} aria-label="Row selection" className="boomi-crt-corner">
+      <span
+        role="checkbox"
+        aria-checked={allChecked ? true : someChecked ? 'mixed' : false}
+        aria-label="Select all rows"
+        data-checkall=""
+        className={allChecked ? CHECK_ON : someChecked ? CHECK_MIXED : CHECK}
+      />
+    </div>
+    {columns.map((name, c) => (
+      <div
+        key={c}
+        role="columnheader"
+        aria-colindex={c + 2}
+        title={name}
+        className={
+          'boomi-crt-hcell' +
+          (c === 0 ? ' boomi-crt-hcell--frozen' : '') +
+          (c === activeCol ? ' boomi-crt-hcell--active' : '')
+        }
+        style={layout.styles[c]}
+      >
+        {name}
+      </div>
+    ))}
+  </div>
+);
+
+export default GridRow;

@@ -128,6 +128,16 @@ const Integration: React.FC<IntegrationProps> = ({
   const cardOpensEdit = !isAgent && showEdit && !showEditButton;
   const openEdit = () => onEditClick('ConfigureIntegration', integration);
 
+  // Cross reference tables entry. Off unless the host sets `crossReferenceTables.enabled`.
+  const crtCfg = boomiConfig?.components?.[componentKey]?.crossReferenceTables;
+  const crtActionProps = crtCfg?.enabled === true
+    ? {
+        onEditCrossReferences: () => onEditClick('UpdateCrossReferences', integration),
+        // An empty label (or one of spaces) is no label: the item falls back to its default text, like `title`.
+        crossReferencesLabel: (crtCfg.menuLabel as string | undefined)?.trim() || undefined,
+      }
+    : {};
+
   const handleDelete = async () => {
     if (confirmingRef.current) return;
     confirmingRef.current = true;
@@ -187,6 +197,7 @@ const Integration: React.FC<IntegrationProps> = ({
           onEditMap={() => onEditClick('UpdateMaps', integration)}
           onDeleteIntegration={handleDelete}
           onShowHistory={() => onShowHistory(integration)}
+          {...crtActionProps}
           {...(cardOpensEdit ? { onEdit: openEdit, editLabel: cardCfg.editButton?.label ?? 'Edit' } : {})}
         />
       )}
@@ -213,15 +224,17 @@ const Integration: React.FC<IntegrationProps> = ({
 
           <div className="boomi-integration-card__body">
             <div className={`boomi-integration-card__content${showConnectors ? ' boomi-integration-card__content--connectors' : ''}`}>
-              <div className="boomi-integration-card__title-row">
-                <h3 className="boomi-integration-card__title">
-                  {title}
-                </h3>
-                {menuOnTop && !showType && topMenu}
+              <div>
+                <div className="boomi-integration-card__title-row">
+                  <h3 className="boomi-integration-card__title">
+                    {title}
+                  </h3>
+                  {menuOnTop && !showType && topMenu}
+                </div>
+                <p className="boomi-integration-card__desc">
+                  {integration.integrationPackDescription}
+                </p>
               </div>
-              <p className="boomi-integration-card__desc">
-                {integration.integrationPackDescription}
-              </p>
               {showConnectors && (
                 <ConnectorStack
                   connectors={integration.connectors}
@@ -280,6 +293,7 @@ const Integration: React.FC<IntegrationProps> = ({
                       onEditMap={() => onEditClick('UpdateMaps', integration)}
                       onDeleteIntegration={handleDelete}
                       onShowHistory={() => onShowHistory(integration)}
+                      {...crtActionProps}
                       {...(cardOpensEdit ? { onEdit: openEdit, editLabel: cardCfg.editButton?.label ?? 'Edit' } : {})}
                     />
                   )}
@@ -329,6 +343,7 @@ const Integration: React.FC<IntegrationProps> = ({
                   onEditMap={() => onEditClick('UpdateMaps', integration)}
                   onDeleteIntegration={handleDelete}
                   onShowHistory={() => onShowHistory(integration)}
+                  {...crtActionProps}
                 />
               )}
 

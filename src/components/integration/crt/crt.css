@@ -1,0 +1,1444 @@
+/*
+ * Styles for the cross reference table screen and its grid.
+ * Plain CSS only: Tailwind ring, shadow and translate utilities do not work inside
+ * the plugin's shadow root. Every colour comes from a --boomi-crt-* theme token (set in
+ * all three theme blocks of main.css), falling back to the existing theme token it
+ * aliases and then a literal, through the local --crt-* properties below.
+ * The sizes --crt-row-h, --crt-header-h and --crt-gutter-w are set by the grid
+ * component (CrtGrid.tsx) on its root, so TypeScript and CSS share one value. The
+ * fallbacks written here (32, 32 and 88 px) must stay equal to those constants.
+ */
+
+.boomi-crt-screen,
+.boomi-crt-gridbox,
+.boomi-crt-grid {
+  --crt-fg: var(--boomi-crt-fg, var(--boomi-page-fg-color, #374151));
+  --crt-muted: var(--boomi-crt-muted, var(--boomi-muted, #6b7280));
+  --crt-surface: var(--boomi-crt-surface, var(--boomi-card-bg, #ffffff));
+  --crt-outer-border: var(--boomi-crt-outer-border, var(--boomi-card-border, #d1d5db));
+  --crt-cell-border: var(--boomi-crt-cell-border, var(--boomi-table-header-border, var(--boomi-card-border, #d1d5db)));
+  --crt-header-bg: var(--boomi-crt-header-bg, var(--boomi-table-header-bg, #f3f4f6));
+  --crt-header-fg: var(--boomi-crt-header-fg, var(--boomi-table-header-fg, #374151));
+  --crt-row-odd-bg: var(--boomi-crt-row-odd-bg, var(--boomi-table-row-odd-bg, #ffffff));
+  /* The theme's even stripe is nearly white in the light theme, so add a little contrast. */
+  --crt-row-even-bg: color-mix(in srgb, var(--crt-muted) 7%, var(--boomi-crt-row-even-bg, var(--boomi-table-row-even-bg, #f9fafb)));
+  --crt-focus: var(--boomi-crt-focus, var(--boomi-input-border-focus, #6366f1));
+  --crt-danger: var(--boomi-crt-danger, var(--boomi-danger-fg, #ef4444));
+  /* Marks rows that were inserted since the table was loaded. */
+  --crt-new: var(--boomi-crt-new, var(--boomi-success-bg, #16a34a));
+}
+
+/* ---------- Screen ---------- */
+
+/* The Process and Table pickers share one row and wrap on a narrow screen. */
+.boomi-crt-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+  max-width: 46rem;
+}
+
+.boomi-crt-picker > .boomi-crt-tp {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.boomi-crt-picker > .boomi-crt-tp:last-child {
+  flex-grow: 2;
+}
+
+.boomi-crt-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--crt-fg);
+}
+
+.boomi-crt-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border: 1px solid var(--crt-cell-border);
+  border-radius: 9999px;
+  background-color: var(--crt-surface);
+  color: var(--crt-fg);
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
+.boomi-crt-chip--default {
+  color: var(--crt-muted);
+}
+
+.boomi-crt-chip--overridden {
+  border-color: var(--crt-focus);
+  color: var(--crt-focus);
+  font-weight: 600;
+}
+
+.boomi-crt-count {
+  margin-left: auto;
+  color: var(--crt-muted);
+  white-space: nowrap;
+}
+
+/* Row and clipboard actions above the grid. */
+
+.boomi-crt-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem;
+  border: 1px solid var(--crt-outer-border);
+  border-radius: 0.375rem;
+  background-color: var(--crt-surface);
+  color: var(--crt-fg);
+  font-size: 0.8125rem;
+}
+
+/* Two lines: row actions with the Override button at the right, then clipboard actions with the selection text. */
+.boomi-crt-tools-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.boomi-crt-tools-trailing {
+  margin-left: auto;
+  padding-right: 0.25rem;
+}
+
+.boomi-crt-tools-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  padding: 0.125rem;
+  border: 1px solid var(--crt-cell-border);
+  border-radius: 0.375rem;
+}
+
+.boomi-crt-tools-selection {
+  margin-left: auto;
+  padding: 0 0.5rem;
+  color: var(--crt-muted);
+  white-space: nowrap;
+}
+
+.boomi-crt-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.boomi-crt-tool:hover:not(:disabled) {
+  border-color: var(--crt-cell-border);
+  background-color: color-mix(in srgb, var(--crt-focus) 10%, transparent);
+}
+
+.boomi-crt-tool:focus-visible {
+  outline: 2px solid var(--crt-focus);
+  outline-offset: 1px;
+}
+
+.boomi-crt-tool:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.boomi-crt-tool-icon {
+  display: inline-flex;
+  font-size: 1rem;
+}
+
+.boomi-crt-grid-wrap {
+  height: 60vh;
+  min-height: 320px;
+}
+
+.boomi-crt-statusbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  min-height: 1.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.boomi-crt-help {
+  color: var(--crt-muted);
+}
+
+.boomi-crt-hint {
+  color: var(--crt-danger);
+  font-weight: 600;
+}
+
+/* Result messages ("Pasted 3 rows") are quiet; warnings keep the danger colour. */
+.boomi-crt-hint--info {
+  color: var(--crt-muted);
+}
+
+.boomi-crt-hint--warn {
+  color: var(--crt-danger);
+}
+
+.boomi-crt-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--crt-muted);
+}
+
+/* ---------- Grid ---------- */
+
+.boomi-crt-gridbox,
+.boomi-crt-gridbox * {
+  box-sizing: border-box;
+}
+
+/*
+ * Holds the grid and its context menu. The menu is a sibling of the scrolling grid, so the
+ * grid's clipping cannot cut it, and it is placed with position: absolute against this box
+ * (position: fixed does not work inside the plugin root, which has a CSS transform).
+ */
+.boomi-crt-gridbox {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.boomi-crt-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--crt-outer-border);
+  border-radius: 0.375rem;
+  background-color: var(--crt-surface);
+  color: var(--crt-fg);
+  font-size: 0.875rem;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.boomi-crt-grid:focus,
+.boomi-crt-grid:focus-visible {
+  outline: none;
+}
+
+/* Not overridden: the same stripes, tinted toward the muted colour. */
+.boomi-crt-grid.boomi-crt-grid--readonly {
+  --crt-row-odd-bg: color-mix(in srgb, var(--crt-muted) 14%, var(--boomi-crt-row-odd-bg, var(--boomi-table-row-odd-bg, #ffffff)));
+  --crt-row-even-bg: color-mix(in srgb, var(--crt-muted) 20%, var(--boomi-crt-row-even-bg, var(--boomi-table-row-even-bg, #f9fafb)));
+}
+
+.boomi-crt-canvas {
+  position: relative;
+}
+
+/* Header row */
+
+.boomi-crt-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  height: var(--crt-header-h, 32px);
+}
+
+.boomi-crt-corner,
+.boomi-crt-hcell {
+  flex: none;
+  height: 100%;
+  padding: 0 12px;
+  overflow: hidden;
+  background-color: var(--crt-header-bg);
+  border-right: 1px solid var(--crt-cell-border);
+  border-bottom: 1px solid var(--crt-cell-border);
+  color: var(--crt-header-fg);
+  font-weight: 600;
+  line-height: calc(var(--crt-header-h, 32px) - 1px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boomi-crt-corner {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  width: var(--crt-gutter-w, 88px);
+  padding: 0 0 0 8px;
+}
+
+.boomi-crt-hcell--frozen {
+  position: sticky;
+  left: var(--crt-gutter-w, 88px);
+  z-index: 1;
+  border-right-width: 2px;
+}
+
+.boomi-crt-hcell--active {
+  box-shadow: inset 0 -2px 0 var(--crt-focus);
+}
+
+/* Rows. Positioned by the virtualizer through an inline `top`. */
+
+.boomi-crt-row {
+  position: absolute;
+  left: 0;
+  display: flex;
+  height: var(--crt-row-h, 32px);
+  border-bottom: 1px solid var(--crt-cell-border);
+  background-color: var(--crt-row-bg);
+}
+
+.boomi-crt-row--odd {
+  --crt-row-bg: var(--crt-row-odd-bg);
+}
+
+.boomi-crt-row--even {
+  --crt-row-bg: var(--crt-row-even-bg);
+}
+
+/*
+ * New rows get a faint tint and ticked rows a stronger one. Both mix over the row's own
+ * stripe, so the striping stays readable. Ticked comes last so it wins on a new row.
+ */
+.boomi-crt-row--odd.boomi-crt-row--new {
+  --crt-row-bg: color-mix(in srgb, var(--crt-new) 10%, var(--crt-row-odd-bg));
+}
+
+.boomi-crt-row--even.boomi-crt-row--new {
+  --crt-row-bg: color-mix(in srgb, var(--crt-new) 10%, var(--crt-row-even-bg));
+}
+
+.boomi-crt-row--odd.boomi-crt-row--checked {
+  --crt-row-bg: color-mix(in srgb, var(--crt-focus) 16%, var(--crt-row-odd-bg));
+}
+
+.boomi-crt-row--even.boomi-crt-row--checked {
+  --crt-row-bg: color-mix(in srgb, var(--crt-focus) 16%, var(--crt-row-even-bg));
+}
+
+/* Cells */
+
+.boomi-crt-cell,
+.boomi-crt-gutter {
+  flex: none;
+  height: 100%;
+  overflow: hidden;
+  line-height: calc(var(--crt-row-h, 32px) - 1px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boomi-crt-cell {
+  padding: 0 12px;
+  border-right: 1px solid var(--crt-cell-border);
+  cursor: cell;
+}
+
+/*
+ * Sticky cells must be opaque or the columns scrolling under them show through.
+ * The surface colour goes underneath and the row stripe on top, so a translucent
+ * theme colour still reads correctly.
+ */
+.boomi-crt-gutter,
+.boomi-crt-cell--frozen {
+  position: sticky;
+  z-index: 2;
+  background-color: var(--crt-surface);
+  background-image: linear-gradient(var(--crt-row-bg), var(--crt-row-bg));
+}
+
+.boomi-crt-gutter {
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: var(--crt-gutter-w, 88px);
+  padding: 0 10px 0 8px;
+  border-right: 1px solid var(--crt-cell-border);
+  color: var(--crt-muted);
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+.boomi-crt-gutter--active {
+  color: var(--crt-fg);
+  font-weight: 600;
+}
+
+/* A bar on the left edge marks a row that is new since the table was loaded. */
+.boomi-crt-gutter--new {
+  box-shadow: inset 3px 0 0 var(--crt-new);
+}
+
+.boomi-crt-rownum {
+  margin-left: 0.5rem;
+}
+
+/* A drawn checkbox (a span with role=checkbox), since a native input would take focus. */
+.boomi-crt-check {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--crt-muted);
+  border-radius: 3px;
+  background-color: var(--crt-surface);
+  cursor: pointer;
+}
+
+.boomi-crt-check:hover {
+  border-color: var(--crt-focus);
+}
+
+.boomi-crt-check--on,
+.boomi-crt-check--mixed {
+  border-color: var(--crt-focus);
+  background-color: var(--crt-focus);
+}
+
+.boomi-crt-check--on::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 4px;
+  width: 4px;
+  height: 8px;
+  border-style: solid;
+  border-color: #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.boomi-crt-check--mixed::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 2px;
+  left: 2px;
+  height: 2px;
+  background-color: #ffffff;
+}
+
+.boomi-crt-cell--frozen {
+  left: var(--crt-gutter-w, 88px);
+  border-right: 2px solid var(--crt-outer-border);
+}
+
+/*
+ * A changed cell gets a light tint and a small corner flag. The row stripe stays as the
+ * lower layer, so frozen (opaque) cells keep their background. The flag is on the right
+ * edge, away from the frozen column divider on the left.
+ */
+.boomi-crt-cell--edited {
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, var(--crt-focus) 16%, transparent),
+      color-mix(in srgb, var(--crt-focus) 16%, transparent)
+    ),
+    linear-gradient(var(--crt-row-bg), var(--crt-row-bg));
+}
+
+.boomi-crt-cell--edited:not(.boomi-crt-cell--frozen) {
+  position: relative;
+}
+
+.boomi-crt-cell--edited::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-style: solid;
+  border-width: 0 8px 8px 0;
+  border-color: transparent var(--crt-focus) transparent transparent;
+}
+
+.boomi-crt-cell--edited.boomi-crt-cell--editing::after {
+  display: none;
+}
+
+/*
+ * Cells inside a multi-cell range get a light tint over the row stripe. The active cell is
+ * left untinted so it stays easy to find. An edited cell in a range shows both tints.
+ */
+.boomi-crt-cell--selected {
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, var(--crt-focus) 22%, transparent),
+      color-mix(in srgb, var(--crt-focus) 22%, transparent)
+    ),
+    linear-gradient(var(--crt-row-bg), var(--crt-row-bg));
+}
+
+.boomi-crt-cell--selected.boomi-crt-cell--edited {
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, var(--crt-focus) 16%, transparent),
+      color-mix(in srgb, var(--crt-focus) 16%, transparent)
+    ),
+    linear-gradient(
+      color-mix(in srgb, var(--crt-focus) 22%, transparent),
+      color-mix(in srgb, var(--crt-focus) 22%, transparent)
+    ),
+    linear-gradient(var(--crt-row-bg), var(--crt-row-bg));
+}
+
+/* Inside the cell, so the cell's overflow clip does not cut it. */
+.boomi-crt-cell--active {
+  outline: 2px solid var(--crt-focus);
+  outline-offset: -2px;
+}
+
+.boomi-crt-grid:not(:focus-within) .boomi-crt-cell--active {
+  outline-color: var(--crt-muted);
+}
+
+/* The input draws its own border while editing. */
+.boomi-crt-cell--editing {
+  padding: 0;
+  outline: none;
+}
+
+.boomi-crt-cell--editing:not(.boomi-crt-cell--frozen) {
+  position: relative;
+}
+
+.boomi-crt-grid .boomi-crt-cell-input {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0 10px;
+  border: 2px solid var(--crt-focus);
+  border-radius: 0;
+  background-color: var(--boomi-input-bg, #ffffff);
+  box-shadow: none;
+  color: var(--boomi-input-fg, #111827);
+  font: inherit;
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.boomi-crt-grid .boomi-crt-cell-input:focus {
+  border-color: var(--crt-focus);
+  outline: none;
+}
+
+/* ---------- Context menu ---------- */
+
+/* Looks come from the shared boomi-menu classes; this only places and tightens it. */
+.boomi-crt-gridbox .boomi-crt-menu {
+  position: absolute;
+  z-index: 20;
+  min-width: 14rem;
+  max-height: 100%;
+  overflow-y: auto;
+  outline: none;
+}
+
+.boomi-crt-gridbox .boomi-crt-menu .boomi-menu-item {
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Hover and keyboard share one highlight: the focused item. */
+.boomi-crt-gridbox .boomi-crt-menu .boomi-menu-item:focus {
+  background-color: var(--boomi-menu-item-bg-hover, #f3f4f6);
+  outline: none;
+}
+
+.boomi-crt-gridbox .boomi-crt-menu .boomi-menu-item:focus-visible {
+  outline: 2px solid var(--crt-focus);
+  outline-offset: -2px;
+}
+
+.boomi-crt-gridbox .boomi-crt-menu .boomi-menu-item--danger:focus {
+  background-color: var(--boomi-menu-danger-bg-hover, var(--boomi-menu-item-bg-hover, #f3f4f6));
+}
+
+.boomi-crt-gridbox .boomi-crt-menu .boomi-crt-menu-item--disabled,
+.boomi-crt-gridbox .boomi-crt-menu .boomi-crt-menu-item--disabled:hover,
+.boomi-crt-gridbox .boomi-crt-menu .boomi-crt-menu-item--disabled:focus {
+  background-color: transparent;
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.boomi-crt-menu-label {
+  flex: 1 1 auto;
+}
+
+.boomi-crt-menu-shortcut {
+  margin-left: 1.5rem;
+  color: var(--crt-muted);
+  font-size: 0.75rem;
+}
+
+/* ---------- Full screen ---------- */
+
+/*
+ * The workspace is the toolbar, the grid and the status line. In full screen it covers the
+ * plugin area (position: fixed is relative to the plugin root, which has a CSS transform)
+ * and the grid takes all the height that is left. Dialogs are not part of it, so they still
+ * show on top.
+ */
+.boomi-crt-workspace--full {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem;
+  overflow: hidden;
+  background-color: var(--boomi-page-bg-color, var(--crt-surface));
+  color: var(--crt-fg);
+}
+
+.boomi-crt-workspace--full .boomi-crt-grid-wrap {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+.boomi-crt-workspace--full .boomi-crt-tools {
+  flex: none;
+}
+
+.boomi-crt-workspace--full .boomi-crt-statusbar {
+  flex: none;
+}
+
+.boomi-crt-fs-caption {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.boomi-crt-tool--edge {
+  margin-right: 0.25rem;
+}
+
+/* ---------- Table picker (CrtTablePicker) ---------- */
+
+/*
+ * Looks come from the shared select and option classes (boomi-select, boomi-options,
+ * boomi-option), the same ones the Dropdown uses. This section only places the list, which is
+ * rendered inside the component and positioned absolutely (a portal would lose every style
+ * inside the shadow root), and adds the unsaved dot, the disabled option and the compact form.
+ * The accent is the same colour that flags an edited cell.
+ */
+.boomi-crt-tp,
+.boomi-crt-tp * {
+  box-sizing: border-box;
+}
+
+.boomi-crt-tp {
+  --crt-tp-accent: var(--boomi-crt-tp-accent, var(--crt-focus, var(--boomi-input-border-focus, #6366f1)));
+  margin-bottom: 1rem;
+}
+
+/* Full screen: one short row, no label, and no bottom margin in the caption row. */
+.boomi-crt-tp--compact {
+  flex: none;
+  width: 16rem;
+  max-width: 100%;
+  margin-bottom: 0;
+}
+
+.boomi-crt-tp-anchor {
+  position: relative;
+  width: 100%;
+}
+
+.boomi-crt-tp-btn {
+  display: block;
+  width: 100%;
+  font: inherit;
+}
+
+/* Disabled: still readable, with no caret and no pointer. */
+.boomi-crt-tp--disabled .boomi-crt-tp-btn {
+  cursor: default;
+  opacity: 0.8;
+}
+
+.boomi-crt-tp--compact .boomi-crt-tp-btn {
+  padding: 0.125rem 2rem 0.125rem 0.625rem;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.boomi-crt-tp-value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* One line with an ellipsis, for the name and the muted line. */
+.boomi-crt-tp-trunc {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boomi-crt-tp-caret {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-right: 0.5rem;
+  pointer-events: none;
+}
+
+/* The list: a column with the search box on top and the options scrolling underneath. */
+.boomi-crt-tp-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  outline: none;
+}
+
+.boomi-crt-tp--compact .boomi-crt-tp-panel {
+  width: 22rem;
+  max-width: calc(100vw - 2rem);
+}
+
+.boomi-crt-tp-search {
+  flex: none;
+}
+
+.boomi-crt-tp-list {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  outline: none;
+}
+
+.boomi-crt-tp-empty {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.boomi-crt-tp-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.boomi-crt-tp-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.boomi-crt-tp-name--selected {
+  font-weight: 600;
+}
+
+.boomi-crt-tp-desc {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  opacity: 0.8;
+}
+
+.boomi-crt-tp-check {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-right: 0.75rem;
+  font-size: 1.25rem;
+}
+
+/* Unsaved edits. */
+.boomi-crt-tp-dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--crt-tp-accent);
+}
+
+/*
+ * Listed but not choosable. Only the name is dimmed, so the reason stays readable. The
+ * highlight is never put on it, so there is nothing to hover.
+ */
+.boomi-crt-tp-option--disabled {
+  cursor: not-allowed;
+}
+
+.boomi-crt-tp-option--disabled .boomi-crt-tp-name-row {
+  opacity: 0.55;
+}
+
+/* ---------- Screen safety: no editable table ---------- */
+
+/* The tables that cannot be edited, one line each under the empty text. */
+.boomi-crt-empty-list {
+  max-width: 40rem;
+  margin: 1rem auto 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  font-size: 0.8125rem;
+}
+
+.boomi-crt-empty-list li {
+  padding: 0.375rem 0;
+  border-top: 1px solid var(--crt-cell-border);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Find and replace (CrtFindBar, match highlights) ---------- */
+
+/*
+ * Amber, the warning hue of all three themes (the warning chip tokens), so a match is never
+ * mistaken for the indigo of the selection and edit tints, nor for the green of a new row.
+ * The edge colour is the chip's text colour: dark amber on light, pale amber on dark.
+ */
+.boomi-crt-screen,
+.boomi-crt-gridbox,
+.boomi-crt-grid {
+  --crt-match: var(--boomi-crt-match, var(--boomi-chip-warning-border, #f59e0b));
+  --crt-match-edge: var(--boomi-crt-match-edge, var(--boomi-chip-warning-fg, #92400e));
+}
+
+/* The row is the third line of the toolbar and wraps only when the toolbar gets narrow. */
+.boomi-crt-find {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--crt-cell-border);
+}
+
+.boomi-crt-find-input {
+  box-sizing: border-box;
+  flex: 0 1 14rem;
+  min-width: 8rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  font: inherit;
+  line-height: 1.25rem;
+}
+
+.boomi-crt-find-input[aria-invalid='true'],
+.boomi-crt-find-input[aria-invalid='true']:focus-visible {
+  border-color: var(--crt-danger);
+  outline-color: var(--crt-danger);
+}
+
+.boomi-crt-find-group {
+  display: inline-flex;
+  gap: 0.125rem;
+  padding: 0.125rem;
+  border: 1px solid var(--crt-cell-border);
+  border-radius: 0.375rem;
+}
+
+.boomi-crt-find-toggle,
+.boomi-crt-find-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.boomi-crt-find-toggle:hover,
+.boomi-crt-find-step:hover:not(:disabled) {
+  border-color: var(--crt-cell-border);
+  background-color: color-mix(in srgb, var(--crt-focus) 10%, transparent);
+}
+
+.boomi-crt-find-toggle:focus-visible,
+.boomi-crt-find-step:focus-visible {
+  outline: 2px solid var(--crt-focus);
+  outline-offset: 1px;
+}
+
+/* A toggle that is on keeps the accent, like the full screen button. */
+.boomi-crt-find-toggle[aria-pressed='true'] {
+  border-color: var(--crt-focus);
+  background-color: color-mix(in srgb, var(--crt-focus) 18%, transparent);
+  color: var(--crt-focus);
+  font-weight: 600;
+}
+
+.boomi-crt-find-step:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.boomi-crt-find-count {
+  min-width: 6.5rem;
+  padding: 0 0.25rem;
+  color: var(--crt-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A sentence (a refused pattern, a search that stopped early) wraps instead of running out of the row. */
+.boomi-crt-find-count--long {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.boomi-crt-find-count--invalid {
+  color: var(--crt-danger);
+  font-weight: 600;
+}
+
+.boomi-crt-find-close {
+  margin-left: auto;
+}
+
+/*
+ * A matching cell gets an amber tint, the current match a stronger one and an outline. The tint
+ * is a pseudo element under the text and over the cell's own background layers, so it blends
+ * with whatever is already there (the row stripe, the edited and range tints, the opaque
+ * frozen column) without a rule for each combination. isolation keeps the element behind the
+ * text but inside the cell. The outline replaces the active cell's outline on the current
+ * match, which is normally also the active cell, and it keeps its colour when the grid has no
+ * focus (the cursor is usually in the find box). An open editor draws its own border.
+ */
+.boomi-crt-cell--match {
+  isolation: isolate;
+}
+
+.boomi-crt-cell--match:not(.boomi-crt-cell--frozen) {
+  position: relative;
+}
+
+.boomi-crt-cell--match::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: color-mix(in srgb, var(--crt-match) 35%, transparent);
+  pointer-events: none;
+}
+
+.boomi-crt-cell--match-current::before {
+  background-color: color-mix(in srgb, var(--crt-match) 55%, transparent);
+}
+
+.boomi-crt-grid .boomi-crt-cell--match-current:not(.boomi-crt-cell--editing),
+.boomi-crt-grid:not(:focus-within) .boomi-crt-cell--match-current:not(.boomi-crt-cell--editing) {
+  outline: 2px solid var(--crt-match-edge);
+  outline-offset: -2px;
+}
+
+/* ---------- Key warnings and edge space markers (warnings display) ---------- */
+
+/*
+ * The chips in the info row that say a table has blank or duplicate keys. Each is a button that
+ * jumps to the next flagged row, so it keeps the chip shape and adds the danger colour (the one
+ * the warning notice under the grid uses), a pointer and a focus ring. Font properties are set
+ * one by one: the font shorthand would also reset the chip's line height.
+ */
+.boomi-crt-chip--warn {
+  margin: 0;
+  border-color: var(--crt-danger);
+  background-color: color-mix(in srgb, var(--crt-danger) 10%, var(--crt-surface));
+  color: var(--crt-danger);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boomi-crt-chip--warn:hover {
+  background-color: color-mix(in srgb, var(--crt-danger) 20%, var(--crt-surface));
+}
+
+.boomi-crt-chip--warn:focus-visible {
+  outline: 2px solid var(--crt-focus);
+  outline-offset: 1px;
+}
+
+/*
+ * The key cell of a row whose key is blank or appears in another row: a bar on its left edge and
+ * a light tint. Both are inset shadows, so they sit above the cell's own background layers (the
+ * row stripe, the edited and range tints, the opaque frozen column) without a rule for each
+ * combination. The tint is a shadow with a spread larger than any cell, clipped to the cell. The
+ * active cell's outline, the find tint and the open editor are drawn separately and still show.
+ */
+.boomi-crt-cell--warn {
+  box-shadow:
+    inset 3px 0 0 var(--crt-danger),
+    inset 0 0 0 400px color-mix(in srgb, var(--crt-danger) 12%, transparent);
+}
+
+/*
+ * Whitespace at the start or end of a cell, one dot per character. A faint pill behind the dots
+ * makes a trailing run easy to see next to the text.
+ */
+.boomi-crt-ws {
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--crt-muted) 16%, transparent);
+  color: var(--crt-muted);
+  letter-spacing: 1px;
+}
+
+/* ---------- Keyboard shortcuts (toolbar help button, CrtShortcutsModal) ---------- */
+
+/*
+ * The help button is for first time use, so it is quieter than every other tool: icon only, no
+ * border, the muted text colour, and the normal colour (with the usual hover tint and focus
+ * ring) only while it is hovered or focused. It is the last thing in the second row.
+ */
+.boomi-crt-tools-help {
+  display: inline-flex;
+  flex: none;
+  margin-left: 0.125rem;
+}
+
+.boomi-crt-shortcuts-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background-color: transparent;
+  color: var(--crt-muted);
+  font-size: 1.125rem;
+  cursor: pointer;
+}
+
+.boomi-crt-shortcuts-btn:hover,
+.boomi-crt-shortcuts-btn:focus-visible {
+  color: var(--crt-fg);
+  background-color: color-mix(in srgb, var(--crt-focus) 10%, transparent);
+}
+
+.boomi-crt-shortcuts-btn:focus-visible {
+  outline: 2px solid var(--crt-focus);
+  outline-offset: 1px;
+}
+
+/*
+ * The window is the shared Modal (its overlay, width, theme tokens and host offset), so only
+ * its content is styled here. Lines and soft text are mixed from the Modal's own text colour,
+ * so the light, dark and boomi themes all follow. The Modal's dialog element takes focus when
+ * the window opens; it is a container, not a control, so it shows no focus ring.
+ */
+.boomi-crt-modal-frame [role='dialog']:focus {
+  outline: none;
+}
+
+.boomi-crt-sc {
+  --crt-sc-line: color-mix(in srgb, currentColor 14%, transparent);
+  --crt-sc-soft: color-mix(in srgb, currentColor 62%, transparent);
+  font-size: 0.875rem;
+}
+
+/* Groups flow into as many columns as fit (two in the wide Modal) and a group is never split. */
+.boomi-crt-sc-groups {
+  columns: 24rem;
+  column-gap: 2rem;
+}
+
+.boomi-crt-sc-group {
+  break-inside: avoid;
+  margin: 0 0 1.25rem;
+}
+
+.boomi-crt-sc-title {
+  margin: 0 0 0.25rem;
+  color: var(--crt-sc-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The rule sits on the list, not the title: a line mixed from the title's softened colour would be too faint. */
+.boomi-crt-sc-list {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--crt-sc-line);
+}
+
+.boomi-crt-sc-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 45%) 1fr;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding: 0.3125rem 0;
+  border-bottom: 1px solid var(--crt-sc-line);
+}
+
+.boomi-crt-sc-row:last-child {
+  border-bottom: 0;
+}
+
+.boomi-crt-sc-keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.375rem;
+  margin: 0;
+}
+
+.boomi-crt-sc-action {
+  margin: 0;
+}
+
+.boomi-crt-sc-combo,
+.boomi-crt-sc-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.boomi-crt-sc-or,
+.boomi-crt-sc-plus {
+  color: var(--crt-sc-soft);
+  font-size: 0.75rem;
+}
+
+.boomi-crt-sc-key kbd {
+  display: inline-block;
+  min-width: 1.5rem;
+  padding: 0.0625rem 0.375rem;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 0.25rem;
+  background-color: color-mix(in srgb, currentColor 7%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, currentColor 22%, transparent);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.boomi-crt-sc-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+/* ---------- Save bar, split Save button, shared-table confirmation ---------- */
+
+/* What Save will do ("3 rows changed"), on the left; Cancel and Save stay on the right as before. */
+.boomi-crt-savebar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.boomi-crt-savebar .boomi-update-actions {
+  margin-top: 0;
+}
+
+.boomi-crt-summary {
+  font-size: 0.875rem;
+  color: var(--crt-muted);
+}
+
+.boomi-crt-summary--dirty {
+  color: var(--crt-fg);
+  font-weight: 600;
+}
+
+/* A save runs: nothing under the overlay can be clicked or tabbed to. */
+.boomi-crt-busy {
+  position: relative;
+}
+
+.boomi-crt-busy-overlay {
+  align-items: center;
+  padding-top: 0;
+}
+
+/* A small card in the middle of the dimmed backdrop. */
+.boomi-crt-busy-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 16rem;
+  max-width: 90%;
+  padding: 1.25rem 1.75rem;
+  border-radius: 0.75rem;
+  background-color: var(--boomi-modal-bg, var(--crt-surface));
+  color: var(--boomi-modal-fg, var(--crt-fg));
+  box-shadow: var(--boomi-modal-shadow, 0 4px 20px rgba(0, 0, 0, 0.25));
+}
+
+.boomi-crt-busy-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.boomi-crt-busy-text strong {
+  font-size: 1.125rem;
+}
+
+.boomi-crt-busy-text span {
+  font-size: 0.8125rem;
+  color: var(--crt-muted);
+}
+
+.boomi-crt-spin--large {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-width: 3px;
+  flex: none;
+}
+
+/* The split button: the main part and the arrow share one outline. */
+.boomi-crt-split {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.boomi-crt-split .boomi-crt-split-main {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.boomi-crt-split-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.625rem;
+  border: 1px solid var(--boomi-btn-primary-border);
+  border-left-color: color-mix(in srgb, var(--boomi-btn-primary-fg) 35%, transparent);
+  border-top-right-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.boomi-crt-split-arrow:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boomi-crt-split-arrow:focus-visible {
+  outline: 2px solid var(--boomi-btn-primary-border);
+  outline-offset: 2px;
+}
+
+.boomi-crt-split-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.25rem);
+  z-index: 40;
+  min-width: max-content;
+  padding: 0.25rem;
+  border: 1px solid var(--crt-outer-border);
+  border-radius: 0.375rem;
+  background-color: var(--crt-surface);
+  color: var(--crt-fg);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.boomi-crt-split-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.boomi-crt-split-item:hover,
+.boomi-crt-split-item:focus-visible {
+  background-color: color-mix(in srgb, var(--crt-muted) 14%, transparent);
+  outline: none;
+}
+
+/* The confirmation lists the processes that share the table. */
+.boomi-crt-scope-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 50vh;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.boomi-crt-scope-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--crt-outer-border);
+  border-radius: 0.375rem;
+}
+
+.boomi-crt-scope-item input[type='checkbox'] {
+  margin-top: 0.25rem;
+  accent-color: var(--crt-focus);
+}
+
+.boomi-crt-scope-item label,
+.boomi-crt-scope-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.boomi-crt-scope-item label {
+  cursor: pointer;
+}
+
+.boomi-crt-scope-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.boomi-crt-scope-text {
+  font-size: 0.8125rem;
+  color: var(--crt-muted);
+  overflow-wrap: anywhere;
+}
+
+.boomi-crt-scope-item--failed {
+  border-color: var(--crt-danger);
+}
+
+.boomi-crt-scope-item--failed .boomi-crt-scope-text,
+.boomi-crt-scope-item--failed .boomi-crt-scope-state {
+  color: var(--crt-danger);
+}
+
+.boomi-crt-scope-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  font-weight: 700;
+}
+
+.boomi-crt-scope-item--saved .boomi-crt-scope-state {
+  color: var(--crt-new);
+}
+
+.boomi-crt-scope-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* A small spinner for one line of progress (the shared Spinner is a full overlay). */
+.boomi-crt-spin {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: boomi-crt-spin 0.8s linear infinite;
+}
+
+@keyframes boomi-crt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boomi-crt-spin {
+    animation-duration: 2.4s;
+  }
+}
+
+/* ---------- History lines ---------- */
+
+/* One quiet line under the info row: when the open table was last saved, and by whom. */
+.boomi-crt-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--crt-muted);
+}
+
+/* The lines belong to the row above, so the row's own gap shrinks while they show. */
+.boomi-crt-info:has(+ .boomi-crt-history) {
+  margin-bottom: 0.25rem;
+}
+
+.boomi-crt-history-line {
+  overflow-wrap: anywhere;
+}

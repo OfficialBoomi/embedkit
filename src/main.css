@@ -3012,6 +3012,23 @@
     --boomi-scrollbar-thumb-active: color-mix(in srgb, var(--boomi-accent, #6366f1) 40%, transparent);
     --boomi-scrollbar-corner:       transparent; /* avoids hard square in corners */
 
+    /* Cross reference table editor colours (the grid, its toolbar and the find bar) */
+    --boomi-crt-fg: var(--boomi-page-fg-color);
+    --boomi-crt-muted: var(--boomi-muted);
+    --boomi-crt-surface: var(--boomi-card-bg);
+    --boomi-crt-outer-border: var(--boomi-card-border);
+    --boomi-crt-cell-border: var(--boomi-table-header-border);
+    --boomi-crt-header-bg: var(--boomi-table-header-bg);
+    --boomi-crt-header-fg: var(--boomi-table-header-fg);
+    --boomi-crt-row-odd-bg: var(--boomi-table-row-odd-bg);
+    --boomi-crt-row-even-bg: var(--boomi-table-row-even-bg); /* base stripe: the grid tints it a little toward --boomi-crt-muted */
+    --boomi-crt-focus: var(--boomi-input-border-focus);
+    --boomi-crt-tp-accent: var(--boomi-crt-focus);
+    --boomi-crt-danger: var(--boomi-danger-fg);
+    --boomi-crt-new: var(--boomi-success-bg, #16a34a); /* inserted rows; same default as the success button */
+    --boomi-crt-match: var(--boomi-chip-warning-border);
+    --boomi-crt-match-edge: var(--boomi-chip-warning-fg);
+
   }
 
   /* Dark theme */
@@ -3410,6 +3427,23 @@
     --boomi-scrollbar-thumb:        color-mix(in srgb, var(--boomi-page-fg-color, #ffffff) 18%, transparent);
     --boomi-scrollbar-thumb-hover:  color-mix(in srgb, var(--boomi-accent, #818cf8) 32%, transparent);
     --boomi-scrollbar-thumb-active: color-mix(in srgb, var(--boomi-accent, #818cf8) 45%, transparent);
+
+    /* Cross reference table editor colours (the grid, its toolbar and the find bar) */
+    --boomi-crt-fg: var(--boomi-page-fg-color);
+    --boomi-crt-muted: var(--boomi-muted);
+    --boomi-crt-surface: var(--boomi-card-bg);
+    --boomi-crt-outer-border: var(--boomi-card-border);
+    --boomi-crt-cell-border: var(--boomi-table-header-border);
+    --boomi-crt-header-bg: var(--boomi-table-header-bg);
+    --boomi-crt-header-fg: var(--boomi-table-header-fg);
+    --boomi-crt-row-odd-bg: var(--boomi-table-row-odd-bg);
+    --boomi-crt-row-even-bg: var(--boomi-table-row-even-bg);
+    --boomi-crt-focus: var(--boomi-input-border-focus);
+    --boomi-crt-tp-accent: var(--boomi-crt-focus);
+    --boomi-crt-danger: var(--boomi-danger-fg);
+    --boomi-crt-new: var(--boomi-success-bg, #16a34a);
+    --boomi-crt-match: var(--boomi-chip-warning-border);
+    --boomi-crt-match-edge: var(--boomi-chip-warning-fg);
   }
 
   /* Boomi theme */
@@ -3780,6 +3814,23 @@
     --boomi-scrollbar-thumb:        color-mix(in srgb, var(--boomi-accent, #0284c7) 22%, transparent);
     --boomi-scrollbar-thumb-hover:  color-mix(in srgb, var(--boomi-accent, #0284c7) 36%, transparent);
     --boomi-scrollbar-thumb-active: color-mix(in srgb, var(--boomi-accent, #0284c7) 48%, transparent);
+
+    /* Cross reference table editor colours (the grid, its toolbar and the find bar) */
+    --boomi-crt-fg: var(--boomi-page-fg-color);
+    --boomi-crt-muted: var(--boomi-muted);
+    --boomi-crt-surface: var(--boomi-card-bg);
+    --boomi-crt-outer-border: var(--boomi-card-border);
+    --boomi-crt-cell-border: var(--boomi-table-header-border);
+    --boomi-crt-header-bg: var(--boomi-table-header-bg);
+    --boomi-crt-header-fg: var(--boomi-table-header-fg);
+    --boomi-crt-row-odd-bg: var(--boomi-table-row-odd-bg);
+    --boomi-crt-row-even-bg: var(--boomi-table-row-even-bg);
+    --boomi-crt-focus: var(--boomi-input-border-focus);
+    --boomi-crt-tp-accent: var(--boomi-crt-focus);
+    --boomi-crt-danger: var(--boomi-danger-fg);
+    --boomi-crt-new: var(--boomi-success-bg, #16a34a);
+    --boomi-crt-match: var(--boomi-chip-warning-border);
+    --boomi-crt-match-edge: var(--boomi-chip-warning-fg);
   }
 }
   .boomi-agent-thread-separator {
@@ -3946,6 +3997,8 @@
   margin-left: calc(-1 * var(--boomi-connector-icon-overlap, 0.625rem));
 }
 .boomi-connector-stack > .boomi-connector-icon:hover { transform: translateY(-2px); z-index: 5; }
+/* Cards of the 1.7 UI (the Integrations list at uiVersion 1.7, and every Add Integration catalog card) keep their icons still. Earlier UI versions keep the lift. */
+.boomi-integration-card--ui-1-7 .boomi-connector-stack > .boomi-connector-icon:hover { transform: none; z-index: auto; }
 @media (prefers-reduced-motion: reduce) {
   .boomi-connector-stack > .boomi-connector-icon { transition: none; }
   .boomi-connector-stack > .boomi-connector-icon:hover { transform: none; }
@@ -4019,7 +4072,7 @@
 }
 .boomi-integration-card__header-extra { flex: 0 0 auto; padding-right: var(--boomi-integration-card-padding-x, 1rem); }
 /* Title row: the actions menu sits at its right when the type row is hidden (1.7 UI). */
-.boomi-integration-card__title-row { display: flex; align-items: center; gap: var(--boomi-integration-card-title-row-gap, 0.5rem); min-width: 0; }
+.boomi-integration-card__title-row { display: flex; align-items: start; gap: var(--boomi-integration-card-title-row-gap, 0.5rem); min-width: 0; }
 .boomi-integration-card__title-row > .boomi-integration-card__title { flex: 1 1 auto; min-width: 0; }
 .boomi-integration-card__menu { flex: 0 0 auto; display: flex; align-items: center; }
 /* 1.7 UI: the Edit / Run Agent button fills the button row (beside the environment chip, if any). */
@@ -4056,15 +4109,16 @@
   outline: 2px solid var(--boomi-integration-card-focus-ring, var(--boomi-accent, #6366f1));
   outline-offset: 2px;
 }
-.boomi-integration-card__body { display: flex; gap: 1rem; padding: var(--boomi-integration-card-body-padding, 1rem); }
-.boomi-integration-card__content { display: flex; flex-direction: column; width: 100%; min-width: 0; }
+.boomi-integration-card__body { display: flex; gap: 1rem; padding: var(--boomi-integration-card-body-padding, 1rem); height: stretch; height: -webkit-fill-available; }
+.boomi-integration-card__content { display: flex; flex-direction: column; width: 100%; min-width: 0; justify-content: space-between; }
 .boomi-integration-card__title {
   margin: 0; padding-right: 0.5rem;
   color: var(--boomi-integration-card-title-fg, inherit);
   font-size: var(--boomi-integration-card-title-font-size, 1.25rem);
   font-weight: var(--boomi-integration-card-title-font-weight, 600);
   line-height: var(--boomi-integration-card-title-line-height, 1.75rem);
-  overflow-wrap: break-word; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  overflow-wrap: break-word; overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; white-space: normal;
 }
 .boomi-integration-card__desc {
   margin: 0.25rem 0 0 0;

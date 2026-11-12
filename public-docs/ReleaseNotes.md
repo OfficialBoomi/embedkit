@@ -6,12 +6,58 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.8.1-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.9.0-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
 
 ### All Releases
+
+<details open>
+  <summary><strong>v1.9.0</strong>: A Cross Reference Tables screen where your users view an integration's cross reference tables and edit their own copy, off until you turn it on, and UI fixes and improvements for every embed, such as long card titles wrapping to three lines</summary>
+
+  **Upgrade notes**
+  - **The Cross Reference Tables feature changes nothing until you turn it on.** The screen is behind `components.<componentKey>.crossReferenceTables.enabled`, which is off by default. A host that does not set it gets no new menu item, no new wizard step and no new request from this feature.
+  - **The UI fixes and improvements below apply to every embed**, with or without the flag. If your own CSS targets the integration cards, read the Custom CSS note in that list.
+  - **Needs the matching SDK and server.** Publish `@boomi/embedkit-sdk` first, then deploy embedkit-server, then upgrade EmbedKit. With the screen on and an older server, it says "This server does not support cross reference tables yet. Update the embedkit server and try again." and the "Last saved" line never appears.
+  - **Optional server settings:** `CRT_SAVE_BODY_LIMIT_MB` (default `8`), `CRT_SAVE_LOCK_WAIT_SECONDS` (default `10`), `CRT_SAVE_LOCK_TTL_SECONDS` (default `120`), `CRT_HISTORY_CACHE_SECONDS` (default `60`), `CRT_DEFINITION_CACHE_MB` (default `64`) and `CRT_DEFINITION_FRESH_SECONDS` (default `30`). See [Server settings](./IntegrationsGuide.md#server-settings).
+  - **Two new events.** If you subscribe to every event with `'*'`, you also receive `crossReference.table.saved` and `crossReference.table.reset` once users save, and a `switch` over `event.type` that must cover every case needs two new branches. See [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks).
+  - **Publishers:** the tables your customers can edit are the ones ticked as overrideable on the top-level published process. See [Where tables come from](./IntegrationsGuide.md#where-tables-come-from).
+  - The CDN embed does not include this screen.
+
+  **UI fixes and improvements** (apply to every embed, not opt-in)
+  - ✅ **Card titles:** a long title on an integration card now wraps to up to three lines, then ends with an ellipsis. This covers the card view of the Integrations list and the Add Integration catalog cards; the table view is unchanged.
+  - ✅ **Card layout:** on the Integrations list cards, the title and description now sit together at the top and the connector icons at the bottom, level across a row. The catalog cards use the same classes, so they pick up the title wrap and spacing too.
+  - ✅ **Actions menu:** with the 1.7 UI and the type row off (the default there), the ⋮ menu lines up with the first line of the title.
+  - ✅ **Small visual fixes** to the integration cards and their icons.
+  - ✅ **Custom CSS:** class names are unchanged, but the title row and description now sit inside one extra block, so a selector that expects them as direct children of `.boomi-integration-card__content` (for example one written with `>`) no longer matches on the Integrations list cards.
+
+  **Fixes** (needs the matching SDK and server)
+  - 🐛 **Single-install connections and process properties:** For a single-install integration, **Edit Connections** (and the connections step of the setup wizard) listed every connection and every process property in the environment, including those that belong to other integrations installed there. It now lists only those of the integration's own processes, the same as a multi-install integration. Saving changes only the values shown. If you relied on seeing other integrations' values on this screen, check it after upgrading.
+
+  **Fixes** (UI only, no server or SDK change needed)
+  - 🐛 **Edit Schedule:** the full-screen loading cover no longer stays on after a Save that fails (the schedules could not be loaded, there is no environment, or the update was refused), so the error under it can be read.
+  - 🐛 **A confirmation after Save:** after a successful Save in **Edit Schedule** the user stays on the screen and sees "Schedule saved." (a Save with nothing to send says "No changes to save."). After a successful Save in **Edit Connections**, the Integrations list opens with its existing "Integration updated successfully!" message. Before, both jumped back to the list and said nothing. Cancel and a failed Save show no message. **Edit Maps** (which saves each change as it is made) and the setup wizard are unchanged.
+  - 🐛 **Edit Schedule load error:** the message now names the environment (its name and id). When the platform has no runtime attached to the environment, it says so: "No runtime is attached to environment ... Attach one in Boomi." Any other failure keeps its reason, with the environment in front.
+
+  **New** (behind `crossReferenceTables.enabled`)
+  - 🆕 **Cross Reference Tables screen:** Pick a process and a table, see the publisher's default rows, press **Override** and edit your own copy in a grid that works like a spreadsheet: arrow keys, Enter to edit, copy, cut and paste, insert, duplicate, move and delete rows, undo and redo, find and replace, full screen, and a **Keyboard shortcuts** window from the help icon. The headers and the match type (exact, wildcard or regex) come from the publisher and cannot be changed. A table has up to 20 columns and 10,000 rows. **Reset to defaults** puts the publisher's rows back once the user saves. Blank and duplicate keys show as warning chips that jump to the next flagged row.
+  - 🆕 **Three entry points:** An **Edit Cross Reference Tables** item in the integration's ⋮ menu; a **Cross Reference Tables** step in the setup wizard, between Map Fields and Set Schedule / Run (shown for every integration while the feature is on; a pack without editable tables says "No editable cross reference tables"); and **Open Cross Reference Table** in the menu of a Cross Ref Lookup card on Map Fields, which opens the screen with that table selected (only for lookups that name their table directly).
+  - 🆕 **Saving:** **Save** writes the whole open table for the open process and reads it back. A table that other processes of the same integration also use gets a split **Save** button, **Save to this process** and an arrow with **Save to other processes that share this table...**, which opens a confirmation listing each other process with what will happen there, then saves them one after another with a result for each and a retry for the failures a second try can fix (a table someone else changed says to reload it instead; nothing is rolled back). Restoring defaults works the same way. If someone changed the table after it was loaded, a prompt offers **Overwrite**, **Reload table** or **Keep editing**. A table too large for the server is refused before it is sent. While a save runs, a small wait window covers the whole screen. For a single-install integration the processes share one copy of a table, so there is no "Save to other processes" item and a save in one process updates the others on screen.
+  - 🆕 **In the setup wizard:** **Next**, **Back** and **Cancel** ask first when a table has unsaved edits (**Discard and continue** or **Keep editing**). **Next** does not save by itself.
+  - 🆕 **A "Last saved" line:** Under the chips, one line such as `Last saved by <email> on <date>` (or `Defaults restored ...`), built from the plugin's own record of saves and the last save Boomi recorded for the environment. Boomi records saves per environment, not per table, and the user it names is the account the server uses to talk to Boomi. Naming a user needs the Boomi right to view audit logs. Nothing is shown when the server cannot say. `showHistory: false` hides it and makes no request for it.
+  - 🆕 **Two new events:** `crossReference.table.saved` (`{ integrationPackInstanceId, environmentId, processId, tableId, rowCount, changedRowCount? }`, once for each process saved) and `crossReference.table.reset` (`{ integrationPackInstanceId, environmentId, processId, tableId }`, once for each process restored). They carry ids and counts, never cell values.
+  - 🆕 **Your own dialogs:** The confirmations for leaving with unsaved edits, **Reset to defaults**, deleting several rows and the wizard's unsaved edits use the standard `confirm` dialog, so a `confirm` handler covers them (`source.componentName` is `CrossReferenceTables`). The wait window, the conflict prompt and the shared-table confirmation are built in. See [Cross reference table confirmations](./ConfigurationReference.md#cross-reference-table-confirmations).
+
+  **Opt-in** (nothing changes unless you configure it)
+  - 🆕 **Options under `crossReferenceTables`:** `enabled` (default `false`), `menuLabel` (default "Edit Cross Reference Tables"), `title` (default "Cross Reference Tables"), `unavailableTables` (`'disabled'` by default, or `'hidden'`: what to do with a table that cannot be edited here), `wizardStep` (default `true` when enabled; `false` removes the wizard step) and `showHistory` (default `true`). See [Cross Reference Tables](./ConfigurationReference.md#cross-reference-tables-crossreferencetables).
+  - 🆕 **Cross Reference Tables colors:** new `--boomi-crt-*` tokens style the grid, its toolbar, the key warnings and the find matches. Each falls back to an existing theme token, so without them the screen follows your theme. See [Cross Reference Tables tokens](./ConfigurationReference.md#cross-reference-tables).
+
+  **Docs**
+  - [Integrations Guide](./IntegrationsGuide.md): new section 10, Cross Reference Tables. The Upgrade checklist is now section 11.
+  - [Configuration Reference](./ConfigurationReference.md): the `crossReferenceTables` options, the two new events, the confirmations for dialog handlers and the `--boomi-crt-*` tokens.
+
+</details>
 
 <details open>
   <summary><strong>v1.8.1</strong>: Fixes the "Invalid or expired token" error after logging out and back in, with a friendlier session message you can customize, adds page size, position and styling options for the integrations list pagination, adds a Sort by menu with Created and Last viewed, remembers the page, filters and sort when going back to the integrations list, lets users delete every schedule of an integration, and fixes edits to Hour schedules not being saved</summary>

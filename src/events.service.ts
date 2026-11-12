@@ -32,8 +32,9 @@ import logger from './logger.service';
 
 /**
  * Known event types. Extend this union as new events are added. Namespaced
- * by area (`integration.*`, `connection.*`, `map.*`, `schedules.*`, `ai.*`,
- * `agent.*`, `auth.*`) so future areas don't collide with each other or with `feedback`.
+ * by area (`integration.*`, `connection.*`, `map.*`, `schedules.*`,
+ * `crossReference.*`, `ai.*`, `agent.*`, `auth.*`) so future areas don't collide
+ * with each other or with `feedback`.
  */
 export type EmbedKitEventType =
   | 'feedback'
@@ -47,6 +48,8 @@ export type EmbedKitEventType =
   | 'map.extensions.updated'
   | 'map.browse.executed'
   | 'schedules.updated'
+  | 'crossReference.table.saved'
+  | 'crossReference.table.reset'
   | 'ai.transformation.generated'
   | 'agent.session.created'
   | 'agent.session.deleted'
@@ -169,6 +172,35 @@ export type SchedulesUpdatedEventData = {
   integrationPackInstanceId: string;
   environmentId?: string;
   scheduleCount: number;
+};
+
+/**
+ * Payload for `crossReference.table.saved`: a user saved their own rows of one cross reference table
+ * in one process. Emitted once per process saved. Reports WHICH table and HOW MANY rows, never the
+ * cell values, which are the customer's data.
+ */
+export type CrossReferenceTableSavedEventData = {
+  integrationPackInstanceId: string;
+  environmentId: string;
+  /** The installed process whose copy of the table was saved */
+  processId: string;
+  tableId: string;
+  /** Rows in the table after the save */
+  rowCount: number;
+  /** Rows added, edited or removed (a reorder is not counted). Sent only for the process that was being edited, not for the other processes of a shared save */
+  changedRowCount?: number;
+};
+
+/**
+ * Payload for `crossReference.table.reset`: a user put one cross reference table of one process
+ * back to the publisher's default values. Emitted once per process reset.
+ */
+export type CrossReferenceTableResetEventData = {
+  integrationPackInstanceId: string;
+  environmentId: string;
+  /** The installed process whose copy of the table was reset */
+  processId: string;
+  tableId: string;
 };
 
 /** Payload for `ai.transformation.generated`. */

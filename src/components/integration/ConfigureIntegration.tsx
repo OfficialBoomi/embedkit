@@ -15,6 +15,7 @@
 import { 
   useState, 
   useRef, 
+  useMemo,
   useEffect} 
   from 'react';
 import { usePlugin } from '../../context/pluginContext';
@@ -24,15 +25,17 @@ import Page from '../core/Page';
 import ToastNotification from '../ui/ToastNotification';
 import UpdateMaps from './UpdateMaps';
 import UpdateConnections, { UpdateConnectionsRef } from './UpdateConnections';
+import UpdateCrossReferences, { UpdateCrossReferencesRef } from './UpdateCrossReferences';
 import UpdateSchedules, { UpdateScheduleRef } from './UpdateSchedules';
 import Wizard from '../ui/Wizard';
 import AjaxLoader from '../ui/AjaxLoader';
 import { useEnvironmentExtensionsService } from '../../service/environmentExtensions.service';
 import { useMapExtensionsService } from '../../service/mapExtensions.service';
 import { BrowseSessionStore } from '../../utils/browseSessionStore';
+import type { InitialRequest } from '../../utils/crt/crtProcesses';
 import logger from '../../logger.service';
 
-type WizardStep = 'connections' | 'maps' | 'schedule';
+type WizardStep = 'connections' | 'maps' | 'crossReferences' | 'schedule';
 import { emitEmbedKitEvent } from '../../events.service';
 
 /**
@@ -66,7 +69,7 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
   const { boomiConfig, setPageIsLoading, renderComponent } = usePlugin();
   const [currentStep, setCurrentStep] = useState(0);
   // Steps with something to configure; null while checking. Schedule is always last.
-  const [steps, setSteps] = useState<WizardStep[] | null>(null);
+  const [checkedSteps, setCheckedSteps] = useState<WizardStep[] | null>(null);
   const { fetchEnvironmentExtensions } = useEnvironmentExtensionsService();
   const { getMapExtensions } = useMapExtensionsService();
   const fetchExtRef = useRef(fetchEnvironmentExtensions);
@@ -92,13 +95,25 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
       if (ext.status === 'rejected') logger.warn('Wizard: connection check failed; keeping the step', ext.reason);
       if (maps.status === 'rejected') logger.warn('Wizard: map check failed; keeping the step', maps.reason);
       if (cancelled) return;
-      setSteps([...(hasConnections ? ['connections' as const] : []), ...(hasMaps ? ['maps' as const] : []), 'schedule']);
+      setCheckedSteps([...(hasConnections ? ['connections' as const] : []), ...(hasMaps ? ['maps' as const] : []), 'schedule']);
       setCurrentStep(0);
     })();
     return () => { cancelled = true; };
   }, [integration.id, integration.environmentId, integration.installationType]);
+  // Cross reference tables step: only when the feature is on, and it stays even for a pack with no tables.
+  const crtConfig = boomiConfig?.components?.[componentKey]?.crossReferenceTables;
+  const showCrtStep = crtConfig?.enabled === true && crtConfig?.wizardStep !== false;
+  // It goes after the checked steps and before Set Schedule / Run (always last).
+  const steps = useMemo<WizardStep[] | null>(
+    () => (checkedSteps && showCrtStep ? [...checkedSteps.slice(0, -1), 'crossReferences', 'schedule'] : checkedSteps),
+    [checkedSteps, showCrtStep]
+  );
   const step: WizardStep = steps?.[currentStep] ?? 'schedule';
   const updateConnectionsRef = useRef<UpdateConnectionsRef>(null);
+  const crossReferencesRef = useRef<UpdateCrossReferencesRef>(null);
+  // The table a Cross Reference Lookup card on the maps step asked to open. It is handed to the step while the step
+  // is shown and cleared when the step is left, so asking for the same table again later is a new request.
+  const [crtRequest, setCrtRequest] = useState<InitialRequest | null>(null);
   const updateScheduleRef = useRef<UpdateScheduleRef>(null);
   const [showUpdateToast, setShowUpdateToast] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('Integration updated successfully!');
@@ -108,6 +123,18 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
   } = useRunAllProcesses();
   const connStepKey = `${integration.id}:${step === 'connections' ? 'active' : 'hidden'}`;
   const schedStepKey = `${integration.id}:${step === 'schedule' ? 'active' : 'hidden'}`;
+
+  // Moves to the cross reference step with the table open. Leaving the maps step needs no question: map edits are saved
+  // as they are made. Without the step there is nothing to move to (the maps step is then given no callback).
+  const openCrossReference = (target: { tableId: string; processId?: string }) => {
+    const index = steps?.indexOf('crossReferences') ?? -1;
+    if (index < 0) return;
+    setCrtRequest(target);
+    setCurrentStep(index);
+  };
+  useEffect(() => {
+    if (step !== 'crossReferences') setCrtRequest(null);
+  }, [step]);
 
   const pageFor: Record<WizardStep, React.ReactElement> = {
     connections: (
@@ -129,6 +156,19 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
         setIsLoading={setPageIsLoading}
         active={step === 'maps'}
         wizard={true}
+        onOpenCrossReference={showCrtStep ? openCrossReference : undefined}
+      />
+    ),
+    crossReferences: (
+      <UpdateCrossReferences
+        componentKey={componentKey}
+        key={`update-cross-references-${integration.id}`}
+        ref={crossReferencesRef}
+        integration={integration}
+        active={step === 'crossReferences'}
+        wizard={true}
+        initialTableId={crtRequest?.tableId}
+        initialProcessId={crtRequest?.processId}
       />
     ),
     schedule: (
@@ -146,6 +186,7 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
   const labelFor: Record<WizardStep, string> = {
     connections: 'Make Connections',
     maps: 'Map Fields',
+    crossReferences: crtConfig?.title || 'Cross Reference Tables',
     schedule: 'Set Schedule / Run',
   };
   const wizardPages = (steps ?? []).map((s) => pageFor[s]);
@@ -170,6 +211,13 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
         break;
       }
 
+      case 'crossReferences': {
+        // Nothing is saved here (the screen's own Save buttons do that): only unsaved edits are asked about.
+        if ((await crossReferencesRef.current?.confirmLeave()) === false) return;
+        setCurrentStep((prev) => prev + 1);
+        break;
+      }
+
       case 'schedule': {
         const isValid = await updateScheduleRef.current?.submit?.();
         if (!isValid) return;
@@ -188,7 +236,9 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
     }
   };
 
-  const handleCancel = () => {
+  // Back and Cancel (the same button), and the breadcrumb below, ask the cross reference tables step first.
+  const handleCancel = async () => {
+    if (step === 'crossReferences' && (await crossReferencesRef.current?.confirmLeave()) === false) return;
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
     } else {
@@ -197,6 +247,11 @@ const ConfigureIntegration: React.FC<ConfigureIntegrationProps> = ({
   };
 
 
+
+  const handleBreadcrumb = async () => {
+    if ((await crossReferencesRef.current?.confirmLeave()) === false) return;
+    onBack();
+  };
 
   const handleRunNow = async () => {
     const recordUrls = await runAllProcesses(integration.environmentId || '', integration.id || '');
@@ -267,7 +322,7 @@ return (
       description={integration.integrationPackDescription || ''}
       bodyContent={bodyContent}
       levelOne="My Integrations"
-      callbackOne={onBack}
+      callbackOne={step === 'crossReferences' ? handleBreadcrumb : onBack}
     />
   </>
 );

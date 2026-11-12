@@ -79,8 +79,8 @@ export const useFetchEnvironmentExtensions = ({}: {} = {}) => {
         if (!environmentId && !(Array.isArray(environments) && environments.length)) {
           throw new Error('Code [1003] - environmentId or environments[] required');
         }
-        // Single-install packs keep their extensions at the environment level; the
-        // server queries them without an extension group.
+        // The flag is still sent so an older server behaves as before. The current SDK
+        // scopes the query to the pack's own processes for single- and multi-install alike.
         const single = isSingleInstall ?? false;
 
         setIsLoading(true);

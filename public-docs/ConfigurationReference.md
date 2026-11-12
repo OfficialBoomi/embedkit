@@ -4,6 +4,8 @@ This document is the complete reference for all user-facing configuration option
 
 > **New in 1.7:** the integrations list, Add Integration catalog, setup wizard, environment scope and their flags are explained end to end in the [Integrations Guide](./IntegrationsGuide.md).
 
+> **New in 1.9.0:** an opt-in screen to view and edit an integration's cross reference tables, off until you set `crossReferenceTables.enabled` (options: [Cross Reference Tables](#cross-reference-tables-crossreferencetables); how it works: [Integrations Guide](./IntegrationsGuide.md#10-cross-reference-tables)). The same release also brings UI fixes and improvements to the integration cards for every embed, with no opt-in: see the [Release Notes](./ReleaseNotes.md).
+
 ---
 
 ## Table of Contents
@@ -546,6 +548,42 @@ components: {
 
 > **Default mappings arrive at install.** Since `@boomi/embedkit-sdk` 1.4.0 the server copies the publisher's default mappings and functions into a new instance's map extensions during install, so **Edit Map(s)** opens with them already drawn. The result is reported through the `map.defaults.seeded` event.
 
+### Cross Reference Tables (`crossReferenceTables`)
+
+Options for the **Cross Reference Tables** screen, under `components[componentKey].crossReferenceTables`. It shows the publisher's default rows of an installed integration's cross reference tables and lets your users edit their own copy. It is **off by default**: unless `enabled` is `true`, nothing changes for your users. How it works (saving, shared tables, the "Last saved" line) is in the [Integrations Guide](./IntegrationsGuide.md#10-cross-reference-tables).
+
+```js
+components: {
+  myIntegrations: {
+    renderType: 'integration',
+    crossReferenceTables: {
+      enabled: true,                              // off by default
+      menuLabel: 'Edit Cross Reference Tables',   // default
+      title: 'Cross Reference Tables',            // default
+      unavailableTables: 'disabled',              // default; 'hidden' leaves those tables out
+      wizardStep: true,                           // default when enabled
+      showHistory: true,                          // default
+    },
+  },
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enabled` | `boolean` | `false` | Turns the feature on (only `true` counts): the menu item on each integration, the **Cross Reference Tables** step in the Edit wizard (unless `wizardStep` is `false`) and **Open Cross Reference Table** in the menu of a Cross Ref Lookup card on Map Fields. |
+| `menuLabel` | `string` | `'Edit Cross Reference Tables'` | Text of the item in an integration's ⋮ menu, after **Edit Map(s)**. |
+| `title` | `string` | `'Cross Reference Tables'` | Title of the screen (followed by the integration's name) and name of the wizard step. An empty string uses the default. |
+| `unavailableTables` | `'disabled' \| 'hidden'` | `'disabled'` | What to do with a table that cannot be edited here (for example runtime specific, or a definition EmbedKit cannot read): `'disabled'` lists it greyed out with the reason, `'hidden'` leaves it out. Any other value acts as `'disabled'`. |
+| `wizardStep` | `boolean` | `true` (when `enabled`) | Only `false` removes the step from the Edit wizard. The menu item stays, and so does **Open Cross Reference Table** on **Edit Map(s)**, but the wizard's own Map Fields step no longer shows it, because it has no step to move to. |
+| `showHistory` | `boolean` | `true` | Only `false` hides the "Last saved" line and stops the screen from requesting it. |
+
+Things to know:
+
+- **Needs matching releases.** Publish the SDK first, then deploy the server, then upgrade EmbedKit. On an older server the screen says "This server does not support cross reference tables yet. Update the embedkit server and try again." The server's optional settings are under [Server settings](./IntegrationsGuide.md#server-settings).
+- **Which tables appear.** Only tables ticked as overrideable on the top-level published process. See [Where tables come from](./IntegrationsGuide.md#where-tables-come-from).
+- **Integration method only.** The CDN embed does not include this screen.
+- **Related.** The events are `crossReference.table.saved` and `crossReference.table.reset` (see [Events & Callbacks](#10-events--callbacks)), the confirmations go through your `confirm` [dialog handler](#cross-reference-table-confirmations), and the colors are the `--boomi-crt-*` [tokens](#cross-reference-tables).
+
 ### Add Integration Catalog (`form.addIntegration`)
 
 With [`uiVersion`](#ui-version-uiversion) `'1.7.0'` or higher, the Add Integration modal is a **catalog**: a search box over pack names, descriptions and connectors, a card or table view, and one card per eligible pack. Catalog cards use the same markup, width and title size as the main Integrations cards: the type on top when shown (**Integration** or **Single Install Integration**; `catalog.showType`), the pack name and description, a left-aligned stack of connector icons, a full-width "Installed in N environments" bar (when installed), and a full-width **Install** button (`catalog.installButton`). With the button off, clicking the card starts the install; the table view always shows the button. Installing opens the install step. The modal fits `--boomi-catalog-columns` cards across (default 3); on a narrower screen the cards shrink rather than drop a column, and on phones they stack. The environment list is the session's scoped list (see [Environment scope](#environment-scope-login-body-environments)); for **single-install** packs it also excludes environments that already hold the pack, preselects when exactly one remains, and disables install when none do.
@@ -742,6 +780,7 @@ RenderComponent({
 | `ExecutionHistory` | Integration execution log and history view. |
 | `UpdateConnections` | Connection credential configuration UI. |
 | `UpdateMaps` | Data mapping canvas UI. |
+| `UpdateCrossReferences` | Cross reference tables of one integration: the publisher's default rows and the customer's own copy. Takes `props.integration`. The Integrations list, the Edit wizard and Map Fields open it for you when [`crossReferenceTables.enabled`](#cross-reference-tables-crossreferencetables) is on. |
 | `UpdateSchedules` | Process schedule configuration UI. |
 
 ---
@@ -1555,6 +1594,30 @@ The search row above **Sources**, **Transformations** and **Targets** (`.boomi-m
 
 ---
 
+### Cross Reference Tables
+
+The [Cross Reference Tables](#cross-reference-tables-crossreferencetables) screen: the grid, its toolbar, the find row and the pickers. Each token falls back to the token named in the Default column, so the screen follows your theme until you set one. Class hooks start with `.boomi-crt-` (for example `.boomi-crt-screen`, `.boomi-crt-grid`, `.boomi-crt-chip`, `.boomi-crt-savebar`).
+
+| Token | Default | Description |
+|-------|---------|-------------|
+| `--boomi-crt-fg` | `--boomi-page-fg-color` | Text of the screen and the grid. |
+| `--boomi-crt-muted` | `--boomi-muted` | Secondary text, and the tint of the row stripes. |
+| `--boomi-crt-surface` | `--boomi-card-bg` | Background of the grid, the toolbar and the chips. |
+| `--boomi-crt-outer-border` | `--boomi-card-border` | Border around the grid and its panels. |
+| `--boomi-crt-cell-border` | `--boomi-table-header-border` | Lines between cells and rows. |
+| `--boomi-crt-header-bg` | `--boomi-table-header-bg` | Column headers and the corner cell. |
+| `--boomi-crt-header-fg` | `--boomi-table-header-fg` | Text of the column headers. |
+| `--boomi-crt-row-odd-bg` | `--boomi-table-row-odd-bg` | Odd rows. |
+| `--boomi-crt-row-even-bg` | `--boomi-table-row-even-bg` | Even rows (the grid tints it slightly toward `--boomi-crt-muted` for contrast). |
+| `--boomi-crt-focus` | `--boomi-input-border-focus` | Focus rings, toolbar button hover, the active column header and ticked rows. |
+| `--boomi-crt-tp-accent` | `--boomi-crt-focus` | The dot that marks a table or process with unsaved edits in the pickers. |
+| `--boomi-crt-danger` | `--boomi-danger-fg` | Blank and duplicate key warnings and invalid find input. |
+| `--boomi-crt-new` | `--boomi-success-bg` (`#16a34a` without it) | Rows inserted since the table was loaded, and the saved mark in the shared save window. |
+| `--boomi-crt-match` | `--boomi-chip-warning-border` | Background of find matches. |
+| `--boomi-crt-match-edge` | `--boomi-chip-warning-fg` | Outline of the current find match. |
+
+---
+
 ### Wizard / Stepper
 
 | Token | Description |
@@ -1791,7 +1854,7 @@ cssVars: {
 
 EmbedKit emits standardized, typed events for actions that happen inside the
 embed — response feedback, integration-pack lifecycle, connection and map
-edits, schedule changes, AI transformation generation, agent
+edits, schedule changes, cross reference table saves, AI transformation generation, agent
 sessions/messages, and the session ending or timing out. **EmbedKit never sends event data over the network** — your
 application subscribes and owns what happens next. This removes any security
 concern about where the data goes: there is no endpoint to protect, no key to
@@ -1808,7 +1871,7 @@ wrapper calling `BoomiPlugin` / `RenderComponent` / `DestroyPlugin` directly).
 > complete record of all platform activity.
 >
 > **Build coverage differs by event.** The integration-management events
-> (`integration.*`, `connection.*`, `map.*`, `schedules.*`, `ai.*`) are only
+> (`integration.*`, `connection.*`, `map.*`, `schedules.*`, `crossReference.*`, `ai.*`) are only
 > reachable from the **Integration method** (npm `@boomi/embedkit`) — the CDN
 > build only ever mounts `Agent` / `AgentTiles` / `AgentListLauncher`, so it
 > never fires them. The `agent.*` and `feedback` events fire in **both**
@@ -1858,6 +1921,8 @@ type EmbedKitEvent<T> = {
 | `map.function.converted` | A user chose **Edit** on a platform-defined function with `updateMaps.convertFunctionsToScript` on, and it was compiled to a script | `{ mapId, functionId, type, warnings: string[] }` |
 | `map.browse.executed` | A user resolves dynamic-browse candidates (re-authenticating a connector mid-mapping) | `{ integrationPackInstanceId, mapId, succeededCount, failedCount }` |
 | `schedules.updated` | A user saves process schedule changes. `scheduleCount` is `0` when every schedule was deleted. Not emitted when the integration had no schedule and none was added | `{ integrationPackInstanceId, environmentId?, scheduleCount }` |
+| `crossReference.table.saved` | A user saves their own rows of a cross reference table. Emitted once for each process saved (a shared save to three processes emits three). `rowCount` is the rows in the table after the save. `changedRowCount` counts rows added, edited or removed (reordering is not counted) and is present only for the process the user was editing, not the other processes of a shared save | `{ integrationPackInstanceId, environmentId, processId, tableId, rowCount, changedRowCount? }` |
+| `crossReference.table.reset` | A user saves a table after choosing **Reset to defaults**, so the publisher's default values apply again. Emitted once for each process restored | `{ integrationPackInstanceId, environmentId, processId, tableId }` |
 | `ai.transformation.generated` | A user generates a transformation script via AI | `{ integrationPackInstanceId?, functionId, prompt }` |
 | `agent.session.created` | A chat session is created — check `data.trigger` | `{ trigger: 'user' \| 'system', integrationPackId? }` |
 | `agent.session.deleted` | A user deletes a chat session | `{ trigger: 'user', integrationPackId? }` |
@@ -1888,6 +1953,12 @@ type EmbedKitEvent<T> = {
 > (API keys, passwords, OAuth tokens), and those never leave the SDK layer
 > into an event payload. Likewise `map.extensions.updated` reports counts and
 > names, not the full mapping/function data.
+
+> **Cell values never leave the table.** The two `crossReference.table.*`
+> events carry ids and counts, never cell values, which are your users' data.
+> The envelope's `source` carries `integrationPackInstanceId`,
+> `integrationPackId`, `environmentId` and `componentKey`. A `switch` over
+> `event.type` that must cover every case needs a branch for each new type.
 
 ### Subscribing
 
@@ -1983,7 +2054,7 @@ configuration.
 
 ## 11. Dialog Handlers
 
-Before it deletes an integration, runs every process of an integration, disconnects mappings, deletes a transformation or deletes an agent chat, EmbedKit asks "Are you sure?" with its own SweetAlert dialog. If your app already has a dialog component (for example Angular Material's `MatDialog`), register a **dialog handler** and EmbedKit calls your function instead. EmbedKit waits for the answer and continues only when your function returns `true`. The same system lets you replace the message EmbedKit shows when the session has ended or timed out (see [`sessionError`](#sessionerror)).
+Before it deletes an integration, runs every process of an integration, disconnects mappings, deletes a transformation or deletes an agent chat, EmbedKit asks "Are you sure?" with its own SweetAlert dialog. The [Cross Reference Tables](#cross-reference-tables-crossreferencetables) screen, when you turn it on, asks a few more confirmations with their own wording (see [Cross reference table confirmations](#cross-reference-table-confirmations)). If your app already has a dialog component (for example Angular Material's `MatDialog`), register a **dialog handler** and EmbedKit calls your function instead. EmbedKit waits for the answer and continues only when your function returns `true`. The same system lets you replace the message EmbedKit shows when the session has ended or timed out (see [`sessionError`](#sessionerror)).
 
 Handlers are opt-in. With no handler registered, nothing changes.
 
@@ -2075,7 +2146,22 @@ Every field except `timerMs` is always filled in, and `timerMs` is present only 
 | Delete a transformation | `Deleting this transformation cannot be undone and will remove all mappings associated with it.` | `Yes, Delete!` | `true` |
 | Delete an agent chat (also in the CDN embed) | `This action cannot be undone.` | `Yes, delete it!` | `true` |
 
-All of them use the title `Are you sure?`, the cancel label `No, cancel`, the intent `'warning'`, and are dismissible by outside click and Escape. EmbedKit sets `destructive` for each action itself. It does not depend on `dialogs.destructiveVariant`, which only styles the built-in dialog.
+All five use the title `Are you sure?`, the cancel label `No, cancel`, the intent `'warning'`, and are dismissible by outside click and Escape. EmbedKit sets `destructive` for each action itself. It does not depend on `dialogs.destructiveVariant`, which only styles the built-in dialog.
+
+#### Cross reference table confirmations
+
+The Cross Reference Tables screen uses the same `confirm` handler for four confirmations, each with its own title and button labels. `req.source.componentName` is `'CrossReferenceTables'` for all of them. Each has `destructive: true` and the intent `'warning'`, and is dismissible by outside click and Escape.
+
+| Action | `title` | `description` | `confirmLabel` | `cancelLabel` |
+|--------|---------|---------------|----------------|---------------|
+| Leave the screen (Cancel button or breadcrumb) while a table has unsaved edits | `Discard your changes?` | `One table has unsaved changes. Leaving now discards them.` (or `N tables have unsaved changes. ...`) | `Discard changes` | `Keep editing` |
+| Move on from the wizard step (Next, Back, Cancel or breadcrumb) while a table has unsaved edits | `You have unsaved changes` | `One table has unsaved changes. Discard and continue throws them away.` (or `N tables have unsaved changes. ...`) | `Discard and continue` | `Keep editing` |
+| **Reset to defaults** | `Reset to defaults?` | `The default values will show again. Your own rows stay in Boomi until you press Save.` when the table had rows of its own when it was loaded, otherwise `Your changes to this table will be discarded and the default values will show again.` | `Reset` | `Keep my values` |
+| Delete two or more rows | `Delete N rows?` | `The rows are removed from this table. Reset to defaults brings the original values back.` | `Delete` | `Keep rows` |
+
+Three more windows on this screen are built in and cannot be replaced by a handler: the small wait window that covers the screen while a save runs, the prompt shown when someone else changed the table (**Overwrite**, **Reload table** or **Keep editing**), and the confirmation for saving a shared table to other processes.
+
+Other messages follow the usual rules. The success toasts ("Table saved.", "Table saved in N processes." and "Default values restored.") go to your `toast` handler. If the session ends while this screen is open, your `sessionError` handler is called with `origin: 'maps'` (the same origin as Map Fields), and the `auth.session.ended` event carries that origin.
 
 ### `alert`
 

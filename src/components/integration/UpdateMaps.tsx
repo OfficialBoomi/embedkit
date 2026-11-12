@@ -72,6 +72,9 @@ import { classifyMapError, describeFailedCandidates } from '../../utils/mapError
  * @property {(updatedMaps: EnvironmentMapExtension[]) => void} [onMapsChange] - Optional callback invoked when the maps are updated.
  * @property {() => void} [onBack] - Optional callback invoked to navigate back.
  * @property {(val: boolean) => void} [setIsLoading] - Optional callback to set loading state externally.
+ * @property {(target: { tableId: string; processId?: string }) => void} [onOpenCrossReference] - Wizard only: called when a
+ * Cross Reference Lookup card asks to open its table, so the wizard can move to its cross reference step. Without it the
+ * wizard's maps step shows no such item. Standalone, the screen opens the cross reference table screen itself.
  */
 export interface UpdateMapsProps {
   componentKey: string
@@ -80,6 +83,7 @@ export interface UpdateMapsProps {
   integration: IntegrationPackInstance;
   onBack?: () => void;
   setIsLoading?: (val: boolean) => void;
+  onOpenCrossReference?: (target: { tableId: string; processId?: string }) => void;
 }
 
 const UpdateMaps: React.FC<UpdateMapsProps> = ({
@@ -88,7 +92,8 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
   wizard,
   integration,
   onBack,
-  setIsLoading
+  setIsLoading,
+  onOpenCrossReference
 }) => {
   const { boomiConfig, setPageIsLoading, renderComponent } = usePlugin();
   const { updateMapExtensions } = useUpdateMapExtensions();
@@ -182,8 +187,36 @@ const UpdateMaps: React.FC<UpdateMapsProps> = ({
   };
 
   const handleCancel = () => handleRenderHome(false);
+
+  // A lookup card can open its cross reference table when the feature is on. In the wizard that needs a step
+  // to move to (the wizard hands us the callback only when it has one); standalone the screen is opened here.
+  const crossReferencesOn = boomiConfig?.components?.[componentKey]?.crossReferenceTables?.enabled === true;
+  const canOpenCrossReference = crossReferencesOn && (wizard ? !!onOpenCrossReference : !!renderComponent);
+  const openCrossReference = (tableId: string) => {
+    // The process the open map belongs to: the installed process of a multi-install pack (an empty string for
+    // a single install), else the map's own process.
+    const processId = currentMap?.extensionGroupId || currentMap?.processId || undefined;
+    if (wizard) {
+      onOpenCrossReference?.({ tableId, processId });
+      return;
+    }
+    // Map edits are saved as they are made, so nothing is lost by leaving this screen.
+    setPageIsLoading?.(true);
+    renderComponent?.({
+      component: 'UpdateCrossReferences',
+      props: {
+        componentKey,
+        integration,
+        initialTableId: tableId,
+        initialProcessId: processId,
+        onBack: onBack ?? handleCancel,
+      },
+    });
+  };
   const handleSave = () => {
     setPageIsLoading?.(true);
+    // Each map change is saved as it is made, so this button only goes back to the list. The list is not asked to
+    // say "updated" (handleRenderHome does not pass it on): nothing was saved just now.
     handleRenderHome(true);
   };
 
@@ -706,6 +739,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
                 onTransformationUpdate={handleCanvasFunctionChange}
                 onDeleteTransformation={handleCanvasFunctionDelete}
                 onEditTransformation={openFunctionEditor}
+                onOpenCrossReference={canOpenCrossReference ? openCrossReference : undefined}
                 onAddTransformation={() => {
                   setEditFunction(null);
                   setEditName(`script_${Date.now()}`);
@@ -723,6 +757,7 @@ const handleCandidateSubmit = async (): Promise<boolean> => {
                 onTransformationUpdate={handleCanvasFunctionChange}
                 onDeleteTransformation={handleCanvasFunctionDelete}
                 onEditTransformation={openFunctionEditor}
+                onOpenCrossReference={canOpenCrossReference ? openCrossReference : undefined}
                 onAddTransformation={() => {
                   setEditFunction(null);
                   setEditName(`script_${Date.now()}`);

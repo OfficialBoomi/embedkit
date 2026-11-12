@@ -18,7 +18,8 @@ import {
   AiOutlineApartment,
   AiOutlineDelete,
   AiOutlineLineChart,
-  AiOutlineEdit
+  AiOutlineEdit,
+  AiOutlineTable
 } from 'react-icons/ai';
 import DropdownMenu from '../ui/DropdownMenu';
 import { IntegrationPackInstance } from '@boomi/embedkit-sdk';
@@ -39,6 +40,8 @@ import { Menu } from '@headlessui/react';
  * @property {() => void} onShowHistory - Called to show the integration's execution history.
  * @property {() => void} [onEdit] - When set, adds Edit as the first item (used when the card has no Edit button).
  * @property {string} [editLabel] - Text of that item (default "Edit").
+ * @property {() => void} [onEditCrossReferences] - When set, adds the cross reference tables item after Edit Map(s).
+ * @property {string} [crossReferencesLabel] - Text of that item (default "Edit Cross Reference Tables", also used when this is empty).
  */
 interface IntegrationActionsProps {
   integration: IntegrationPackInstance;
@@ -51,6 +54,8 @@ interface IntegrationActionsProps {
   onShowHistory: () => void;
   onEdit?: () => void;
   editLabel?: string;
+  onEditCrossReferences?: () => void;
+  crossReferencesLabel?: string;
 }
 
 const IntegrationActions: React.FC<IntegrationActionsProps> = ({
@@ -64,7 +69,11 @@ const IntegrationActions: React.FC<IntegrationActionsProps> = ({
   onShowHistory,
   onEdit,
   editLabel = 'Edit',
+  onEditCrossReferences,
+  crossReferencesLabel,
 }) => {
+  // A default parameter only covers undefined, so an empty label would give a blank menu item.
+  const crossLabel = crossReferencesLabel?.trim() || 'Edit Cross Reference Tables';
   return (
     <DropdownMenu>
       <>
@@ -104,6 +113,20 @@ const IntegrationActions: React.FC<IntegrationActionsProps> = ({
               >
                 <AiOutlineApartment className="boomi-menu-icon" />
                 Edit Map(s)
+              </button>
+            )}
+          </Menu.Item>
+        )}
+        {onEditCrossReferences && (
+          <Menu.Item>
+            {({ active }) => (
+              <button
+                onClick={onEditCrossReferences}
+                className="boomi-menu-item"
+                data-headlessui-state={active ? 'active' : undefined}
+              >
+                <AiOutlineTable className="boomi-menu-icon" />
+                {crossLabel}
               </button>
             )}
           </Menu.Item>
