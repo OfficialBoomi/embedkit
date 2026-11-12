@@ -14,30 +14,30 @@
 ### All Releases
 
 <details open>
-  <summary><strong>NEXT_VERSION</strong>: A Cross Reference Tables screen where your users view an integration's cross reference tables and edit their own copy, off until you turn it on, and an integration card layout change for every embed: long titles wrap to three lines</summary>
+  <summary><strong>NEXT_VERSION</strong>: A Cross Reference Tables screen where your users view an integration's cross reference tables and edit their own copy, off until you turn it on, and UI fixes and improvements for every embed, such as long card titles wrapping to three lines</summary>
 
   **Upgrade notes**
   - **The Cross Reference Tables feature changes nothing until you turn it on.** The screen is behind `components.<componentKey>.crossReferenceTables.enabled`, which is off by default. A host that does not set it gets no new menu item, no new wizard step and no new request from this feature.
-  - **The integration card changes below apply to every embed**, with or without the flag. If your own CSS targets the integration cards, check it against the "Changes for every embed" list below.
+  - **The UI fixes and improvements below apply to every embed**, with or without the flag. If your own CSS targets the integration cards, read the Custom CSS note in that list.
   - **Needs the matching SDK and server.** Publish `@boomi/embedkit-sdk` first, then deploy embedkit-server, then upgrade EmbedKit. With the screen on and an older server, it says "This server does not support cross reference tables yet. Update the embedkit server and try again." and the "Last saved" line never appears.
   - **Optional server settings:** `CRT_SAVE_BODY_LIMIT_MB` (default `8`), `CRT_SAVE_LOCK_WAIT_SECONDS` (default `10`), `CRT_SAVE_LOCK_TTL_SECONDS` (default `120`), `CRT_HISTORY_CACHE_SECONDS` (default `60`), `CRT_DEFINITION_CACHE_MB` (default `64`) and `CRT_DEFINITION_FRESH_SECONDS` (default `30`). See [Server settings](./IntegrationsGuide.md#server-settings).
   - **Two new events.** If you subscribe to every event with `'*'`, you also receive `crossReference.table.saved` and `crossReference.table.reset` once users save, and a `switch` over `event.type` that must cover every case needs two new branches. See [Events & Callbacks](./ConfigurationReference.md#10-events--callbacks).
   - **Publishers:** the tables your customers can edit are the ones ticked as overrideable on the top-level published process. See [Where tables come from](./IntegrationsGuide.md#where-tables-come-from).
   - The CDN embed does not include this screen.
 
-  **Changes for every embed** (no opt-in)
-  - ✅ **Long integration titles wrap:** On an integration card, a title that does not fit on one line now wraps to up to three lines and ends with an ellipsis after that. Before, it stayed on one line and ended with an ellipsis. This is the card view of the Integrations list and the cards of the Add Integration catalog; the table view is unchanged.
-  - ✅ **Card layout:** On the Integrations list cards, the title and the description now sit together in one block. The card body is set to fill the height of the card, and the card content is spread from top to bottom, so with connector icons shown the title and description stay at the top and the icons sit at the bottom of the card body, at the same level on cards in the same row. The Add Integration catalog cards use the same card classes, so they pick up the title wrap, the body height and the spacing too.
-  - ✅ **Actions menu beside the first line:** When the actions (⋮) menu sits in the title row (the 1.7 UI with the type row off, which is the default there), it now lines up with the first line of the title instead of the middle of it.
-  - ✅ **UI fixes and improvements:** A few small visual fixes and improvements to the integration cards and their icons.
-  - ✅ **Custom CSS:** The class names are unchanged. A selector that expects the title row or the description to be a direct child of `.boomi-integration-card__content` (for example one written with `>`) no longer matches on the Integrations list cards, because the two are now inside one extra block.
+  **UI fixes and improvements** (apply to every embed, not opt-in)
+  - ✅ **Card titles:** a long title on an integration card now wraps to up to three lines, then ends with an ellipsis. This covers the card view of the Integrations list and the Add Integration catalog cards; the table view is unchanged.
+  - ✅ **Card layout:** on the Integrations list cards, the title and description now sit together at the top and the connector icons at the bottom, level across a row. The catalog cards use the same classes, so they pick up the title wrap and spacing too.
+  - ✅ **Actions menu:** with the 1.7 UI and the type row off (the default there), the ⋮ menu lines up with the first line of the title.
+  - ✅ **Small visual fixes** to the integration cards and their icons.
+  - ✅ **Custom CSS:** class names are unchanged, but the title row and description now sit inside one extra block, so a selector that expects them as direct children of `.boomi-integration-card__content` (for example one written with `>`) no longer matches on the Integrations list cards.
 
   **Fixes** (needs the matching SDK and server)
   - 🐛 **Single-install connections and process properties:** For a single-install integration, **Edit Connections** (and the connections step of the setup wizard) listed every connection and every process property in the environment, including those that belong to other integrations installed there. It now lists only those of the integration's own processes, the same as a multi-install integration. Saving changes only the values shown. If you relied on seeing other integrations' values on this screen, check it after upgrading.
 
   **Fixes** (UI only, no server or SDK change needed)
   - 🐛 **Edit Schedule:** the full-screen loading cover no longer stays on after a Save that fails (the schedules could not be loaded, there is no environment, or the update was refused), so the error under it can be read.
-  - 🐛 **A confirmation after Save:** after a successful Save in **Edit Schedule**, the user now stays on the screen and sees a "Schedule saved." message (a Save with nothing to send says "No changes to save."). After a successful Save in **Edit Connections**, the Integrations list opens with its existing "Integration updated successfully!" message. Before, both screens jumped back to the list and said nothing. Cancel and a failed Save show no message. **Edit Maps** is unchanged: it saves each change as it is made, so its Save button only returns to the list. The setup wizard is unchanged.
+  - 🐛 **A confirmation after Save:** after a successful Save in **Edit Schedule** the user stays on the screen and sees "Schedule saved." (a Save with nothing to send says "No changes to save."). After a successful Save in **Edit Connections**, the Integrations list opens with its existing "Integration updated successfully!" message. Before, both jumped back to the list and said nothing. Cancel and a failed Save show no message. **Edit Maps** (which saves each change as it is made) and the setup wizard are unchanged.
   - 🐛 **Edit Schedule load error:** the message now names the environment (its name and id). When the platform has no runtime attached to the environment, it says so: "No runtime is attached to environment ... Attach one in Boomi." Any other failure keeps its reason, with the environment in front.
 
   **New** (behind `crossReferenceTables.enabled`)
