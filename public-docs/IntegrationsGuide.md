@@ -36,7 +36,7 @@
 | Setup wizard skips steps with nothing to configure | After install and on Edit | always |
 | Single-install packs use the setup wizard and can edit connections | After install and on Edit | always |
 | Session environment scope (`environments` at login) | Login body | opt-in |
-| Cross Reference Tables: view and edit an integration's cross reference tables (menu item, setup wizard step, Map Fields link). New in NEXT_VERSION | Integrations list menu, setup wizard, Map Fields | opt-in (`crossReferenceTables.enabled`), whatever the `uiVersion` |
+| Cross Reference Tables: view and edit an integration's cross reference tables (menu item, setup wizard step, Map Fields link). New in 1.9.0 | Integrations list menu, setup wizard, Map Fields | opt-in (`crossReferenceTables.enabled`), whatever the `uiVersion` |
 
 Anything marked "at `uiVersion` 1.7.0" stays off for a component until you set its `uiVersion` to `'1.7.0'` or later (see the next section). The rest are bug fixes or behavior that applies to every component, or opt-in options that are off until you turn them on.
 

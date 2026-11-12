@@ -6,7 +6,7 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.8.1-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.9.0-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
@@ -14,7 +14,7 @@
 ### All Releases
 
 <details open>
-  <summary><strong>NEXT_VERSION</strong>: A Cross Reference Tables screen where your users view an integration's cross reference tables and edit their own copy, off until you turn it on, and UI fixes and improvements for every embed, such as long card titles wrapping to three lines</summary>
+  <summary><strong>v1.9.0</strong>: A Cross Reference Tables screen where your users view an integration's cross reference tables and edit their own copy, off until you turn it on, and UI fixes and improvements for every embed, such as long card titles wrapping to three lines</summary>
 
   **Upgrade notes**
   - **The Cross Reference Tables feature changes nothing until you turn it on.** The screen is behind `components.<componentKey>.crossReferenceTables.enabled`, which is off by default. A host that does not set it gets no new menu item, no new wizard step and no new request from this feature.

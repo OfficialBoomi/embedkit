@@ -4,7 +4,7 @@ This document is the complete reference for all user-facing configuration option
 
 > **New in 1.7:** the integrations list, Add Integration catalog, setup wizard, environment scope and their flags are explained end to end in the [Integrations Guide](./IntegrationsGuide.md).
 
-> **New in NEXT_VERSION:** an opt-in screen to view and edit an integration's cross reference tables, off until you set `crossReferenceTables.enabled` (options: [Cross Reference Tables](#cross-reference-tables-crossreferencetables); how it works: [Integrations Guide](./IntegrationsGuide.md#10-cross-reference-tables)). The same release also brings UI fixes and improvements to the integration cards for every embed, with no opt-in: see the [Release Notes](./ReleaseNotes.md).
+> **New in 1.9.0:** an opt-in screen to view and edit an integration's cross reference tables, off until you set `crossReferenceTables.enabled` (options: [Cross Reference Tables](#cross-reference-tables-crossreferencetables); how it works: [Integrations Guide](./IntegrationsGuide.md#10-cross-reference-tables)). The same release also brings UI fixes and improvements to the integration cards for every embed, with no opt-in: see the [Release Notes](./ReleaseNotes.md).
 
 ---
 
