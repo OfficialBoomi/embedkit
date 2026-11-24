@@ -19,6 +19,7 @@
   **Upgrade notes**
   - UI only: no server or SDK change is needed. The CDN embed does not include this screen.
   - **Two visible changes for hosts that turned the screen on:** the first column no longer stays in place while the grid scrolls sideways, and **Cancel** and **Save** moved from below the grid to a bar above the toolbar. The bar keeps the `.boomi-crt-savebar` class.
+  - **Custom CSS:** `.boomi-crt-savebar` now sits inside `.boomi-crt-workspace`, above the toolbar, with its spacing below it instead of above it. A selector that expects it as a direct child of `.boomi-crt-screen`, or an override of its top margin, no longer matches or applies.
 
   **Fixes**
   - 🐛 **Save in full screen:** Cancel and Save were hidden behind the full screen view, so a table could not be saved from it. They are now in a bar at the top of the full screen view.
