@@ -33,15 +33,23 @@ const WHITESPACE = /\s/;
  */
 const NO_EDGE_SPACES = Object.freeze({ lead: 0, trail: 0 });
 
+/** What checkKeys looks for. Blank keys are always checked. */
+export interface CheckKeysOptions {
+  /** Look for keys that appear in more than one row. On unless this is `false`. */
+  duplicates?: boolean;
+}
+
 /**
  * Finds blank and duplicate keys in the first column. Each row is read once. Keys are compared
  * after toLowerCase() but never trimmed, so 'a' and 'a ' stay different keys; the edge space
- * marker is what flags the second one.
+ * marker is what flags the second one. With `duplicates: false` only blank keys are reported.
  */
 export function checkKeys(
   getCell: (row: number, col: number) => string,
   rowCount: number,
+  options: CheckKeysOptions = {},
 ): CrtKeyWarnings {
+  const findDuplicates = options.duplicates !== false;
   const blankRows: number[] = [];
   // Keep each row's folded key so the duplicate pass does not call getCell a second time.
   const keys: Array<string | null> = [];
@@ -49,8 +57,9 @@ export function checkKeys(
 
   for (let row = 0; row < rowCount; row++) {
     const text = getCell(row, 0);
-    if (BLANK_KEY.test(text)) {
-      blankRows.push(row);
+    const blank = BLANK_KEY.test(text);
+    if (blank) blankRows.push(row);
+    if (blank || !findDuplicates) {
       keys.push(null);
       continue;
     }

@@ -581,6 +581,120 @@ describe('empty states', () => {
   });
 });
 
+describe('the showReset setting', () => {
+  const resetButton = () => screen.queryByRole('button', { name: 'Reset to defaults' });
+
+  it('shows Reset to defaults on an overridden table when it is left out, true or any value but false', async () => {
+    for (const value of [undefined, true, 0, 'false', null]) {
+      ctx.boomiConfig = config({ showReset: value });
+      const { unmount } = await renderScreen([overridden('Alpha')]);
+      expect(resetButton()).not.toBeNull();
+      expect(screen.queryByRole('button', { name: 'Override' })).toBeNull();
+      unmount();
+    }
+  });
+
+  it('false hides Reset to defaults on an overridden table', async () => {
+    ctx.boomiConfig = config({ showReset: false });
+    await renderScreen([overridden('Alpha')]);
+    expect(resetButton()).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Override' })).toBeNull();
+  });
+
+  it('false still shows Override on a table that is not overridden, and hides Reset once it is', async () => {
+    ctx.boomiConfig = config({ showReset: false });
+    await renderScreen([table('Alpha')]);
+    expect(screen.getByRole('button', { name: 'Override' })).toBeTruthy();
+    expect(resetButton()).toBeNull();
+
+    // The stand-in grid's edit button overrides the table and changes a cell.
+    edit('Alpha');
+    expect(screen.queryByRole('button', { name: 'Override' })).toBeNull();
+    expect(resetButton()).toBeNull();
+    expect(screen.getByText('Save will create your own copy (2 rows), 1 row changed')).toBeTruthy();
+  });
+
+  it('false keeps editing, Cancel and the unsaved changes guard working', async () => {
+    ctx.boomiConfig = config({ showReset: false });
+    await renderScreen([table('Alpha')]);
+    edit('Alpha');
+    clickCancel();
+
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+    expect(confirm.mock.calls[0][0].title).toBe('Discard your changes?');
+  });
+
+  it('false also hides it in full screen, where the toolbar is shared', async () => {
+    ctx.boomiConfig = config({ showReset: false });
+    await renderScreen([overridden('Alpha')]);
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle full screen' }));
+    expect(resetButton()).toBeNull();
+  });
+
+  it('only reads the setting of its own component key', async () => {
+    ctx.boomiConfig = { components: { other: { crossReferenceTables: { showReset: false } } } };
+    await renderScreen([overridden('Alpha')]);
+    expect(resetButton()).not.toBeNull();
+  });
+});
+
+describe('the save bar', () => {
+  const bar = () => document.querySelector('.boomi-crt-savebar') as HTMLElement;
+  const workspace = () => document.querySelector('.boomi-crt-workspace') as HTMLElement;
+  const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it('sits inside the workspace, above the toolbar and the grid', async () => {
+    await renderScreen([table('Alpha')]);
+    expect(workspace()).not.toBeNull();
+    expect(workspace().contains(bar())).toBe(true);
+    expect(before(bar(), screen.getByRole('button', { name: 'Toggle full screen' }))).toBe(true);
+    expect(before(bar(), screen.getByRole('grid'))).toBe(true);
+    // The first thing in the workspace in the normal view, since there is no caption.
+    expect(workspace().firstElementChild).toBe(bar());
+  });
+
+  it('has the summary, Cancel and Save in it', async () => {
+    await renderScreen([table('Alpha')]);
+    expect(within(bar()).getByText('No changes to save')).toBeTruthy();
+    expect(within(bar()).getByRole('button', { name: 'Cancel' })).toBeTruthy();
+    expect(within(bar()).getByRole('button', { name: 'Save' })).toBeTruthy();
+  });
+
+  it('is inside the full screen workspace, below the caption, so it is not covered', async () => {
+    await renderScreen([table('Alpha')]);
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle full screen' }));
+
+    const full = document.querySelector('.boomi-crt-workspace--full') as HTMLElement;
+    expect(full).not.toBeNull();
+    expect(full.contains(bar())).toBe(true);
+    expect(within(bar()).getByRole('button', { name: 'Cancel' })).toBeTruthy();
+    expect(within(bar()).getByRole('button', { name: 'Save' })).toBeTruthy();
+    const caption = full.querySelector('.boomi-crt-fs-caption') as HTMLElement;
+    expect(before(caption, bar())).toBe(true);
+    expect(full.querySelectorAll('.boomi-crt-savebar')).toHaveLength(1);
+  });
+
+  it('is one bar in both views, never two', async () => {
+    await renderScreen([table('Alpha')]);
+    expect(document.querySelectorAll('.boomi-crt-savebar')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle full screen' }));
+    expect(document.querySelectorAll('.boomi-crt-savebar')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle full screen' }));
+    expect(document.querySelectorAll('.boomi-crt-savebar')).toHaveLength(1);
+    expect(workspace().firstElementChild).toBe(bar());
+  });
+
+  it('Cancel in full screen asks about unsaved changes like Cancel in the normal view', async () => {
+    await renderScreen([table('Alpha')]);
+    edit('Alpha');
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle full screen' }));
+    fireEvent.click(within(bar()).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+    expect(confirm.mock.calls[0][0].title).toBe('Discard your changes?');
+  });
+});
+
 describe('full screen caption', () => {
   it('shows the picker, the process, the state and the counts, without a second table name', async () => {
     await renderScreen([table('Alpha')]);

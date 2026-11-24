@@ -99,8 +99,7 @@ export function useGridMenu(
     const { active } = getSel();
     scrollRowIntoView(el, active.row);
     scrollColumnIntoView(el, layout, active.col);
-    // The first data column is frozen, so it never moves with the horizontal scroll.
-    const left = active.col === 0 ? GUTTER_WIDTH : layout.lefts[active.col] - el.scrollLeft;
+    const left = layout.lefts[active.col] - el.scrollLeft;
     const top = HEADER_HEIGHT + active.row * ROW_HEIGHT - el.scrollTop + ROW_HEIGHT;
     openMenu(originX + left + 8, originY + top);
   };

@@ -6,8 +6,8 @@
  *
  * @description
  * An Excel-like editable grid for one cross reference table. Rows are virtualized
- * (up to 10,000), every column renders (at most 20). The row number gutter and the
- * first data column are frozen. The grid owns only view state (active cell, cell range,
+ * (up to 10,000), every column renders (at most 20). The row number gutter stays in place
+ * while the columns scroll. The grid owns only view state (active cell, cell range,
  * ticked rows, open editor, open menu); the data lives in the store, and every keyboard
  * decision comes from the pure rules in crtKeymap.
  *

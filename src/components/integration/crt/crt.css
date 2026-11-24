@@ -288,13 +288,6 @@
   padding: 0 0 0 8px;
 }
 
-.boomi-crt-hcell--frozen {
-  position: sticky;
-  left: var(--crt-gutter-w, 88px);
-  z-index: 1;
-  border-right-width: 2px;
-}
-
 .boomi-crt-hcell--active {
   box-shadow: inset 0 -2px 0 var(--crt-focus);
 }
@@ -357,12 +350,11 @@
 }
 
 /*
- * Sticky cells must be opaque or the columns scrolling under them show through.
+ * The gutter is sticky and must be opaque or the columns scrolling under it show through.
  * The surface colour goes underneath and the row stripe on top, so a translucent
  * theme colour still reads correctly.
  */
-.boomi-crt-gutter,
-.boomi-crt-cell--frozen {
+.boomi-crt-gutter {
   position: sticky;
   z-index: 2;
   background-color: var(--crt-surface);
@@ -442,27 +434,18 @@
   background-color: #ffffff;
 }
 
-.boomi-crt-cell--frozen {
-  left: var(--crt-gutter-w, 88px);
-  border-right: 2px solid var(--crt-outer-border);
-}
-
 /*
- * A changed cell gets a light tint and a small corner flag. The row stripe stays as the
- * lower layer, so frozen (opaque) cells keep their background. The flag is on the right
- * edge, away from the frozen column divider on the left.
+ * A changed cell gets a light tint and a small corner flag on its right edge. The row stripe
+ * stays as the lower layer. The cell is positioned so the flag sits in its corner.
  */
 .boomi-crt-cell--edited {
+  position: relative;
   background-image:
     linear-gradient(
       color-mix(in srgb, var(--crt-focus) 16%, transparent),
       color-mix(in srgb, var(--crt-focus) 16%, transparent)
     ),
     linear-gradient(var(--crt-row-bg), var(--crt-row-bg));
-}
-
-.boomi-crt-cell--edited:not(.boomi-crt-cell--frozen) {
-  position: relative;
 }
 
 .boomi-crt-cell--edited::after {
@@ -517,12 +500,9 @@
 
 /* The input draws its own border while editing. */
 .boomi-crt-cell--editing {
+  position: relative;
   padding: 0;
   outline: none;
-}
-
-.boomi-crt-cell--editing:not(.boomi-crt-cell--frozen) {
-  position: relative;
 }
 
 .boomi-crt-grid .boomi-crt-cell-input {
@@ -631,6 +611,7 @@
   min-height: 0;
 }
 
+.boomi-crt-workspace--full .boomi-crt-savebar,
 .boomi-crt-workspace--full .boomi-crt-tools {
   flex: none;
 }
@@ -953,18 +934,15 @@
 /*
  * A matching cell gets an amber tint, the current match a stronger one and an outline. The tint
  * is a pseudo element under the text and over the cell's own background layers, so it blends
- * with whatever is already there (the row stripe, the edited and range tints, the opaque
- * frozen column) without a rule for each combination. isolation keeps the element behind the
- * text but inside the cell. The outline replaces the active cell's outline on the current
- * match, which is normally also the active cell, and it keeps its colour when the grid has no
- * focus (the cursor is usually in the find box). An open editor draws its own border.
+ * with whatever is already there (the row stripe, the edited and range tints) without a rule
+ * for each combination. isolation keeps the element behind the text but inside the cell. The
+ * outline replaces the active cell's outline on the current match, which is normally also the
+ * active cell, and it keeps its colour when the grid has no focus (the cursor is usually in the
+ * find box). An open editor draws its own border.
  */
 .boomi-crt-cell--match {
-  isolation: isolate;
-}
-
-.boomi-crt-cell--match:not(.boomi-crt-cell--frozen) {
   position: relative;
+  isolation: isolate;
 }
 
 .boomi-crt-cell--match::before {
@@ -1017,9 +995,9 @@
 /*
  * The key cell of a row whose key is blank or appears in another row: a bar on its left edge and
  * a light tint. Both are inset shadows, so they sit above the cell's own background layers (the
- * row stripe, the edited and range tints, the opaque frozen column) without a rule for each
- * combination. The tint is a shadow with a spread larger than any cell, clipped to the cell. The
- * active cell's outline, the find tint and the open editor are drawn separately and still show.
+ * row stripe, the edited and range tints) without a rule for each combination. The tint is a
+ * shadow with a spread larger than any cell, clipped to the cell. The active cell's outline, the
+ * find tint and the open editor are drawn separately and still show.
  */
 .boomi-crt-cell--warn {
   box-shadow:
@@ -1181,14 +1159,17 @@
 
 /* ---------- Save bar, split Save button, shared-table confirmation ---------- */
 
-/* What Save will do ("3 rows changed"), on the left; Cancel and Save stay on the right as before. */
+/*
+ * What Save will do ("3 rows changed"), on the left; Cancel and Save on the right. The bar is the
+ * first row of the workspace, above the toolbar, so it is also inside the full screen overlay.
+ */
 .boomi-crt-savebar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem 1rem;
-  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .boomi-crt-savebar .boomi-update-actions {
@@ -1285,10 +1266,11 @@
   outline-offset: 2px;
 }
 
+/* Opens downward: the bar is at the top of the workspace. */
 .boomi-crt-split-menu {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 0.25rem);
+  top: calc(100% + 0.25rem);
   z-index: 40;
   min-width: max-content;
   padding: 0.25rem;

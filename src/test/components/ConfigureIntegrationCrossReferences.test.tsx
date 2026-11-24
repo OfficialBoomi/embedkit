@@ -312,6 +312,19 @@ describe('whether the step is there', () => {
     expect(document.querySelector('.boomi-crt-savebar')?.textContent).not.toMatch(/Cancel/);
     expect(document.querySelector('.boomi-crt-screen')?.classList.contains('boomi-update-wizard')).toBe(true);
   });
+
+  it('has the save bar at the top of the workspace, with Save and no Cancel', async () => {
+    const user = userEvent.setup();
+    crt();
+    await mountWizard();
+    await goToCrt(user);
+    const bar = document.querySelector('.boomi-crt-savebar') as HTMLElement;
+    const workspace = document.querySelector('.boomi-crt-workspace') as HTMLElement;
+    expect(workspace.firstElementChild).toBe(bar);
+    expect(bar.querySelector('.boomi-crt-summary')).not.toBeNull();
+    expect(Array.from(bar.querySelectorAll('button')).map((b) => b.textContent?.trim())).toContain('Save');
+    expect(Array.from(bar.querySelectorAll('button')).map((b) => b.textContent?.trim())).not.toContain('Cancel');
+  });
 });
 
 describe('Next', () => {

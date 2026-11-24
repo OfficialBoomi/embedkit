@@ -44,20 +44,20 @@ const markers = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLElement>
 const DOT = '·';
 
 describe('the class table', () => {
-  it('has a key warning flag that adds one class and leaves every earlier entry alone', () => {
-    expect(FLAG_KEY_WARN).toBe(128);
-    expect(CELL_CLASS).toHaveLength(256);
+  it('has a key warning flag that adds one class and leaves every other entry alone', () => {
+    expect(FLAG_KEY_WARN).toBe(64);
+    expect(CELL_CLASS).toHaveLength(128);
     expect(CELL_CLASS[FLAG_KEY_WARN]).toBe('boomi-crt-cell boomi-crt-cell--warn');
-    expect(CELL_CLASS[FLAG_KEY_WARN | 1]).toBe('boomi-crt-cell boomi-crt-cell--frozen boomi-crt-cell--warn');
-    for (let flags = 0; flags < 128; flags++) {
+    expect(CELL_CLASS[FLAG_KEY_WARN | 1]).toBe('boomi-crt-cell boomi-crt-cell--active boomi-crt-cell--warn');
+    for (let flags = 0; flags < FLAG_KEY_WARN; flags++) {
       expect(CELL_CLASS[flags]).not.toContain('warn');
       expect(CELL_CLASS[flags | FLAG_KEY_WARN]).toBe(`${CELL_CLASS[flags]} boomi-crt-cell--warn`);
     }
   });
 
   it('combines with the find flags', () => {
-    expect(CELL_CLASS[FLAG_KEY_WARN | FLAG_MATCH | 1]).toBe(
-      'boomi-crt-cell boomi-crt-cell--frozen boomi-crt-cell--match boomi-crt-cell--warn'
+    expect(CELL_CLASS[FLAG_KEY_WARN | FLAG_MATCH]).toBe(
+      'boomi-crt-cell boomi-crt-cell--match boomi-crt-cell--warn'
     );
   });
 });
@@ -86,7 +86,7 @@ describe('GridRow with key warnings', () => {
   it('draws plain cells when no key warning is given', () => {
     const store = createCrtStore(makeTable(['a', 'b', 'c']));
     const { container } = render(<GridRow {...baseProps(store)} />);
-    expect(cells(container).map((c) => c.className)).toEqual([CELL_CLASS[1], CELL_CLASS[0], CELL_CLASS[0]]);
+    expect(cells(container).map((c) => c.className)).toEqual([CELL_CLASS[0], CELL_CLASS[0], CELL_CLASS[0]]);
     expect(cells(container).map((c) => c.title)).toEqual(['', '', '']);
   });
 
@@ -94,7 +94,7 @@ describe('GridRow with key warnings', () => {
     const store = createCrtStore(makeTable(['a', 'a', 'c']));
     const { container } = render(<GridRow {...baseProps(store, { keyWarn: 2 })} />);
     const [key, value, other] = cells(container);
-    expect(key.className).toBe(CELL_CLASS[1 | FLAG_KEY_WARN]);
+    expect(key.className).toBe(CELL_CLASS[FLAG_KEY_WARN]);
     expect(key).toHaveAttribute('title', 'Duplicate key (this key appears more than once)');
     expect(value.className).toBe(CELL_CLASS[0]);
     expect(other.className).toBe(CELL_CLASS[0]);
@@ -112,7 +112,7 @@ describe('GridRow with key warnings', () => {
   it('keeps the other flags on a flagged key cell', () => {
     const store = createCrtStore(makeTable(['a', 'a']));
     const { container } = render(<GridRow {...baseProps(store, { keyWarn: 2, activeCol: 0 })} />);
-    expect(cells(container)[0].className).toBe(CELL_CLASS[1 | 2 | FLAG_KEY_WARN]);
+    expect(cells(container)[0].className).toBe(CELL_CLASS[1 | FLAG_KEY_WARN]);
   });
 
   it('is not drawn again for the same number, and is drawn again when the number changes', () => {
