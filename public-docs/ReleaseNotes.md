@@ -6,7 +6,7 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.9.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.9.1-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
@@ -14,7 +14,7 @@
 ### All Releases
 
 <details open>
-  <summary><strong>NEXT_VERSION</strong>: Cross Reference Tables screen polish: Cancel and Save at the top and in full screen, no pinned first column, and two new options</summary>
+  <summary><strong>v1.9.1</strong>: Cross Reference Tables screen polish: Cancel and Save at the top and in full screen, no pinned first column, and two new options</summary>
 
   **Upgrade notes**
   - UI only: no server or SDK change is needed. The CDN embed does not include this screen.
