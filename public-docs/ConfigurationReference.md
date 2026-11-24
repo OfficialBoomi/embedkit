@@ -563,6 +563,8 @@ components: {
       unavailableTables: 'disabled',              // default; 'hidden' leaves those tables out
       wizardStep: true,                           // default when enabled
       showHistory: true,                          // default
+      showDuplicateKeyWarning: true,              // default
+      showReset: true,                            // default
     },
   },
 }
@@ -576,6 +578,8 @@ components: {
 | `unavailableTables` | `'disabled' \| 'hidden'` | `'disabled'` | What to do with a table that cannot be edited here (for example runtime specific, or a definition EmbedKit cannot read): `'disabled'` lists it greyed out with the reason, `'hidden'` leaves it out. Any other value acts as `'disabled'`. |
 | `wizardStep` | `boolean` | `true` (when `enabled`) | Only `false` removes the step from the Edit wizard. The menu item stays, and so does **Open Cross Reference Table** on **Edit Map(s)**, but the wizard's own Map Fields step no longer shows it, because it has no step to move to. |
 | `showHistory` | `boolean` | `true` | Only `false` hides the "Last saved" line and stops the screen from requesting it. |
+| `showDuplicateKeyWarning` | `boolean` | `true` | Only `false` hides the duplicate key chip and the highlight on duplicate keys. Blank keys and spaces at the edge of a cell still warn. |
+| `showReset` | `boolean` | `true` | Only `false` hides **Reset to defaults**. **Override**, editing and **Save** are not affected. |
 
 Things to know:
 
