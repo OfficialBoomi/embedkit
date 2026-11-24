@@ -402,4 +402,77 @@ describe('key warning chips', () => {
       expect(activeCell()).toEqual({ row: 7, col: 0 });
     });
   });
+
+  describe('the showDuplicateKeyWarning setting', () => {
+    const setting = (value: unknown) => {
+      ctx.boomiConfig = { components: { k: { crossReferenceTables: { showDuplicateKeyWarning: value } } } };
+    };
+
+    it('shows the duplicate chip and highlight when it is left out, true or any value but false', async () => {
+      for (const value of [undefined, true, 0, 'false', null]) {
+        setting(value);
+        const { unmount } = await mount();
+        expect(queryChips()).toEqual(['2 blank keys', '1 duplicate key']);
+        expect(warnedRows()).toEqual([1, 3, 5, 7]);
+        unmount();
+      }
+    });
+
+    it('false hides the duplicate chip and highlight and keeps the blank ones', async () => {
+      setting(false);
+      await mount();
+      expect(queryChips()).toEqual(['2 blank keys']);
+      expect(warnedRows()).toEqual([1, 7]);
+    });
+
+    it('false removes the duplicate wording from a key cell tooltip', async () => {
+      setting(false);
+      await mount();
+      expect(cellOf(3, 0)).not.toHaveAttribute('title', expect.stringMatching(/Duplicate key/));
+      expect(cellOf(1, 0)).toHaveAttribute('title', expect.stringMatching(/Blank key/));
+    });
+
+    it('false leaves no chip at all for a table that only has duplicates', async () => {
+      setting(false);
+      await mount([{ ...clean, overrideRows: rowsOf(['a', 'A', 'b']) }]);
+      expect(queryChips()).toEqual([]);
+      expect(warnedRows()).toEqual([]);
+      expect(infoRow().querySelector('button')).toBeNull();
+    });
+
+    it('false still shows edge space markers', async () => {
+      setting(false);
+      await mount([{ ...clean, overrideRows: rowsOf(['a', 'a ', 'b']) }]);
+      expect(queryChips()).toEqual([]);
+      expect(cellOf(1, 0).querySelectorAll('.boomi-crt-ws')).toHaveLength(1);
+    });
+
+    it('false adds no chip when an edit makes a duplicate, and blank keys still count', async () => {
+      setting(false);
+      await mount([clean]);
+      typeInto(1, 0, 'a');
+      expect(queryChips()).toEqual([]);
+      expect(warnedRows()).toEqual([]);
+      typeInto(2, 0, '');
+      expect(queryChips()).toEqual(['1 blank key']);
+      expect(warnedRows()).toEqual([2]);
+    });
+
+    it('false hides the duplicate chip in the full screen caption too', async () => {
+      setting(false);
+      await mount();
+      act(() => {
+        fireEvent.click(screen.getByRole('button', { name: 'Full screen' }));
+      });
+      const caption = document.querySelector('.boomi-crt-fs-caption') as HTMLElement;
+      expect(within(caption).getByRole('button', { name: '2 blank keys' })).toBeInTheDocument();
+      expect(within(caption).queryByRole('button', { name: /duplicate key/ })).toBeNull();
+    });
+
+    it('only reads the setting of its own component key', async () => {
+      ctx.boomiConfig = { components: { other: { crossReferenceTables: { showDuplicateKeyWarning: false } } } };
+      await mount();
+      expect(queryChips()).toEqual(['2 blank keys', '1 duplicate key']);
+    });
+  });
 });

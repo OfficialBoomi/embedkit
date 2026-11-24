@@ -104,6 +104,38 @@ describe('checkKeys', () => {
     expect(calls).toBe(4);
   });
 
+  describe('with duplicates switched off', () => {
+    const off = { duplicates: false };
+
+    it('still finds blank keys and reports no duplicates', () => {
+      expect(checkKeys(keyColumn(['', 'a', 'a', ' ', 'b']), 5, off)).toEqual(warnings([0, 3], [], 0));
+    });
+
+    it('reports nothing for a table that only has duplicates', () => {
+      expect(checkKeys(keyColumn(['x', 'X', 'y']), 3, off)).toEqual(warnings([], [], 0));
+    });
+
+    it('still reads each row exactly once', () => {
+      const keys = ['a', 'b', 'a', ''];
+      let calls = 0;
+      checkKeys(
+        (row, col) => {
+          calls++;
+          return keyColumn(keys)(row, col);
+        },
+        keys.length,
+        off,
+      );
+      expect(calls).toBe(4);
+    });
+
+    it('checks duplicates when the option is true or left out', () => {
+      const keys = ['a', 'A', ''];
+      expect(checkKeys(keyColumn(keys), 3, { duplicates: true })).toEqual(warnings([2], [0, 1], 1));
+      expect(checkKeys(keyColumn(keys), 3, {})).toEqual(warnings([2], [0, 1], 1));
+    });
+  });
+
   it('checks 10,000 rows in under 200 ms', () => {
     // Every seventh row is blank. Key k is shared by rows k and k + 5000, so each duplicate key
     // covers exactly two rows.

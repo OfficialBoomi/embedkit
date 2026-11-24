@@ -13,10 +13,11 @@
  * the pack's real headers, default rows and override rows), or from a data source registered with
  * `registerCrtDataSource`, which tests use.
  *
- * Save writes the open table to Boomi (or restores its defaults) and reads it back; the bar above
- * the buttons says what Save will do. A table that other processes of the pack share gets a split
- * Save button: the main part saves this process only, and the arrow saves to the other processes
- * too after a confirmation. If someone else changed the table meanwhile, a prompt offers to
+ * Save writes the open table to Boomi (or restores its defaults) and reads it back; the bar at the
+ * top of the workspace (inside it, so full screen keeps it) says what Save will do and holds Cancel
+ * and Save. A table that other processes of the pack share gets a split Save button: the main part
+ * saves this process only, and the arrow saves to the other processes too after a confirmation.
+ * If someone else changed the table meanwhile, a prompt offers to
  * overwrite it, reload it or keep editing. While a save runs, and while its confirmation or conflict
  * window is open, the whole screen is inert (those windows sit beside it, not inside it, and take
  * the keyboard themselves). A save, reset or reload leaves the cursor and the scroll position of the
@@ -41,7 +42,10 @@
  * While a table is editable its key column is checked for blank and duplicate keys after every
  * change. Each problem shows as a warning chip in the info row (and in the full screen caption);
  * pressing a chip jumps to the next flagged row. The grid gets the same result to mark the key
- * cells. A table that is not editable shows no key warnings.
+ * cells. A table that is not editable shows no key warnings. The component's
+ * `crossReferenceTables.showDuplicateKeyWarning` setting (default true) leaves out the duplicate
+ * chip and highlight; blank keys still warn. Its `showReset` setting (default true) hides the
+ * Reset to defaults button.
  *
  * The screen is also a step of the Edit wizard (`wizard`). There it shows the body only: no page
  * frame and no Cancel button, since the wizard has its own Back and Cancel. It stays mounted for the
@@ -572,13 +576,19 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
     if (place.scroll) handle.scrollTo?.(place.scroll.top, place.scroll.left);
   }, [store, selectedKey]);
 
+  // Only `false` turns the duplicate key notice off (the chip and the highlight). Blank keys always warn.
+  const showDuplicateKeyWarning =
+    (boomiConfig?.components?.[componentKey]?.crossReferenceTables?.showDuplicateKeyWarning ?? true) !== false;
+
   // Blank and duplicate keys, only while the table can be edited. The store changes in place, so its
   // version is what says the rows are not the ones that were checked.
   const keyWarnings = useMemo(
     () =>
-      store && store.isEditable() ? checkKeys((r, c) => store.getCell(r, c), store.rowCount()) : null,
+      store && store.isEditable()
+        ? checkKeys((r, c) => store.getCell(r, c), store.rowCount(), { duplicates: showDuplicateKeyWarning })
+        : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [store, storeVersion]
+    [store, storeVersion, showDuplicateKeyWarning]
   );
   const keyChips = keyWarnings ? buildKeyChips(keyWarnings) : NO_CHIPS;
 
@@ -811,6 +821,8 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
   // The history waits for the tables: it loads once the screen is ready, and never when the tables came
   // from a registered source (the server knows nothing of those) or the setting turns it off.
   const showHistory = (boomiConfig?.components?.[componentKey]?.crossReferenceTables?.showHistory ?? true) !== false;
+  // Only `false` hides Reset to defaults. Override, editing and Save are not affected.
+  const showReset = (boomiConfig?.components?.[componentKey]?.crossReferenceTables?.showReset ?? true) !== false;
   const history = useCrtHistory({
     enabled: state.status === 'ready' && state.live && showHistory,
     environmentId: packEnvironmentId,
@@ -924,6 +936,38 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
       ]
     : [];
 
+  // The summary, Cancel and Save. They sit at the top of the workspace, so full screen (which covers
+  // the rest of the page) keeps them in reach. The wizard has its own Cancel, so it gets none here.
+  const renderSaveBar = () => (
+    <div className="boomi-crt-savebar">
+      <span
+        className={`boomi-crt-summary${save.action.mode === 'none' ? '' : ' boomi-crt-summary--dirty'}`}
+        role="status"
+        aria-live="polite"
+      >
+        {save.action.text}
+      </span>
+      <div className="boomi-update-actions">
+        {!wizard && (
+          <Button toggle={false} primary={false} showIcon={false} label="Cancel" onClick={handleCancel} />
+        )}
+        <CrtSaveButton
+          shared={save.shared}
+          disabled={save.action.mode === 'none' || save.saving}
+          label={save.action.mode === 'reset' ? 'Restore defaults' : 'Save'}
+          sharedLabel={save.action.mode === 'reset' ? 'Restore defaults in this process' : 'Save to this process'}
+          menuLabel={
+            save.action.mode === 'reset'
+              ? 'Restore defaults in other processes that share this table...'
+              : 'Save to other processes that share this table...'
+          }
+          onSave={save.save}
+          onSaveOthers={save.openScope}
+        />
+      </div>
+    </div>
+  );
+
   const renderTable = (table: CrtTableData, current: CrtStore) => {
     const overridden = current.isOverridden();
     return (
@@ -1015,6 +1059,7 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
               </span>
             </div>
           )}
+          {renderSaveBar()}
           <CrtToolbar
             info={gridInfo}
             onRun={handleRun}
@@ -1029,15 +1074,17 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
             trailing={
               // The wrapper carries the tooltip, so it shows over the whole button.
               overridden ? (
-                <span title="Discard your changes and show the default values again.">
-                  <Button
-                    toggle={false}
-                    primary={false}
-                    showIcon={false}
-                    label="Reset to defaults"
-                    onClick={handleReset}
-                  />
-                </span>
+                showReset ? (
+                  <span title="Discard your changes and show the default values again.">
+                    <Button
+                      toggle={false}
+                      primary={false}
+                      showIcon={false}
+                      label="Reset to defaults"
+                      onClick={handleReset}
+                    />
+                  </span>
+                ) : null
               ) : (
                 <span title="Edit your own copy. It will no longer follow later changes to the defaults.">
                   <Button
@@ -1167,41 +1214,6 @@ const UpdateCrossReferences = forwardRef<UpdateCrossReferencesRef, UpdateCrossRe
                 role="alert"
               />
             )}
-            <div className="boomi-crt-savebar">
-              <span
-                className={`boomi-crt-summary${save.action.mode === 'none' ? '' : ' boomi-crt-summary--dirty'}`}
-                role="status"
-                aria-live="polite"
-              >
-                {save.action.text}
-              </span>
-              <div className="boomi-update-actions">
-                {!wizard && (
-                  <Button
-                    toggle={false}
-                    primary={false}
-                    showIcon={false}
-                    label="Cancel"
-                    onClick={handleCancel}
-                  />
-                )}
-                <CrtSaveButton
-                  shared={save.shared}
-                  disabled={save.action.mode === 'none' || save.saving}
-                  label={save.action.mode === 'reset' ? 'Restore defaults' : 'Save'}
-                  sharedLabel={
-                    save.action.mode === 'reset' ? 'Restore defaults in this process' : 'Save to this process'
-                  }
-                  menuLabel={
-                    save.action.mode === 'reset'
-                      ? 'Restore defaults in other processes that share this table...'
-                      : 'Save to other processes that share this table...'
-                  }
-                  onSave={save.save}
-                  onSaveOthers={save.openScope}
-                />
-              </div>
-            </div>
           </div>
           {save.saving && !save.scope && <CrtBusyModal message={save.busyLabel} />}
           {save.scope && (

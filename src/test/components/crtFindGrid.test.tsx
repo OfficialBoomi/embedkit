@@ -38,33 +38,33 @@ const makeTable = (rows: number, overridden = true): CrtTableData => {
 };
 
 describe('the class tables', () => {
-  it('keeps every earlier combination exactly as it was', () => {
-    // The key warning flag (128) doubled the table; the first 128 entries are the ones below.
-    expect(CELL_CLASS).toHaveLength(256);
+  it('has one class per cell state, and no pinned column class', () => {
+    // Bits: 1 active, 2 edited, 4 editing, 8 in the range, 16 match, 32 current match, 64 key warning.
+    expect(CELL_CLASS).toHaveLength(128);
     expect(CELL_CLASS[0]).toBe('boomi-crt-cell');
-    expect(CELL_CLASS[1]).toBe('boomi-crt-cell boomi-crt-cell--frozen');
-    expect(CELL_CLASS[2]).toBe('boomi-crt-cell boomi-crt-cell--active');
-    expect(CELL_CLASS[4]).toBe('boomi-crt-cell boomi-crt-cell--edited');
-    expect(CELL_CLASS[8]).toBe('boomi-crt-cell boomi-crt-cell--editing');
-    expect(CELL_CLASS[16]).toBe('boomi-crt-cell boomi-crt-cell--selected');
-    expect(CELL_CLASS[31]).toBe(
-      'boomi-crt-cell boomi-crt-cell--frozen boomi-crt-cell--active boomi-crt-cell--edited boomi-crt-cell--editing boomi-crt-cell--selected'
+    expect(CELL_CLASS[1]).toBe('boomi-crt-cell boomi-crt-cell--active');
+    expect(CELL_CLASS[2]).toBe('boomi-crt-cell boomi-crt-cell--edited');
+    expect(CELL_CLASS[4]).toBe('boomi-crt-cell boomi-crt-cell--editing');
+    expect(CELL_CLASS[8]).toBe('boomi-crt-cell boomi-crt-cell--selected');
+    expect(CELL_CLASS[15]).toBe(
+      'boomi-crt-cell boomi-crt-cell--active boomi-crt-cell--edited boomi-crt-cell--editing boomi-crt-cell--selected'
     );
-    for (let flags = 0; flags < 32; flags++) expect(CELL_CLASS[flags]).not.toContain('match');
+    for (let flags = 0; flags < 16; flags++) expect(CELL_CLASS[flags]).not.toContain('match');
+    for (const classes of CELL_CLASS) expect(classes).not.toContain('frozen');
   });
 
   it('adds a match flag and a current match flag', () => {
-    expect(FLAG_MATCH).toBe(32);
-    expect(FLAG_MATCH_CURRENT).toBe(96);
+    expect(FLAG_MATCH).toBe(16);
+    expect(FLAG_MATCH_CURRENT).toBe(48);
     expect(CELL_CLASS[FLAG_MATCH]).toBe('boomi-crt-cell boomi-crt-cell--match');
     expect(CELL_CLASS[FLAG_MATCH_CURRENT]).toBe('boomi-crt-cell boomi-crt-cell--match boomi-crt-cell--match-current');
   });
 
   it('combines with the other flags', () => {
-    expect(CELL_CLASS[FLAG_MATCH_CURRENT | 1 | 2]).toBe(
-      'boomi-crt-cell boomi-crt-cell--frozen boomi-crt-cell--active boomi-crt-cell--match boomi-crt-cell--match-current'
+    expect(CELL_CLASS[FLAG_MATCH_CURRENT | 1]).toBe(
+      'boomi-crt-cell boomi-crt-cell--active boomi-crt-cell--match boomi-crt-cell--match-current'
     );
-    expect(CELL_CLASS[FLAG_MATCH | 4 | 16]).toContain('boomi-crt-cell--match');
+    expect(CELL_CLASS[FLAG_MATCH | 2 | 8]).toContain('boomi-crt-cell--match');
   });
 });
 
@@ -94,14 +94,14 @@ describe('GridRow with find', () => {
   it('a row with no find props draws plain cells', () => {
     const store = createCrtStore(makeTable(5));
     const { container } = render(<GridRow {...baseProps(store)} />);
-    expect(cells(container).map((c) => c.className)).toEqual([CELL_CLASS[1], CELL_CLASS[0], CELL_CLASS[0]]);
+    expect(cells(container).map((c) => c.className)).toEqual([CELL_CLASS[0], CELL_CLASS[0], CELL_CLASS[0]]);
   });
 
   it('flags the cells of the mask as matches and the find column as the current match', () => {
     const store = createCrtStore(makeTable(5));
     const { container } = render(<GridRow {...baseProps(store, { findMask: 0b110, findCol: 2 })} />);
     expect(cells(container).map((c) => c.className)).toEqual([
-      CELL_CLASS[1],
+      CELL_CLASS[0],
       CELL_CLASS[FLAG_MATCH],
       CELL_CLASS[FLAG_MATCH_CURRENT],
     ]);
@@ -113,10 +113,10 @@ describe('GridRow with find', () => {
     expect(cells(container)[1].className).toBe(CELL_CLASS[FLAG_MATCH_CURRENT]);
   });
 
-  it('combines with the active cell and the frozen column', () => {
+  it('combines with the active cell', () => {
     const store = createCrtStore(makeTable(5));
     const { container } = render(<GridRow {...baseProps(store, { activeCol: 0, findMask: 0b1, findCol: 0 })} />);
-    expect(cells(container)[0].className).toBe(CELL_CLASS[1 | 2 | FLAG_MATCH_CURRENT]);
+    expect(cells(container)[0].className).toBe(CELL_CLASS[1 | FLAG_MATCH_CURRENT]);
   });
 
   it('is not drawn again for the same numbers, and is drawn again when the mask or the current column changes', () => {

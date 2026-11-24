@@ -73,19 +73,15 @@ export function computeLayout(store: CrtStore): GridLayout {
 }
 
 /**
- * Horizontal scroll so a column is fully visible. The gutter and the first column are
- * sticky and cover the left edge, so the visible band starts after them.
+ * Horizontal scroll so a column is fully visible. Only the gutter is sticky and covers the left
+ * edge, so the visible band starts after it. Every column, the first included, scrolls with the rest.
  */
 export function scrollColumnIntoView(el: HTMLElement, layout: GridLayout, col: number): void {
-  if (col <= 0) {
-    if (el.scrollLeft > 0) el.scrollLeft = 0;
-    return;
-  }
-  const frozen = layout.lefts[1] ?? layout.total;
   const left = layout.lefts[col];
+  if (left === undefined) return;
   const right = left + layout.widths[col];
   if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth;
-  if (left < el.scrollLeft + frozen) el.scrollLeft = left - frozen;
+  if (left < el.scrollLeft + GUTTER_WIDTH) el.scrollLeft = left - GUTTER_WIDTH;
 }
 
 /**
@@ -124,28 +120,27 @@ export function observeGridRect(
 export const estimateRowSize = (): number => ROW_HEIGHT;
 
 /**
- * Precomputed class strings: bit 1 frozen, 2 active, 4 edited, 8 editing, 16 in the cell range,
- * 32 matches the find query, 64 is the current find match, 128 is a key cell with a warning
- * (blank or duplicate). The current match is also a match, so a cell that is current carries
- * both bits (FLAG_MATCH_CURRENT).
+ * Precomputed class strings: bit 1 active, 2 edited, 4 editing, 8 in the cell range, 16 matches
+ * the find query, 32 is the current find match, 64 is a key cell with a warning (blank or
+ * duplicate). The current match is also a match, so a cell that is current carries both bits
+ * (FLAG_MATCH_CURRENT).
  */
-export const FLAG_MATCH = 32;
-export const FLAG_MATCH_CURRENT = 96;
-export const FLAG_KEY_WARN = 128;
+export const FLAG_MATCH = 16;
+export const FLAG_MATCH_CURRENT = 48;
+export const FLAG_KEY_WARN = 64;
 
 export const CELL_CLASS: string[] = [];
-for (let flags = 0; flags < 256; flags++) {
+for (let flags = 0; flags < 128; flags++) {
   CELL_CLASS.push(
     [
       'boomi-crt-cell',
-      flags & 1 ? 'boomi-crt-cell--frozen' : '',
-      flags & 2 ? 'boomi-crt-cell--active' : '',
-      flags & 4 ? 'boomi-crt-cell--edited' : '',
-      flags & 8 ? 'boomi-crt-cell--editing' : '',
-      flags & 16 ? 'boomi-crt-cell--selected' : '',
-      flags & 32 ? 'boomi-crt-cell--match' : '',
-      flags & 64 ? 'boomi-crt-cell--match-current' : '',
-      flags & 128 ? 'boomi-crt-cell--warn' : '',
+      flags & 1 ? 'boomi-crt-cell--active' : '',
+      flags & 2 ? 'boomi-crt-cell--edited' : '',
+      flags & 4 ? 'boomi-crt-cell--editing' : '',
+      flags & 8 ? 'boomi-crt-cell--selected' : '',
+      flags & 16 ? 'boomi-crt-cell--match' : '',
+      flags & 32 ? 'boomi-crt-cell--match-current' : '',
+      flags & 64 ? 'boomi-crt-cell--warn' : '',
     ]
       .filter(Boolean)
       .join(' ')

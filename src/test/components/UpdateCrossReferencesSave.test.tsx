@@ -65,7 +65,14 @@ vi.mock('../../components/ui/ToastNotification', () => ({
   },
 }));
 vi.mock('../../components/integration/crt/CrtToolbar', () => ({
-  default: ({ trailing }: { trailing?: React.ReactNode }) => <div>{trailing}</div>,
+  default: ({ trailing, onToggleFullScreen }: { trailing?: React.ReactNode; onToggleFullScreen: () => void }) => (
+    <div>
+      {trailing}
+      <button type="button" onClick={onToggleFullScreen}>
+        Toggle full screen
+      </button>
+    </div>
+  ),
 }));
 vi.mock('../../components/integration/crt/CrtGrid', () => ({
   default: forwardRef<
@@ -198,6 +205,49 @@ describe('saving the open table', () => {
     // The store was rebuilt from what was saved: nothing differs now.
     expect(screen.getByText('No changes to save')).toBeTruthy();
     expect(saveButton().disabled).toBe(true);
+  });
+
+  it('saves from full screen with the bar inside the full screen workspace', async () => {
+    const user = userEvent.setup();
+    fetchTables.mockResolvedValue({ tables: [serverTable('Alpha', { overridden: true, overrideRows: [['x', '1'], ['y', '2']], stamp: 'o2.mine' })] });
+    saveTable.mockResolvedValue({ processId: 'p1', tableId: 'id-alpha', overridden: true, rowCount: 2, stamp: 'o2.saved' });
+    renderScreen();
+    await screen.findByRole('grid');
+    await edit(user);
+    await user.click(screen.getByRole('button', { name: 'Toggle full screen' }));
+
+    const full = document.querySelector('.boomi-crt-workspace--full') as HTMLElement;
+    expect(full).not.toBeNull();
+    const save = within(full).getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+    expect(save.disabled).toBe(false);
+    await user.click(save);
+
+    await waitFor(() => expect(saveTable).toHaveBeenCalledTimes(1));
+    expect(saveTable.mock.calls[0][0].rows).toEqual([['EDITED', '1'], ['y', '2']]);
+    await screen.findByText('Table saved.');
+    expect(within(full).getByText('No changes to save')).toBeTruthy();
+    expect(within(full).getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
+  });
+
+  it('offers the split Save menu in full screen for a table other processes share', async () => {
+    const user = userEvent.setup();
+    fetchTables.mockResolvedValue({
+      tables: [
+        serverTable('Alpha', { overridden: true, overrideRows: [['x', '1']], stamp: 'o1.mine' }),
+        second('Alpha'),
+      ],
+    });
+    renderScreen();
+    await screen.findByRole('grid');
+    await edit(user);
+    await user.click(screen.getByRole('button', { name: 'Toggle full screen' }));
+
+    const full = document.querySelector('.boomi-crt-workspace--full') as HTMLElement;
+    expect(within(full).getByRole('button', { name: 'Save to this process' })).toBeTruthy();
+    await user.click(within(full).getByRole('button', { name: 'More ways to save' }));
+    expect(
+      within(full).getByRole('menuitem', { name: /Save to other processes that share this table/ })
+    ).toBeTruthy();
   });
 
   it('uses the stamp from the last save for the next one', async () => {

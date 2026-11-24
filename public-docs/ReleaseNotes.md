@@ -6,12 +6,28 @@
 
 ### Latest
 
-![Version](https://img.shields.io/badge/version-v1.9.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-v1.9.1-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)
 
 ---
 
 ### All Releases
+
+<details open>
+  <summary><strong>v1.9.1</strong>: Cross Reference Tables screen polish: Cancel and Save at the top and in full screen, no pinned first column, and two new options</summary>
+
+  **Upgrade notes**
+  - UI only: no server or SDK change is needed. The CDN embed does not include this screen.
+  - **Two visible changes for hosts that turned the screen on:** the first column no longer stays in place while the grid scrolls sideways, and **Cancel** and **Save** moved from below the grid to a bar above the toolbar. The bar keeps the `.boomi-crt-savebar` class.
+  - **Custom CSS:** `.boomi-crt-savebar` now sits inside `.boomi-crt-workspace`, above the toolbar, with its spacing below it instead of above it. A selector that expects it as a direct child of `.boomi-crt-screen`, or an override of its top margin, no longer matches or applies.
+
+  **Fixes**
+  - 🐛 **Save in full screen:** Cancel and Save were hidden behind the full screen view, so a table could not be saved from it. They are now in a bar at the top of the full screen view.
+
+  **Opt-in** (nothing changes unless you configure it)
+  - 🆕 **Two options under `crossReferenceTables`:** `showDuplicateKeyWarning` (default `true`; `false` hides the duplicate key chip and highlight, and blank keys still warn) and `showReset` (default `true`; `false` hides **Reset to defaults**). See [Cross Reference Tables](./ConfigurationReference.md#cross-reference-tables-crossreferencetables).
+
+</details>
 
 <details open>
   <summary><strong>v1.9.0</strong>: A Cross Reference Tables screen where your users view an integration's cross reference tables and edit their own copy, off until you turn it on, and UI fixes and improvements for every embed, such as long card titles wrapping to three lines</summary>

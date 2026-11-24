@@ -252,6 +252,8 @@ Defaults depend on the component's `uiVersion`. All paths are under `components[
 | `crossReferenceTables.unavailableTables` | `'disabled' \| 'hidden'` | `'disabled'` | `'disabled'` | A table that cannot be edited here is listed greyed out with the reason, or left out. |
 | `crossReferenceTables.wizardStep` | `boolean` | `true` when enabled | `true` when enabled | Only `false` removes the step from the Edit wizard. |
 | `crossReferenceTables.showHistory` | `boolean` | `true` | `true` | Only `false` hides the "Last saved" line and makes no request for it. |
+| `crossReferenceTables.showDuplicateKeyWarning` | `boolean` | `true` | `true` | Only `false` hides the duplicate key chip and highlight. Blank keys still warn. |
+| `crossReferenceTables.showReset` | `boolean` | `true` | `true` | Only `false` hides **Reset to defaults**. |
 
 Login body (not `boomi.config.js`): `environments: string[]` sets the session scope (see [section 6](#6-limiting-environments)).
 
@@ -339,7 +341,7 @@ export default {
 };
 ```
 
-Off, or not set, nothing changes for your users, and it does not depend on `uiVersion`. The other options (`menuLabel`, `title`, `unavailableTables`, `wizardStep` and `showHistory`) are in the [flags reference](#7-flags-reference) and the [Configuration Reference](./ConfigurationReference.md#cross-reference-tables-crossreferencetables).
+Off, or not set, nothing changes for your users, and it does not depend on `uiVersion`. The other options (`menuLabel`, `title`, `unavailableTables`, `wizardStep`, `showHistory`, `showDuplicateKeyWarning` and `showReset`) are in the [flags reference](#7-flags-reference) and the [Configuration Reference](./ConfigurationReference.md#cross-reference-tables-crossreferencetables).
 
 ### Where it appears
 
@@ -353,7 +355,7 @@ Off, or not set, nothing changes for your users, and it does not depend on `uiVe
 
 Each process keeps its own copy of a table, so the screen works on one process at a time: pick a **Process** (the integration's own processes, never sub-processes), then a **Table**. Each table shows **Default** or **Overridden** and its row count, and a dot marks unsaved edits. A table that cannot be edited here (runtime specific, unreadable definition, or an unsupported format) is greyed out with the reason, or left out when `unavailableTables` is `'hidden'`. Chips under the dropdowns show the processes that share the table, its match type (**Exact**, **Wildcard** or **Regex**, set by the publisher), key warnings and its size.
 
-A table opens read only with the publisher's default rows. **Override** creates the user's own copy, which no longer follows later changes to the defaults. The grid works like a spreadsheet (keyboard editing, copy and paste, undo and redo, find and replace, row insert, move and delete, full screen), and the keyboard icon lists every shortcut. The first column is the key: a blank key or a duplicate key (compared ignoring case) shows a warning chip that jumps to the flagged row, and does not stop a save. Column headers and match type come from the publisher, and a table has at most 20 columns and 10,000 rows. **Reset to defaults** shows the defaults again; nothing is written until the user saves, and the button then reads **Restore defaults**.
+A table opens read only with the publisher's default rows. **Override** creates the user's own copy, which no longer follows later changes to the defaults. The grid works like a spreadsheet (keyboard editing, copy and paste, undo and redo, find and replace, row insert, move and delete, full screen), and the keyboard icon lists every shortcut. The first column is the key: a blank key or a duplicate key (compared ignoring case) shows a warning chip that jumps to the flagged row, and does not stop a save (`showDuplicateKeyWarning: false` turns off the duplicate warning, and blank keys still warn). Column headers and match type come from the publisher, and a table has at most 20 columns and 10,000 rows. **Reset to defaults** shows the defaults again; nothing is written until the user saves, and the button then reads **Restore defaults** (`showReset: false` removes the button). **Cancel** and **Save**, with a line saying what Save will do, are in a bar above the toolbar, so they are also there in full screen.
 
 ### Saving
 

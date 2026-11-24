@@ -182,11 +182,10 @@ const GridRow = memo(function GridRow({
     const marked = editing ? null : markEdgeSpaces(text);
     const warn = c === 0 ? keyWarn : KEY_WARN_NONE;
     const flags =
-      (c === 0 ? 1 : 0) |
-      (isActive ? 2 : 0) |
-      (hasEdits && store.isCellEdited(row, c) ? 4 : 0) |
-      (editing ? 8 : 0) |
-      (inSelection && !isActive ? 16 : 0) |
+      (isActive ? 1 : 0) |
+      (hasEdits && store.isCellEdited(row, c) ? 2 : 0) |
+      (editing ? 4 : 0) |
+      (inSelection && !isActive ? 8 : 0) |
       (c === findCol ? FLAG_MATCH_CURRENT : maskHasCol(findMask, c) ? FLAG_MATCH : 0) |
       (warn !== KEY_WARN_NONE ? FLAG_KEY_WARN : 0);
     cells.push(
@@ -274,11 +273,7 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
         role="columnheader"
         aria-colindex={c + 2}
         title={name}
-        className={
-          'boomi-crt-hcell' +
-          (c === 0 ? ' boomi-crt-hcell--frozen' : '') +
-          (c === activeCol ? ' boomi-crt-hcell--active' : '')
-        }
+        className={'boomi-crt-hcell' + (c === activeCol ? ' boomi-crt-hcell--active' : '')}
         style={layout.styles[c]}
       >
         {name}
